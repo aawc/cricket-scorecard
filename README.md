@@ -54,6 +54,14 @@ In progress. Core files created. Testing strategy added to the plan.
 - Bootstrap 5 (via CDN).
 - **Node.js** (for running tests).
 
+## Running Tests
+
+To run the automated tests, you need Node.js installed.
+Run the following command in the project root:
+```bash
+node test.js
+```
+
 ## License
 
 MIT License. See [LICENSE](LICENSE) for details.
