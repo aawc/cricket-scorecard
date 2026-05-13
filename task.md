@@ -67,8 +67,9 @@
 - [x] Create `test.js` with unit tests
 - [x] Add test documentation to `README.md`
 - [x] End innings on max overs in `app.js`
-- [ ] Add `#target-display` in `index.html`
-- [ ] Update `updateUI` in `app.js` to show Target, CRR, RRR
-- [ ] Refactor mocks in `test.js` to retain state
-- [ ] Add tests for CRR/RRR and innings end in `test.js`
+- [x] Add `#target-display` in `index.html`
+- [x] Update `updateUI` in `app.js` to show Target, CRR, RRR
+- [x] Refactor mocks in `test.js` to retain state
+- [x] Add tests for CRR/RRR and innings end in `test.js`
+- [ ] Update `resetMatch` in `app.js` to retain all settings
 - [/] Verify implementation

@@ -30,10 +30,10 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
 - **Permalink**: Provide a way to create a permalink so that the scoreboard state can be transferred to a different device for continuing there.
-- **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.
+- **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. **When hitting reset, retain all match settings (such as overs per innings or max overs per baller or teams) but forget all information about the innings i.e. balls bowled, runs scored, etc.**
 - **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
 - **Visibility**: When on the match settings page, do not show the scoreboard section.
-- **Second Innings Stats**: **During the second innings, show the target, the current run rate, and the target run rate.**
+- **Second Innings Stats**: During the second innings, show the target, the current run rate, and the target run rate.
 
 ### 2. Technical Specifications
 - **Hosting**: Static website to be hosted on GitHub Pages.
@@ -42,18 +42,19 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Offline Support**: Implement a Service Worker and Web App Manifest to allow the app to be installed and used offline as a PWA.
 - **State Persistence**: Use `localStorage` to persist the game state so that progress is not lost on page reload or if the app is closed.
 - **License**: The project should be licensed under the MIT License.
-- **Testing**: Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit. **Add tests for CRR/RRR display and innings end on max overs.**
+- **Testing**: Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit. Add tests for CRR/RRR display and innings end on max overs.
 
 ### 3. UI/UX
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
 - **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
 - **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
-- **Footer**: Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update.
+- **Footer**: Always include a version number for the scorecard on the footer of the page and when it was deployed (include date and time). **Update the version information only when making code changes, not for documentation updates.**
+- **Credits**: Include a line in the footer that says that this site was built by Varun Khaneja using Gemini with a link to his GitHub at github.com/aawc.
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
 - Keep `README.md` updated with project status and features.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
-- Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update.
+- Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update (restricted to code changes as per above requirement).

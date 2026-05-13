@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. 2nd innings stats and more tests added to the plan.
+In progress. Core files created. Reset match behavior update added to the plan.
 
 ## Features (Implemented)
 
@@ -44,11 +44,11 @@ In progress. Core files created. 2nd innings stats and more tests added to the p
 - Summary View Fix: No extra innings when match over.
 - Credits: Added to footer with emojis.
 - Automated Tests: Node.js script for core logic.
+- Second Innings Stats: Show Target, CRR, RRR.
 
 ## Features (Planned)
 
-- **Second Innings Stats**: Show target, current run rate (CRR), and required run rate (RRR) on the scorecard.
-- **More Tests**: Add tests for CRR/RRR display and innings end on max overs.
+- **Reset Match Behavior**: Retain all match settings (overs, penalties, etc.) and player names on reset, but clear all innings data.
 
 ## Tech Stack
 
