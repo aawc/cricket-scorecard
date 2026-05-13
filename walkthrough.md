@@ -5,10 +5,9 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added "Enable Leg Byes" checkbox in settings (off by default).
 - **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**:
-    - Updated `updateUI` to disable Screenshot and Reset buttons when on the settings page.
-    - Updated `updateUI` to hide/show the Leg Bye button based on the "Enable Leg Byes" setting.
+    - Fixed visibility issues: The scoreboard (flip container) is now hidden when on the settings page.
+    - Fixed controls regression: Relaxed the logic so that if "Allow single batsman" is enabled, buttons are enabled as long as at least one batsman and a bowler are selected.
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -21,8 +20,10 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Button States**: On the settings page, verify that "Screenshot" and "Reset" buttons in the header are disabled (grayed out or unclickable).
-3.  **Verify Leg Byes Option (Off)**: Leave "Enable Leg Byes" unchecked. Start the match. Verify that the "Leg Bye" button is NOT visible on the scorecard.
-4.  **Verify Leg Byes Option (On)**: Reset the match, check "Enable Leg Byes", and start the match. Verify that the "Leg Bye" button IS visible.
+2.  **Verify Scoreboard Visibility**: On the settings page, verify that the scoreboard section is NOT visible at all.
+3.  **Verify Controls Enabling**:
+    *   Start a match with "Allow single batsman" checked.
+    *   Select ONE batsman and a bowler. Verify if controls become enabled (if this is what you intended for single batsman play).
+    *   If you intended that BOTH must be selected at the start even with that setting, please let me know.
 
 Please let me know if you encounter any issues!
