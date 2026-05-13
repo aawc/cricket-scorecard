@@ -23,12 +23,12 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Allow selecting the current batsmen and bowler in the scorecard from the player list.
 - **Over Log**: For each over, display the details of the previous balls in the current over (e.g., showing a sequence like "0, 1, wd, 4, W").
 - **Strike Rotation**: Make sure to switch the batsman on strike at the end of the over.
-- **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. **Do not show the name of the bowler who has reached their max overs limit.**
+- **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. Do not show the name of the bowler who has reached their max overs limit.
 - **Striker Marker**: Use a clear mechanism (e.g., distinct styling like background color) to indicate the striker.
 - **Innings End**: Once all eligible batsmen are out, the innings is over.
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
-- **Validation**: **Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.**
+- **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
 - **Permalink**: Provide a way to create a permalink so that the scoreboard state can be transferred to a different device for continuing there.
 - **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.
 - **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
@@ -54,3 +54,4 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - Keep `README.md` updated with project status and features.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
+- **Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update.**
