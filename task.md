@@ -45,4 +45,8 @@
 - [x] Refactor `index.html` layout with Bootstrap
 - [x] Add theme selector in `index.html`
 - [x] Implement theme switching in `app.js`
+- [ ] Wrap sections in flip container in `index.html`
+- [ ] Add CSS for flipping effect in `style.css`
+- [ ] Update summary view to use monospace font and refine table layout
+- [ ] Update `app.js` to handle flip animation
 - [/] Verify implementation

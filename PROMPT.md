@@ -15,7 +15,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Provide options to configure these rules (e.g., changing the run penalty for extras).
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
 - **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far.
-- **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode.
+- **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. **Use a flipping page effect that rotates back and forth when the mode is switched.**
 - **Player Management**:
     - Allow specifying the names of the players for each team.
     - Allow the ability for 1 player to play from both teams.
@@ -42,9 +42,10 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
 - **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
+- **Screenshot Mode Layout**: **Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.**
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
 - Keep `README.md` updated with project status and features.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
-- All files related to this project, such as `task.md`, must always be created in the current directory.
+- **All files related to this project, such as task.md, must always be created in the current directory.**

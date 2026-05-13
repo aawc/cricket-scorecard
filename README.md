@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Permalink feature implemented. Ready for Bootstrap integration.
+In progress. Core files created. Flipping effect and table layout for screenshot mode added to the plan.
 
 ## Features (Implemented)
 
@@ -29,17 +29,20 @@ In progress. Core files created. Permalink feature implemented. Ready for Bootst
 - Striker Indicator: Used background color/border instead of `*`.
 - Fixes: Count ball faced on wicket.
 - Match Over Logic: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
-- **Permalink**: Generate a URL to share match state across devices (excluding undo history).
+- Permalink: Generate a URL to share match state across devices.
+- Bootstrap Integration: Visually pleasing layout.
+- Themes: Support for Light, Dark, and Green themes.
 
 ## Features (Planned)
 
-- **Bootstrap Integration**: Make the website more visually pleasing.
-- **Themes**: Support a few different themes (e.g., Light, Dark, Cricket Green).
+- **Flipping Page Effect**: Smooth transition between score entry and screenshot mode.
+- **Table Layout in Screenshot Mode**: For better structured display.
+- **Fixed-Width Font**: Use monospace font in screenshot mode for better alignment.
 
 ## Tech Stack
 
 - Vanilla HTML, CSS, and JavaScript (no build step).
-- **Bootstrap 5** (via CDN).
+- Bootstrap 5 (via CDN).
 
 ## License
 
