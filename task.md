@@ -55,4 +55,5 @@
 - [x] Update `app.js` to hide/show Leg Bye button based on setting
 - [x] Hide flip container on settings page in `app.js`
 - [x] Debug and fix controls disabling logic in `app.js`
+- [ ] Add footer to `index.html` with version and date
 - [/] Verify implementation

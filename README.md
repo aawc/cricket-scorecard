@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Visibility fix and controls regression fix implemented.
+In progress. Core files created. Footer with version and date added to the plan.
 
 ## Features (Implemented)
 
@@ -37,8 +37,11 @@ In progress. Core files created. Visibility fix and controls regression fix impl
 - Retain Players on Reset: Keep player names in settings inputs when hitting reset.
 - Disable Leg Byes: Option in settings to disable leg byes (off by default).
 - Disable Buttons on Settings: Screenshot and Reset buttons are disabled when match is not started.
-- **Visibility Fix**: Scoreboard section is hidden when on the match settings page.
-- **Controls Fix**: Relaxed controls disabling logic when single batsman is allowed, requiring at least one batsman to be selected.
+- Visibility Fix: Scoreboard section is hidden when on the match settings page.
+
+## Features (Planned)
+
+- **Footer**: Display version number and deployment date.
 
 ## Tech Stack
 
