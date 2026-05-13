@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Testing strategy added to the plan.
+In progress. Core files created. Innings end on max overs added to the plan.
 
 ## Features (Implemented)
 
@@ -45,22 +45,13 @@ In progress. Core files created. Testing strategy added to the plan.
 
 ## Features (Planned)
 
-- **Automated Tests**: Add a simple Node.js script to run unit tests for core logic.
-- **Test Documentation**: Add instructions on how to run tests.
+- **Innings End on Max Overs**: End the first innings automatically when the maximum total allowed overs have been bowled.
 
 ## Tech Stack
 
 - Vanilla HTML, CSS, and JavaScript (no build step).
 - Bootstrap 5 (via CDN).
-- **Node.js** (for running tests).
-
-## Running Tests
-
-To run the automated tests, you need Node.js installed.
-Run the following command in the project root:
-```bash
-node test.js
-```
+- Node.js (for running tests).
 
 ## License
 

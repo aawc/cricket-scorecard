@@ -24,7 +24,7 @@ Based on your feedback, I will proceed with the following:
 5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode. Fix bug where extra innings is shown in summary when match is over.
 6.  **Over Log**: Display details of previous balls in the current over (e.g., "1wd", "4", "W", "0") to track progress within the over.
 7.  **Player Selection Workflow**: Use dropdowns on the scorecard to select players, filtering for eligibility. Disable controls when selection is needed. Bring attention to the dropdowns when selection is required.
-8.  **Testing**: **Add automated tests to prevent regressions. Use a simple Node.js script to test core logic by mocking the DOM.**
+8.  **Innings End**: **End the innings when the maximum total allowed overs have been bowled for the first innings.** (Second innings is already handled in match over logic).
 
 ## Open Questions
 
@@ -32,17 +32,13 @@ None. I am ready to execute this plan.
 
 ## Proposed Changes
 
-### Testing
+### Core Application
 
-#### [NEW] [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)
-- Create a simple test runner in Node.js.
-- Mock DOM globals.
-- Add tests for key functions in `app.js`.
-
-#### [MODIFY] [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)
-- Add section on how to run tests.
+#### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
+- Update `checkOverComplete` to call `endInnings` if max overs reached in the first innings.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `node test.js` and ensure all tests pass.
+### Manual Verification
+- Simulate a match and bowl all allowed overs in the first innings.
+- Verify that it automatically ends the innings and prompts for target/starts next innings.

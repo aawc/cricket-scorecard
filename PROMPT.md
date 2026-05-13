@@ -25,7 +25,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Strike Rotation**: Make sure to switch the batsman on strike at the end of the over.
 - **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. Do not show the name of the bowler who has reached their max overs limit.
 - **Striker Marker**: Use a clear mechanism (e.g., distinct styling like background color) to indicate the striker.
-- **Innings End**: Once all eligible batsmen are out, the innings is over.
+- **Innings End**: Once all eligible batsmen are out, **or the maximum total allowed overs have been bowled**, the innings is over.
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
@@ -41,7 +41,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Offline Support**: Implement a Service Worker and Web App Manifest to allow the app to be installed and used offline as a PWA.
 - **State Persistence**: Use `localStorage` to persist the game state so that progress is not lost on page reload or if the app is closed.
 - **License**: The project should be licensed under the MIT License.
-- **Testing**: **Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit.**
+- **Testing**: Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit.
 
 ### 3. UI/UX
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
