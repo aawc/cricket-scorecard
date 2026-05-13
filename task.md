@@ -62,5 +62,6 @@
 - [x] Enforce max overs per bowler in `app.js` by filtering dropdown
 - [x] Add player count validation in `startMatch` in `app.js`
 - [x] Create `FAVICON.md` with favicon prompt
-- [ ] Fix `generateSummaryView` in `app.js` to not show extra innings
+- [x] Fix `generateSummaryView` in `app.js` to not show extra innings
+- [x] Add credits to footer in `index.html`
 - [/] Verify implementation

@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Summary view bug fix added to the plan.
+In progress. Core files created. Credits added to footer.
 
 ## Features (Implemented)
 
@@ -41,10 +41,8 @@ In progress. Core files created. Summary view bug fix added to the plan.
 - Footer: Added version number, deployment date, and time.
 - Max Overs Enforcement: Bowlers who reach their limit are filtered out.
 - Player Count Validation: Ensures enough players to bowl all overs.
-
-## Features (Planned)
-
-- **Summary View Fix**: Do not show an extra invalid innings at the bottom of the summary when the match is over.
+- Summary View Fix: No extra innings when match over.
+- **Credits**: Added "Built by Varun Khaneja using Gemini" with a link to GitHub.
 
 ## Tech Stack
 
