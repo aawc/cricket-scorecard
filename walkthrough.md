@@ -5,7 +5,8 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added a footer at the bottom of the page with version `1.1.0` and deployment date `2026-05-13`.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.2.0 | Deployed: 2026-05-13 06:53".
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Updated `updateUI` to add the `is-invalid` class (red border) to the batsman and bowler dropdowns when a selection is required but has not been made.
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -18,6 +19,7 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Footer**: Scroll to the bottom and verify that the footer displays "Version: 1.1.0 | Deployed: 2026-05-13".
+2.  **Verify Footer**: Verify that the footer now includes the time: "Version: 1.2.0 | Deployed: 2026-05-13 06:53".
+3.  **Verify Selection Cues**: Start a match. Verify that the dropdowns for Striker, Non-Striker, and Bowler have a red border (indicating they need attention) until you select a player.
 
 Please let me know if you encounter any issues!
