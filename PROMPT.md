@@ -15,7 +15,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Provide options to configure these rules (e.g., changing the run penalty for extras).
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
     - **Leg Byes Option**: Provide an option to disable leg byes in settings.
-- **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far.
+- **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far. **Ensure that the summary view does not show an extra invalid innings at the bottom when the match is over.**
 - **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. Use a flipping page effect that rotates back and forth when the mode is switched.
 - **Player Management**:
     - Allow specifying the names of the players for each team.
@@ -54,4 +54,4 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - Keep `README.md` updated with project status and features.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
-- **Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update.**
+- Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update.
