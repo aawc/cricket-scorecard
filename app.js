@@ -392,8 +392,10 @@ function generateSummaryView() {
         renderInningsSummary(gameState.match.team2.name, inn, index + 1);
     });
 
-    const currentTeamName = gameState.match.currentBattingTeam === 1 ? gameState.match.team1.name : gameState.match.team2.name;
-    renderInningsSummary(currentTeamName, gameState.match.liveInnings, gameState.match.currentInnings);
+    if (!gameState.match.matchOver) {
+        const currentTeamName = gameState.match.currentBattingTeam === 1 ? gameState.match.team1.name : gameState.match.team2.name;
+        renderInningsSummary(currentTeamName, gameState.match.liveInnings, gameState.match.currentInnings);
+    }
 }
 
 // Save History
