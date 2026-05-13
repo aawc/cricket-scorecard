@@ -5,11 +5,8 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Removed the "Innings per Team" input field.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**:
-    - Hardcoded `totalInnings` to 1.
-    - Updated `populateDropdown` for the bowler to filter out players who have reached the `maxOversPerBowler` limit.
-    - Added validation in `startMatch` to ensure both teams have enough players to bowl all overs based on the limit.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.3.0 | Deployed: 2026-05-13 07:03".
+- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md)**: Added standing instruction to always update the footer on each update.
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -22,14 +19,6 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Innings Setting**: Confirm that the "Innings per Team" setting is no longer visible.
-3.  **Verify Player Count Validation**:
-    *   Set "Overs per Innings" to 8 and "Max Overs per Bowler" to 2.
-    *   Enter only 3 players for Team 1.
-    *   Try to start the match. Verify that an alert appears stating that Team 1 needs at least 4 players.
-4.  **Verify Max Overs Enforcement**:
-    *   Start a match with enough players.
-    *   Bowl the maximum allowed overs with a specific bowler.
-    *   Verify that for the next over, that bowler is no longer available in the dropdown list.
+2.  **Verify Footer**: Verify that the footer displays "Version: 1.3.0 | Deployed: 2026-05-13 07:03".
 
 Please let me know if you encounter any issues!
