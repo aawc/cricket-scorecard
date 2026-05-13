@@ -209,8 +209,9 @@ function startMatch() {
     gameState.match.team1.players = team1PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
     gameState.match.team2.players = team2PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
 
-    if (gameState.match.team1.players.length === 0 || gameState.match.team2.players.length === 0) {
-        alert("Please enter player names for both teams.");
+    const minPlayersNeeded = gameState.settings.allowSingleBatsman ? 1 : 2;
+    if (gameState.match.team1.players.length < minPlayersNeeded || gameState.match.team2.players.length < 1) {
+        alert(`Team 1 needs at least ${minPlayersNeeded} players, and Team 2 needs at least 1 player.`);
         return;
     }
 
@@ -380,6 +381,11 @@ function generateSummaryView() {
 
     const currentTeamName = gameState.match.currentBattingTeam === 1 ? gameState.match.team1.name : gameState.match.team2.name;
     renderInningsSummary(currentTeamName, gameState.match.liveInnings, gameState.match.currentInnings);
+}
+
+// Save History
+function saveHistory() {
+    gameState.history.push(JSON.parse(JSON.stringify(gameState.match)));
 }
 
 // Update UI
