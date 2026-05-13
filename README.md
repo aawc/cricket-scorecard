@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Validation for enough players and max overs enforcement added to the plan.
+In progress. Core files created. Max overs enforcement and player count validation implemented.
 
 ## Features (Implemented)
 
@@ -39,12 +39,9 @@ In progress. Core files created. Validation for enough players and max overs enf
 - Disable Buttons on Settings: Screenshot and Reset buttons are disabled when match is not started.
 - Visibility Fix: Scoreboard section is hidden when on the match settings page.
 - Footer: Added version number, deployment date, and time.
-
-## Features (Planned)
-
-- **Player Count Validation**: Ensure enough players are entered to bowl all overs based on max overs per bowler.
-- **Max Overs Enforcement**: Filter out bowlers who have reached their limit.
-- **Innings Limit**: Innings per team set to 1 always (removed setting).
+- **Max Overs Enforcement**: Bowlers who reach their limit are filtered out of the selection dropdown.
+- **Player Count Validation**: Ensures there are enough players to bowl all overs based on the max overs per bowler setting.
+- **Innings Limit**: Innings per team is set to 1 always.
 
 ## Tech Stack
 

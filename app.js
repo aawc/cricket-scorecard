@@ -46,7 +46,6 @@ const shareMatchBtn = document.getElementById('share-match-btn');
 const themeBtns = document.querySelectorAll('.theme-btn');
 
 // Settings Inputs
-const totalInningsInput = document.getElementById('total-innings');
 const oversPerInningsInput = document.getElementById('overs-per-innings');
 const maxOversPerBowlerInput = document.getElementById('max-overs-per-bowler');
 const widePenaltyInput = document.getElementById('wide-penalty');
@@ -197,7 +196,7 @@ function shareMatch() {
 
 // Start Match
 function startMatch() {
-    gameState.settings.totalInnings = parseInt(totalInningsInput.value);
+    gameState.settings.totalInnings = 1; // Hardcoded to 1
     gameState.settings.oversPerInnings = parseInt(oversPerInningsInput.value);
     gameState.settings.maxOversPerBowler = parseInt(maxOversPerBowlerInput.value);
     gameState.settings.widePenalty = parseInt(widePenaltyInput.value);
@@ -209,9 +208,23 @@ function startMatch() {
     gameState.match.team1.players = team1PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
     gameState.match.team2.players = team2PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
 
-    const minPlayersNeeded = gameState.settings.allowSingleBatsman ? 1 : 2;
-    if (gameState.match.team1.players.length < minPlayersNeeded || gameState.match.team2.players.length < 1) {
-        alert(`Team 1 needs at least ${minPlayersNeeded} players, and Team 2 needs at least 1 player.`);
+    // Validation: Enough players to bowl
+    const totalOvers = gameState.settings.oversPerInnings;
+    const maxOversPerBowler = gameState.settings.maxOversPerBowler;
+    const minBowlersNeeded = Math.ceil(totalOvers / maxOversPerBowler);
+
+    if (gameState.match.team1.players.length < minBowlersNeeded) {
+        alert(`Team 1 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`);
+        return;
+    }
+    if (gameState.match.team2.players.length < minBowlersNeeded) {
+        alert(`Team 2 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`);
+        return;
+    }
+
+    const minBatsmenNeeded = gameState.settings.allowSingleBatsman ? 1 : 2;
+    if (gameState.match.team1.players.length < minBatsmenNeeded || gameState.match.team2.players.length < minBatsmenNeeded) {
+        alert(`Each team needs at least ${minBatsmenNeeded} players to bat.`);
         return;
     }
 
@@ -424,7 +437,9 @@ function updateUI() {
         return player !== live.currentBatsman1 && !live.outBatsmen.includes(player);
     });
     populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, "Select Bowler", (player) => {
-        return player !== live.previousBowler;
+        const bowlerStats = live.bowlers[player] || { balls: 0 };
+        const maxBalls = gameState.settings.maxOversPerBowler * 6;
+        return player !== live.previousBowler && bowlerStats.balls < maxBalls;
     });
 
     // Visual cues for selection
@@ -502,13 +517,11 @@ function checkControlsState() {
         return;
     }
 
-    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
-    const totalPlayers = battingTeam.players.length;
     const singleBatsmanAllowed = gameState.settings.allowSingleBatsman;
     
     let needsSelection = false;
     
-    if (singleBatsmanAllowed && live.wickets === totalPlayers - 1) {
+    if (singleBatsmanAllowed) {
         needsSelection = !(live.currentBatsman1 || live.currentBatsman2) || !live.currentBowler;
     } else {
         needsSelection = !live.currentBatsman1 || !live.currentBatsman2 || !live.currentBowler;

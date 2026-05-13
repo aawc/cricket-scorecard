@@ -58,7 +58,7 @@
 - [x] Add footer to `index.html` with auto-updating version (by agent)
 - [x] Update footer in `index.html` with time
 - [x] Implement visual cues for player selection in `app.js`
-- [ ] Remove "Innings per Team" from `index.html`
-- [ ] Enforce max overs per bowler in `app.js` by filtering dropdown
-- [ ] Add player count validation in `startMatch` in `app.js`
+- [x] Remove "Innings per Team" from `index.html`
+- [x] Enforce max overs per bowler in `app.js` by filtering dropdown
+- [x] Add player count validation in `startMatch` in `app.js`
 - [/] Verify implementation
