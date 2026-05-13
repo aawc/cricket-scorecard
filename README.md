@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Flipping effect and enhanced screenshot layout implemented.
+In progress. Core files created. Reset match behavior update added to the plan.
 
 ## Features (Implemented)
 
@@ -32,8 +32,12 @@ In progress. Core files created. Flipping effect and enhanced screenshot layout 
 - Permalink: Generate a URL to share match state across devices.
 - Bootstrap Integration: Visually pleasing layout.
 - Themes: Support for Light, Dark, and Green themes.
-- **Flipping Page Effect**: Smooth transition between score entry and screenshot mode using CSS 3D transforms.
-- **Enhanced Screenshot Layout**: Uses tables and monospace font for better structure and alignment.
+- Flipping Page Effect: Smooth transition between score entry and screenshot mode.
+- Enhanced Screenshot Layout: Uses tables and monospace font.
+
+## Features (Planned)
+
+- **Retain Players on Reset**: Keep player names in settings inputs when hitting reset.
 
 ## Tech Stack
 

@@ -18,12 +18,11 @@ Based on your feedback, I will proceed with the following:
     *   **Configurable**: The user should be able to adjust these parameters before or during the game (if applicable).
     *   **Teams/Players**: Support entering player names for both teams. Allow one player to be in both teams. Allow selecting current batsmen and bowler from the player list on the scorecard.
     *   **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
-4.  **UI Design**: Mobile-first, large buttons for easy tapping on a field. Visually enhanced using Bootstrap. Support multiple themes (e.g., Light, Dark, Cricket Green).
-    *   **Flipping Effect**: **Use a flipping page effect (CSS 3D transforms) to switch between score entry mode and screenshot mode.**
-5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included.
-    *   **Layout**: **Use a table-based layout for the summary in screenshot mode and use a popular fixed-width font (e.g., monospace) for better alignment.**
+4.  **UI Design**: Mobile-first, large buttons for easy tapping on a field. Visually enhanced using Bootstrap. Support multiple themes (e.g., Light, Dark, Cricket Green). Use a flipping page effect to switch between score entry and screenshot mode.
+5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode.
 6.  **Over Log**: Display details of previous balls in the current over (e.g., "1wd", "4", "W", "0") to track progress within the over.
 7.  **Player Selection Workflow**: Use dropdowns on the scorecard to select players, filtering for eligibility. Disable controls when selection is needed.
+8.  **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. **When resetting, retain information about the players in each team in the settings inputs so they can be edited.**
 
 ## Open Questions
 
@@ -33,19 +32,12 @@ None. I am ready to execute this plan.
 
 ### Core Application
 
-#### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
-- Wrap scoreboard and summary sections in a flip container.
-
-#### [MODIFY] [style.css](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/style.css)
-- Add CSS for the flipping effect (perspective, transform-style, backface-visibility).
-- Add styles for the summary table and fixed-width font in screenshot mode.
-
 #### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `toggleScreenshotMode` to toggle the flip class instead of just showing/hiding sections.
-- Ensure the summary view is generated before flipping.
+- Update `resetMatch` function to retain player names and populate them back into the settings textareas.
 
 ## Verification Plan
 
 ### Manual Verification
-- Verify that clicking "Screenshot Mode" triggers a smooth flipping animation.
-- Verify that the summary view uses a table layout and fixed-width font.
+- Start a match with player names.
+- Click "Reset".
+- Verify that the settings screen appears and the player names are still in the textareas.

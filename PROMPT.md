@@ -15,7 +15,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Provide options to configure these rules (e.g., changing the run penalty for extras).
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
 - **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far.
-- **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. **Use a flipping page effect that rotates back and forth when the mode is switched.**
+- **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. Use a flipping page effect that rotates back and forth when the mode is switched.
 - **Player Management**:
     - Allow specifying the names of the players for each team.
     - Allow the ability for 1 player to play from both teams.
@@ -28,11 +28,11 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Permalink**: Provide a way to create a permalink so that the scoreboard state can be transferred to a different device for continuing there.
-- **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen.
+- **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. **When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.**
 
 ### 2. Technical Specifications
 - **Hosting**: Static website to be hosted on GitHub Pages.
-- **Tech Stack**: Vanilla HTML, CSS, and JavaScript only. **Use Bootstrap 5 via CDN for styling.** Do not use any JS frameworks (React, Vue, etc.) or build steps (Webpack, Vite, etc.) to keep it simple and directly hostable.
+- **Tech Stack**: Vanilla HTML, CSS, and JavaScript only. Use Bootstrap 5 via CDN for styling. Do not use any JS frameworks (React, Vue, etc.) or build steps (Webpack, Vite, etc.) to keep it simple and directly hostable.
 - **Themes**: Support a few different themes (e.g., Light, Dark, Cricket Green).
 - **Offline Support**: Implement a Service Worker and Web App Manifest to allow the app to be installed and used offline as a PWA.
 - **State Persistence**: Use `localStorage` to persist the game state so that progress is not lost on page reload or if the app is closed.
@@ -42,10 +42,10 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
 - **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
-- **Screenshot Mode Layout**: **Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.**
+- **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
 - Keep `README.md` updated with project status and features.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
-- **All files related to this project, such as task.md, must always be created in the current directory.**
+- All files related to this project, such as `task.md`, must always be created in the current directory.
