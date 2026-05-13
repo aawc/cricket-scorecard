@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Credits added to footer.
+In progress. Core files created. Credits updated to Option 3.
 
 ## Features (Implemented)
 
@@ -38,11 +38,11 @@ In progress. Core files created. Credits added to footer.
 - Disable Leg Byes: Option in settings to disable leg byes (off by default).
 - Disable Buttons on Settings: Screenshot and Reset buttons are disabled when match is not started.
 - Visibility Fix: Scoreboard section is hidden when on the match settings page.
-- Footer: Added version number, deployment date, and time.
+- Footer: Added version number, deployment date, and time. (Standing instruction to update on every release).
 - Max Overs Enforcement: Bowlers who reach their limit are filtered out.
 - Player Count Validation: Ensures enough players to bowl all overs.
 - Summary View Fix: No extra innings when match over.
-- **Credits**: Added "Built by Varun Khaneja using Gemini" with a link to GitHub.
+- **Credits**: Added "Built by Varun Khaneja using Gemini" with a link to GitHub, styled with emojis (Option 3).
 
 ## Tech Stack
 
