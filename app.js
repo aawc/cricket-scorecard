@@ -414,6 +414,20 @@ function updateUI() {
 
     matchStatusDisplay.textContent = `Innings ${gameState.match.currentInnings}`;
 
+    const targetDisplay = document.getElementById('target-display');
+    if (gameState.match.currentInnings === 2) {
+        const target = gameState.match.target;
+        targetDisplay.classList.remove('hidden');
+        
+        const crr = live.balls > 0 ? (live.score / live.balls) * 6 : 0;
+        const remainingBalls = (gameState.settings.oversPerInnings * 6) - live.balls;
+        const rrr = remainingBalls > 0 ? ((target - live.score) / remainingBalls) * 6 : 0;
+        
+        targetDisplay.textContent = `Target: ${target} | CRR: ${crr.toFixed(2)} | RRR: ${rrr.toFixed(2)}`;
+    } else {
+        targetDisplay.classList.add('hidden');
+    }
+
     // Disable buttons on settings page
     screenshotModeBtn.disabled = !gameState.matchStarted;
     resetMatchBtn.disabled = !gameState.matchStarted;
