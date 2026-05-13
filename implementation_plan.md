@@ -21,9 +21,10 @@ Based on your feedback, I will proceed with the following:
     *   **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
     *   **Validation**: Count the number of players and ensure there are enough to complete the overs based on the max overs per bowler limit. Do not start the match if insufficient.
 4.  **UI Design**: Mobile-first, large buttons for easy tapping on a field. Visually enhanced using Bootstrap. Support multiple themes (e.g., Light, Dark, Cricket Green). Use a flipping page effect to switch between score entry and screenshot mode. Disable screenshot and reset buttons on the settings page. Do not show the scoreboard section when on the match settings page. Include a footer with a version number, deployment date, and time.
-5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode. **Fix bug where extra innings is shown in summary when match is over.**
+5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode. Fix bug where extra innings is shown in summary when match is over.
 6.  **Over Log**: Display details of previous balls in the current over (e.g., "1wd", "4", "W", "0") to track progress within the over.
 7.  **Player Selection Workflow**: Use dropdowns on the scorecard to select players, filtering for eligibility. Disable controls when selection is needed. Bring attention to the dropdowns when selection is required.
+8.  **Testing**: **Add automated tests to prevent regressions. Use a simple Node.js script to test core logic by mocking the DOM.**
 
 ## Open Questions
 
@@ -31,13 +32,17 @@ None. I am ready to execute this plan.
 
 ## Proposed Changes
 
-### Core Application
+### Testing
 
-#### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Fix `generateSummaryView` to check `matchOver` before rendering live innings.
+#### [NEW] [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)
+- Create a simple test runner in Node.js.
+- Mock DOM globals.
+- Add tests for key functions in `app.js`.
+
+#### [MODIFY] [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)
+- Add section on how to run tests.
 
 ## Verification Plan
 
-### Manual Verification
-- Simulate a match where the second team gets all out.
-- Verify that the summary view does not show an extra innings at the bottom.
+### Automated Tests
+- Run `node test.js` and ensure all tests pass.

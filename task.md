@@ -64,4 +64,6 @@
 - [x] Create `FAVICON.md` with favicon prompt
 - [x] Fix `generateSummaryView` in `app.js` to not show extra innings
 - [x] Add credits to footer in `index.html`
+- [ ] Create `test.js` with unit tests
+- [ ] Add test documentation to `README.md`
 - [/] Verify implementation
