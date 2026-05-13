@@ -71,5 +71,5 @@
 - [x] Update `updateUI` in `app.js` to show Target, CRR, RRR
 - [x] Refactor mocks in `test.js` to retain state
 - [x] Add tests for CRR/RRR and innings end in `test.js`
-- [ ] Update `resetMatch` in `app.js` to retain all settings
+- [/] Update `resetMatch` in `app.js` to retain all settings
 - [/] Verify implementation

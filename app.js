@@ -560,10 +560,11 @@ function addRuns(runs) {
     bowler.balls++;
     bowler.runs += runs;
 
-    const activeBatsman = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.batsmen[live.currentBatsman1] : live.batsmen[live.currentBatsman2];
-    if (activeBatsman) {
-        activeBatsman.runs += runs;
-        activeBatsman.balls++;
+    const activeBatsman = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+    const activeB = live.batsmen[activeBatsman];
+    if (activeB) {
+        activeB.runs += runs;
+        activeB.balls++;
     }
 
     live.overLog.push(runs.toString());
@@ -664,9 +665,9 @@ function addWicket() {
     const live = gameState.match.liveInnings;
     
     const activeBatsmanName = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
-    const activeBatsman = live.batsmen[activeBatsmanName];
-    if (activeBatsman) {
-        activeBatsman.balls++; // Count the ball faced!
+    const activeB = live.batsmen[activeBatsmanName];
+    if (activeB) {
+        activeB.balls++; // Count the ball faced!
     }
 
     live.wickets++;
@@ -785,48 +786,32 @@ function undoLastAction() {
 }
 
 function resetMatch() {
-    const retainedTeam1Players = gameState.match.team1.players.join(', ');
-    const retainedTeam2Players = gameState.match.team2.players.join(', ');
-
     localStorage.removeItem('cricketScorecardState');
-    gameState = {
-        settings: {
-            totalInnings: 1,
-            oversPerInnings: 8,
-            maxOversPerBowler: 2,
-            widePenalty: 1,
-            noBallPenalty: 1,
-            allowSingleBatsman: true,
-            theme: 'light',
-            enableLegByes: false
-        },
-        match: {
-            currentInnings: 1,
-            currentBattingTeam: 1,
-            team1: { name: "Team 1", players: [], innings: [] },
-            team2: { name: "Team 2", players: [], innings: [] },
-            liveInnings: {
-                score: 0,
-                wickets: 0,
-                balls: 0,
-                extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
-                batsmen: {},
-                bowlers: {},
-                currentBatsman1: "",
-                currentBatsman2: "",
-                currentBowler: "",
-                previousBowler: null,
-                outBatsmen: [],
-                overLog: []
-            },
-            target: null,
-            matchOver: false
-        },
-        history: []
-    };
     
-    team1PlayersInput.value = retainedTeam1Players;
-    team2PlayersInput.value = retainedTeam2Players;
+    // Reset match state but keep settings and players
+    gameState.match = {
+        currentInnings: 1,
+        currentBattingTeam: 1,
+        team1: { name: "Team 1", players: gameState.match.team1.players, innings: [] },
+        team2: { name: "Team 2", players: gameState.match.team2.players, innings: [] },
+        liveInnings: {
+            score: 0,
+            wickets: 0,
+            balls: 0,
+            extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+            batsmen: {},
+            bowlers: {},
+            currentBatsman1: "",
+            currentBatsman2: "",
+            currentBowler: "",
+            previousBowler: null,
+            outBatsmen: [],
+            overLog: []
+        },
+        target: null,
+        matchOver: false
+    };
+    gameState.history = [];
     
     gameState.matchStarted = false;
     settingsSection.classList.remove('hidden');
@@ -834,6 +819,17 @@ function resetMatch() {
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer) flipContainer.classList.add('hidden');
     document.body.classList.remove('screenshot-mode');
+    
+    // Repopulate UI inputs with current gameState.settings
+    oversPerInningsInput.value = gameState.settings.oversPerInnings;
+    maxOversPerBowlerInput.value = gameState.settings.maxOversPerBowler;
+    widePenaltyInput.value = gameState.settings.widePenalty;
+    noBallPenaltyInput.value = gameState.settings.noBallPenalty;
+    allowSingleBatsmanInput.checked = gameState.settings.allowSingleBatsman;
+    enableLegByesInput.checked = gameState.settings.enableLegByes;
+    
+    team1PlayersInput.value = gameState.match.team1.players.join(', ');
+    team2PlayersInput.value = gameState.match.team2.players.join(', ');
     
     updateUI();
 }
