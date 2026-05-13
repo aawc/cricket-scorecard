@@ -122,6 +122,7 @@ function setupEventListeners() {
 function loadFromLocalStorage() {
     const urlParams = new URLSearchParams(window.location.search);
     const urlState = urlParams.get('state');
+    const flipContainer = document.querySelector('.flip-container');
 
     if (urlState) {
         try {
@@ -130,11 +131,10 @@ function loadFromLocalStorage() {
             gameState.match = decodedState.match;
             gameState.matchStarted = true;
             
-            // Clear URL parameters
             window.history.replaceState({}, '', window.location.pathname);
             
             settingsSection.classList.add('hidden');
-            scoreboardSection.classList.remove('hidden');
+            if (flipContainer) flipContainer.classList.remove('hidden');
             
             if (gameState.settings.theme) {
                 setTheme(gameState.settings.theme);
@@ -151,11 +151,17 @@ function loadFromLocalStorage() {
         gameState = JSON.parse(savedState);
         if (gameState.matchStarted) {
             settingsSection.classList.add('hidden');
-            scoreboardSection.classList.remove('hidden');
+            if (flipContainer) flipContainer.classList.remove('hidden');
+        } else {
+            settingsSection.classList.remove('hidden');
+            if (flipContainer) flipContainer.classList.add('hidden');
         }
         if (gameState.settings.theme) {
             setTheme(gameState.settings.theme);
         }
+    } else {
+        settingsSection.classList.remove('hidden');
+        if (flipContainer) flipContainer.classList.add('hidden');
     }
 }
 
@@ -230,7 +236,8 @@ function startMatch() {
     gameState.match.matchOver = false;
 
     settingsSection.classList.add('hidden');
-    scoreboardSection.classList.remove('hidden');
+    const flipContainer = document.querySelector('.flip-container');
+    if (flipContainer) flipContainer.classList.remove('hidden');
 
     saveToLocalStorage();
     updateUI();
@@ -467,15 +474,15 @@ function checkControlsState() {
         return;
     }
 
-    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
-    const totalPlayers = battingTeam.players.length;
     const singleBatsmanAllowed = gameState.settings.allowSingleBatsman;
     
     let needsSelection = false;
     
-    if (singleBatsmanAllowed && live.wickets === totalPlayers - 1) {
+    if (singleBatsmanAllowed) {
+        // If single batsman allowed, we only need at least one batsman to be selected
         needsSelection = !(live.currentBatsman1 || live.currentBatsman2) || !live.currentBowler;
     } else {
+        // Standard rules require both batsmen and bowler
         needsSelection = !live.currentBatsman1 || !live.currentBatsman2 || !live.currentBowler;
     }
     
@@ -754,16 +761,14 @@ function resetMatch() {
         history: []
     };
     
-    // Restore player names to inputs
     team1PlayersInput.value = retainedTeam1Players;
     team2PlayersInput.value = retainedTeam2Players;
     
     gameState.matchStarted = false;
     settingsSection.classList.remove('hidden');
-    scoreboardSection.classList.add('hidden');
     
     const flipContainer = document.querySelector('.flip-container');
-    if (flipContainer) flipContainer.classList.remove('flipped');
+    if (flipContainer) flipContainer.classList.add('hidden');
     document.body.classList.remove('screenshot-mode');
     
     updateUI();

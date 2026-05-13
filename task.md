@@ -53,6 +53,6 @@
 - [x] Add "Enable Leg Byes" checkbox in `index.html`
 - [x] Update `app.js` to disable buttons on settings page
 - [x] Update `app.js` to hide/show Leg Bye button based on setting
-- [ ] Hide flip container on settings page in `app.js`
-- [ ] Debug and fix controls disabling logic in `app.js`
+- [x] Hide flip container on settings page in `app.js`
+- [x] Debug and fix controls disabling logic in `app.js`
 - [/] Verify implementation
