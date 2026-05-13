@@ -56,6 +56,6 @@
 - [x] Hide flip container on settings page in `app.js`
 - [x] Debug and fix controls disabling logic in `app.js`
 - [x] Add footer to `index.html` with auto-updating version (by agent)
-- [ ] Update footer in `index.html` with time
-- [ ] Implement visual cues for player selection in `app.js`
+- [x] Update footer in `index.html` with time
+- [x] Implement visual cues for player selection in `app.js`
 - [/] Verify implementation

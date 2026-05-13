@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Footer update and selection cues added to the plan.
+In progress. Core files created. Footer updated with time and selection cues implemented.
 
 ## Features (Implemented)
 
@@ -38,12 +38,8 @@ In progress. Core files created. Footer update and selection cues added to the p
 - Disable Leg Byes: Option in settings to disable leg byes (off by default).
 - Disable Buttons on Settings: Screenshot and Reset buttons are disabled when match is not started.
 - Visibility Fix: Scoreboard section is hidden when on the match settings page.
-- Footer: Added version number and deployment date.
-
-## Features (Planned)
-
-- **Footer Update**: Include deployment time in the footer.
-- **Selection Cues**: Highlight dropdowns (e.g., with a red border) when a new player needs to be selected.
+- **Footer**: Added version number, deployment date, and **time**.
+- **Selection Cues**: Dropdowns turn red (using Bootstrap `is-invalid`) when a selection is required.
 
 ## Tech Stack
 

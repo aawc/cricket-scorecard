@@ -413,6 +413,9 @@ function updateUI() {
     // Populate dropdowns with filtering
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
     const bowlingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
+    const totalPlayers = battingTeam.players.length;
+    const singleBatsmanAllowed = gameState.settings.allowSingleBatsman;
+    const lastManStanding = singleBatsmanAllowed && live.wickets === totalPlayers - 1;
 
     populateDropdown(batsman1Select, battingTeam.players, live.currentBatsman1, "Select Striker", (player) => {
         return player !== live.currentBatsman2 && !live.outBatsmen.includes(player);
@@ -423,6 +426,25 @@ function updateUI() {
     populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, "Select Bowler", (player) => {
         return player !== live.previousBowler;
     });
+
+    // Visual cues for selection
+    if (!live.currentBatsman1 && (!lastManStanding || !live.currentBatsman2)) {
+        batsman1Select.classList.add('is-invalid');
+    } else {
+        batsman1Select.classList.remove('is-invalid');
+    }
+
+    if (!live.currentBatsman2 && (!lastManStanding || !live.currentBatsman1)) {
+        batsman2Select.classList.add('is-invalid');
+    } else {
+        batsman2Select.classList.remove('is-invalid');
+    }
+
+    if (!live.currentBowler) {
+        bowlerSelect.classList.add('is-invalid');
+    } else {
+        bowlerSelect.classList.remove('is-invalid');
+    }
 
     const b1 = live.batsmen[live.currentBatsman1] || { runs: 0, balls: 0 };
     const b2 = live.batsmen[live.currentBatsman2] || { runs: 0, balls: 0 };
@@ -480,15 +502,15 @@ function checkControlsState() {
         return;
     }
 
+    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
+    const totalPlayers = battingTeam.players.length;
     const singleBatsmanAllowed = gameState.settings.allowSingleBatsman;
     
     let needsSelection = false;
     
-    if (singleBatsmanAllowed) {
-        // If single batsman allowed, we only need at least one batsman to be selected
+    if (singleBatsmanAllowed && live.wickets === totalPlayers - 1) {
         needsSelection = !(live.currentBatsman1 || live.currentBatsman2) || !live.currentBowler;
     } else {
-        // Standard rules require both batsmen and bowler
         needsSelection = !live.currentBatsman1 || !live.currentBatsman2 || !live.currentBowler;
     }
     
