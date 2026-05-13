@@ -383,6 +383,7 @@ function updateUI() {
 
     matchStatusDisplay.textContent = `Innings ${gameState.match.currentInnings}`;
 
+    // Populate dropdowns with filtering
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
     const bowlingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
 
@@ -580,7 +581,7 @@ function addWicket() {
     const activeBatsmanName = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
     const activeBatsman = live.batsmen[activeBatsmanName];
     if (activeBatsman) {
-        activeBatsman.balls++;
+        activeBatsman.balls++; // Count the ball faced!
     }
 
     live.wickets++;
@@ -600,12 +601,13 @@ function addWicket() {
         return;
     }
 
+    // Mark current batsman as out
     live.outBatsmen.push(activeBatsmanName);
     
     if (live.currentBatsman1 === activeBatsmanName) {
-        live.currentBatsman1 = "";
+        live.currentBatsman1 = ""; // Force selection
     } else {
-        live.currentBatsman2 = "";
+        live.currentBatsman2 = ""; // Force selection
     }
     
     if (gameState.settings.allowSingleBatsman && live.wickets === totalPlayers - 1) {
@@ -698,6 +700,9 @@ function undoLastAction() {
 }
 
 function resetMatch() {
+    const retainedTeam1Players = gameState.match.team1.players.join(', ');
+    const retainedTeam2Players = gameState.match.team2.players.join(', ');
+
     localStorage.removeItem('cricketScorecardState');
     gameState = {
         settings: {
@@ -733,11 +738,15 @@ function resetMatch() {
         },
         history: []
     };
+    
+    // Restore player names to inputs
+    team1PlayersInput.value = retainedTeam1Players;
+    team2PlayersInput.value = retainedTeam2Players;
+    
     gameState.matchStarted = false;
     settingsSection.classList.remove('hidden');
     scoreboardSection.classList.add('hidden');
     
-    // Reset flip
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer) flipContainer.classList.remove('flipped');
     document.body.classList.remove('screenshot-mode');

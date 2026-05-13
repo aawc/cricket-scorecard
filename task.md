@@ -49,5 +49,5 @@
 - [x] Add CSS for flipping effect in `style.css`
 - [x] Update summary view to use monospace font and refine table layout
 - [x] Update `app.js` to handle flip animation
-- [ ] Update `resetMatch` in `app.js` to retain player names
+- [x] Update `resetMatch` in `app.js` to retain player names
 - [/] Verify implementation

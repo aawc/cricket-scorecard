@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Reset match behavior update added to the plan.
+In progress. Core files created. Retain players on reset implemented.
 
 ## Features (Implemented)
 
@@ -34,9 +34,6 @@ In progress. Core files created. Reset match behavior update added to the plan.
 - Themes: Support for Light, Dark, and Green themes.
 - Flipping Page Effect: Smooth transition between score entry and screenshot mode.
 - Enhanced Screenshot Layout: Uses tables and monospace font.
-
-## Features (Planned)
-
 - **Retain Players on Reset**: Keep player names in settings inputs when hitting reset.
 
 ## Tech Stack
