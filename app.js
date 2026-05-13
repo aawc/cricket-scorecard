@@ -574,6 +574,13 @@ function checkOverComplete() {
         }
         live.overLog = []; // Clear for next over
         
+        const maxBalls = gameState.settings.oversPerInnings * 6;
+        if (live.balls >= maxBalls && gameState.match.currentInnings === 1) {
+            alert("Innings Over! Max overs reached.");
+            endInnings();
+            return;
+        }
+        
         live.previousBowler = live.currentBowler;
         live.currentBowler = ""; // Force selection
     }
