@@ -23,7 +23,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Allow selecting the current batsmen and bowler in the scorecard from the player list.
 - **Over Log**: For each over, display the details of the previous balls in the current over (e.g., showing a sequence like "0, 1, wd, 4, W").
 - **Strike Rotation**: Make sure to switch the batsman on strike at the end of the over.
-- **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible.
+- **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. **When a new bowler or batter needs to be selected, bring attention to that (e.g., by highlighting the dropdown).**
 - **Striker Marker**: Use a clear mechanism (e.g., distinct styling like background color) to indicate the striker.
 - **Innings End**: Once all eligible batsmen are out, the innings is over.
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
@@ -46,7 +46,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
 - **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
-- **Footer**: Always include a version number for the scorecard on the footer of the page and when it was deployed. **Automatically update version number each time a new version of the site is published.**
+- **Footer**: Always include a version number for the scorecard on the footer of the page and when it was deployed **(include date and time).**
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
