@@ -31,6 +31,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Permalink**: Provide a way to create a permalink so that the scoreboard state can be transferred to a different device for continuing there.
 - **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.
 - **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
+- **Visibility**: **When on the match settings page, do not show the scoreboard section.**
 
 ### 2. Technical Specifications
 - **Hosting**: Static website to be hosted on GitHub Pages.
@@ -42,7 +43,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 
 ### 3. UI/UX
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
-- **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
+- **Usability**: Use large, easy-to-tap buttons for score input. **Disable controls when a valid player needs to be selected (ensure they are enabled correctly after selection) or when the match is over.**
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
 - **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
 

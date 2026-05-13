@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Option to disable leg byes and button states implemented.
+In progress. Core files created. Visibility fix and controls regression fix added to the plan.
 
 ## Features (Implemented)
 
@@ -35,8 +35,13 @@ In progress. Core files created. Option to disable leg byes and button states im
 - Flipping Page Effect: Smooth transition between score entry and screenshot mode.
 - Enhanced Screenshot Layout: Uses tables and monospace font.
 - Retain Players on Reset: Keep player names in settings inputs when hitting reset.
-- **Disable Leg Byes**: Option in settings to disable leg byes (off by default).
-- **Disable Buttons on Settings**: Screenshot and Reset buttons are disabled when match is not started.
+- Disable Leg Byes: Option in settings to disable leg byes (off by default).
+- Disable Buttons on Settings: Screenshot and Reset buttons are disabled when match is not started.
+
+## Features (Planned)
+
+- **Visibility Fix**: Hide scoreboard section when on the match settings page.
+- **Controls Fix**: Ensure score entry buttons are enabled correctly after selecting valid batsmen and bowler.
 
 ## Tech Stack
 

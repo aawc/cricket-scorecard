@@ -15,11 +15,11 @@ Based on your feedback, I will proceed with the following:
         *   Max allowed overs per bowler: 2 (default).
         *   Wides/No Balls: 1 run penalty + extra ball (default).
         *   Allow single batsman to play: Yes (default).
-        *   **Enable Leg Byes: Yes (default).**
-    *   **Configurable**: The user should be able to adjust these parameters before or during the game (if applicable). **Added option to disable leg byes.**
-    *   **Teams/Players**: Support entering player names for both teams. Allow one player to be in both teams. Allow selecting current batsmen and bowler from the player list on the scoreboard.
+        *   Enable Leg Byes: Yes (default).
+    *   **Configurable**: The user should be able to adjust these parameters before or during the game (if applicable).
+    *   **Teams/Players**: Support entering player names for both teams. Allow one player to be in both teams. Allow selecting current batsmen and bowler from the player list on the scorecard.
     *   **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
-4.  **UI Design**: Mobile-first, large buttons for easy tapping on a field. Visually enhanced using Bootstrap. Support multiple themes (e.g., Light, Dark, Cricket Green). Use a flipping page effect to switch between score entry and screenshot mode. **Disable screenshot and reset buttons on the settings page.**
+4.  **UI Design**: Mobile-first, large buttons for easy tapping on a field. Visually enhanced using Bootstrap. Support multiple themes (e.g., Light, Dark, Cricket Green). Use a flipping page effect to switch between score entry and screenshot mode. Disable screenshot and reset buttons on the settings page. **Do not show the scoreboard section when on the match settings page.**
 5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode.
 6.  **Over Log**: Display details of previous balls in the current over (e.g., "1wd", "4", "W", "0") to track progress within the over.
 7.  **Player Selection Workflow**: Use dropdowns on the scorecard to select players, filtering for eligibility. Disable controls when selection is needed.
@@ -32,15 +32,12 @@ None. I am ready to execute this plan.
 
 ### Core Application
 
-#### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
-- Add checkbox for "Enable Leg Byes" in settings.
-
 #### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `updateUI` to disable screenshot and reset buttons if match not started.
-- Update `updateUI` to show/hide Leg Bye button based on setting.
+- **Fix visibility**: Hide the flip container (containing scoreboard and summary) when on the settings page.
+- **Fix regression**: Review and fix the controls disabling logic to ensure buttons are enabled when valid players are selected.
 
 ## Verification Plan
 
 ### Manual Verification
-- Open the app at settings page. Verify Screenshot and Reset buttons are disabled.
-- Uncheck "Enable Leg Byes" and start match. Verify Leg Bye button is not visible.
+- Verify that the scoreboard is NOT visible on the settings page.
+- Verify that controls are enabled after selecting valid batsmen and bowler.
