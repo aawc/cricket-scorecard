@@ -5,9 +5,8 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)**: Created a Node.js script with unit tests for core logic, mocking the DOM.
-- **[README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)**: Added documentation on how to run tests.
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.12.0 | Deployed: 2026-05-13 07:57".
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Updated `checkOverComplete` to check if the maximum allowed overs have been bowled for the first innings, and if so, it calls `endInnings()` to set the target and start the next innings.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.14.0 | Deployed: 2026-05-13 08:02".
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -16,14 +15,14 @@ I have implemented the requested features and core files for the Cricket Scoreca
 
 ## Verification Results
 
-### Automated Tests
-- Ran `node test.js` and all tests passed successfully.
-
 ### Manual Verification Required
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Footer**: Verify that the footer displays "Version: 1.12.0 | Deployed: 2026-05-13 07:57".
-3.  **Run Tests**: Run `node test.js` in your terminal and verify that it outputs "All tests passed!".
+2.  **Verify Footer**: Verify that the footer displays "Version: 1.14.0 | Deployed: 2026-05-13 08:02".
+3.  **Verify Innings End on Max Overs**:
+    *   Start a match.
+    *   Bowl the maximum allowed overs in the first innings.
+    *   Verify that the app automatically ends the innings and prompts for the target, switching to the second innings.
 
 Please let me know if you encounter any issues!
