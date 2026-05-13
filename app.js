@@ -175,7 +175,6 @@ function shareMatch() {
         settings: gameState.settings,
         match: gameState.match
     };
-    // Exclude history to keep URL short
     const serializedState = encodeURIComponent(JSON.stringify(stateToShare));
     const url = window.location.origin + window.location.pathname + '?state=' + serializedState;
     
@@ -293,20 +292,21 @@ function handleBowlerChange(newName) {
     updateUI();
 }
 
-// Toggle Screenshot Mode
+// Toggle Screenshot Mode with Flip Effect
 function toggleScreenshotMode() {
-    document.body.classList.toggle('screenshot-mode');
-    if (document.body.classList.contains('screenshot-mode')) {
-        screenshotModeBtn.textContent = 'Exit Screenshot Mode';
-        generateSummaryView();
+    const flipContainer = document.querySelector('.flip-container');
+    
+    if (!flipContainer.classList.contains('flipped')) {
+        generateSummaryView(); // Generate content before flipping
+        flipContainer.classList.add('flipped');
+        document.body.classList.add('screenshot-mode');
     } else {
-        screenshotModeBtn.textContent = 'Screenshot Mode';
-        removeSummaryView();
+        flipContainer.classList.remove('flipped');
+        document.body.classList.remove('screenshot-mode');
     }
 }
 
 function generateSummaryView() {
-    const summarySection = document.getElementById('summary-section');
     const summariesDiv = document.getElementById('innings-summaries');
     summariesDiv.innerHTML = '';
 
@@ -370,18 +370,6 @@ function generateSummaryView() {
 
     const currentTeamName = gameState.match.currentBattingTeam === 1 ? gameState.match.team1.name : gameState.match.team2.name;
     renderInningsSummary(currentTeamName, gameState.match.liveInnings, gameState.match.currentInnings);
-
-    summarySection.classList.remove('hidden');
-}
-
-function removeSummaryView() {
-    const summarySection = document.getElementById('summary-section');
-    summarySection.classList.add('hidden');
-}
-
-// Save History
-function saveHistory() {
-    gameState.history.push(JSON.parse(JSON.stringify(gameState.match)));
 }
 
 // Update UI
@@ -395,14 +383,13 @@ function updateUI() {
 
     matchStatusDisplay.textContent = `Innings ${gameState.match.currentInnings}`;
 
-    // Populate dropdowns with filtering
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
     const bowlingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
 
-    populateDropdown(batsman1Select, battingTeam.players, live.currentBatsman1, "Select Batsman", (player) => {
+    populateDropdown(batsman1Select, battingTeam.players, live.currentBatsman1, "Select Striker", (player) => {
         return player !== live.currentBatsman2 && !live.outBatsmen.includes(player);
     });
-    populateDropdown(batsman2Select, battingTeam.players, live.currentBatsman2, "Select Batsman", (player) => {
+    populateDropdown(batsman2Select, battingTeam.players, live.currentBatsman2, "Select Non-Striker", (player) => {
         return player !== live.currentBatsman1 && !live.outBatsmen.includes(player);
     });
     populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, "Select Bowler", (player) => {
@@ -542,11 +529,11 @@ function checkMatchOver() {
         if (live.score >= target) {
             alert("Match Over! " + battingTeam.name + " wins!");
             match.matchOver = true;
-            generateSummaryView();
+            toggleScreenshotMode(); // Auto flip to summary
         } else if (live.wickets >= maxWickets) {
             alert("Match Over! Defending team wins!");
             match.matchOver = true;
-            generateSummaryView();
+            toggleScreenshotMode();
         } else if (live.balls >= maxBalls) {
              if (live.score === target - 1) {
                  alert("Match Over! It's a Tie!");
@@ -554,7 +541,7 @@ function checkMatchOver() {
                  alert("Match Over! Defending team wins!");
              }
              match.matchOver = true;
-             generateSummaryView();
+             toggleScreenshotMode();
         }
     }
 }
@@ -649,7 +636,7 @@ function endInnings() {
     if (gameState.match.currentInnings > gameState.settings.totalInnings * 2) {
         alert("Match Over!");
         gameState.match.matchOver = true;
-        generateSummaryView();
+        toggleScreenshotMode();
         return;
     }
     
@@ -749,6 +736,12 @@ function resetMatch() {
     gameState.matchStarted = false;
     settingsSection.classList.remove('hidden');
     scoreboardSection.classList.add('hidden');
+    
+    // Reset flip
+    const flipContainer = document.querySelector('.flip-container');
+    if (flipContainer) flipContainer.classList.remove('flipped');
+    document.body.classList.remove('screenshot-mode');
+    
     updateUI();
 }
 

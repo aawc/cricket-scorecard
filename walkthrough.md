@@ -1,21 +1,13 @@
 # Walkthrough - Cricket Scorecard PWA
 
-I have implemented the requested features and core files for the Cricket Scorecard PWA, including the Bootstrap integration and themes.
+I have implemented the requested features and core files for the Cricket Scorecard PWA, including the flipping effect and enhanced summary layout.
 
 ## Changes Made
 
 ### Core Application
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**:
-    - Integrated Bootstrap 5 via CDN.
-    - Refactored layout using Bootstrap grid, cards, and components for a more polished look.
-    - Added a theme selector in the header.
-- **[style.css](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/style.css)**:
-    - Refactored to complement Bootstrap.
-    - Added custom styles for active batsman and over log.
-    - Defined a custom "Cricket Green" theme.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**:
-    - Added logic to handle theme switching and persistence.
-    - Integrated permalink feature to share match state.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Wrapped the scoreboard and summary sections in a flip container to support the 3D flipping effect.
+- **[style.css](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/style.css)**: Added CSS rules for the flipping animation and applied a monospace font (`Courier New`) to the summary section for better alignment.
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Updated `toggleScreenshotMode` to handle the flip animation by adding/removing the `flipped` class on the container.
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -28,8 +20,7 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Visuals**: Check that the site looks styled with Bootstrap (cards, grid layout, styled buttons).
-3.  **Verify Themes**: Use the "Theme" dropdown in the header to switch between Light, Dark, and Cricket Green. Verify that the appearance changes and persists across reloads.
-4.  **Verify Permalink**: Click "Share Match" and verify you can load the state in a new tab.
+2.  **Verify Flipping Effect**: Click "Screenshot Mode" and verify that the page smoothly flips to show the summary. Click "Exit Screenshot Mode" in the summary to flip back.
+3.  **Verify Summary Layout**: In screenshot mode, verify that the text uses a fixed-width font and the tables are well-aligned.
 
 Please let me know if you encounter any issues!

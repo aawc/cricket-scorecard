@@ -79,82 +79,91 @@
                 </div>
             </section>
 
-            <!-- Scoreboard Section -->
-            <section id="scoreboard-section" class="card mb-3 hidden">
-                <div class="card-body">
-                    <div class="scoreboard-header text-center mb-3">
-                        <h2 id="match-status" class="h5 text-muted">First Innings</h2>
-                        <div id="score-display" class="display-1 fw-bold text-primary">0 - 0</div>
-                        <div id="overs-display" class="fs-4 text-secondary">Overs: 0.0 / 8</div>
-                    </div>
+            <!-- Flip Container for Scoreboard and Summary -->
+            <div class="flip-container">
+                <div class="flipper" id="app-flipper">
+                    <!-- Front Face: Scoreboard -->
+                    <div class="front-face">
+                        <section id="scoreboard-section" class="card mb-3">
+                            <div class="card-body">
+                                <div class="scoreboard-header text-center mb-3">
+                                    <h2 id="match-status" class="h5 text-muted">First Innings</h2>
+                                    <div id="score-display" class="display-1 fw-bold text-primary">0 - 0</div>
+                                    <div id="overs-display" class="fs-4 text-secondary">Overs: 0.0 / 8</div>
+                                </div>
 
-                    <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <div class="batsman p-2 border rounded d-flex justify-content-between align-items-center">
-                                <select id="batsman1-select" class="form-select form-select-sm w-auto" aria-label="Batsman 1"></select>
-                                <span id="batsman1-stats" class="badge bg-secondary">0 (0)</span>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <div class="batsman p-2 border rounded d-flex justify-content-between align-items-center">
+                                            <select id="batsman1-select" class="form-select form-select-sm w-auto" aria-label="Batsman 1"></select>
+                                            <span id="batsman1-stats" class="badge bg-secondary">0 (0)</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="batsman p-2 border rounded d-flex justify-content-between align-items-center">
+                                            <select id="batsman2-select" class="form-select form-select-sm w-auto" aria-label="Batsman 2"></select>
+                                            <span id="batsman2-stats" class="badge bg-secondary">0 (0)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="bowler-display p-2 border rounded d-flex justify-content-between align-items-center mb-3">
+                                    <div class="d-flex align-items-center">
+                                        <label for="bowler-select" class="form-label mb-0 me-2">Bowler:</label>
+                                        <select id="bowler-select" class="form-select form-select-sm w-auto" aria-label="Bowler"></select>
+                                    </div>
+                                    <span id="bowler-stats" class="badge bg-secondary">0/0 (0.0)</span>
+                                </div>
+
+                                <!-- Over Log -->
+                                <div class="over-log-container p-2 border rounded mb-3 d-flex align-items-center gap-2">
+                                    <span class="fw-bold">This Over:</span>
+                                    <div id="over-log" class="d-flex gap-1 flex-wrap"></div>
+                                </div>
+
+                                <div class="extras-display p-2 border rounded mb-3 text-center">
+                                    Extras: <span id="extras-total" class="fw-bold">0</span> (W: <span id="wides-display">0</span>, NB: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, LB: <span id="legbyes-display">0</span>)
+                                </div>
+
+                                <!-- Controls -->
+                                <div id="controls-section">
+                                    <div class="runs-buttons row g-2 mb-2">
+                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="0">0</button></div>
+                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="1">1</button></div>
+                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="2">2</button></div>
+                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="3">3</button></div>
+                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="4">4</button></div>
+                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="6">6</button></div>
+                                    </div>
+                                    <div class="extra-buttons row g-2 mb-2">
+                                        <div class="col-4"><button id="wide-btn" class="btn btn-warning w-100">Wide</button></div>
+                                        <div class="col-4"><button id="noball-btn" class="btn btn-warning w-100">No Ball</button></div>
+                                        <div class="col-4"><button id="wicket-btn" class="btn btn-danger w-100">Wicket</button></div>
+                                    </div>
+                                    <div class="other-buttons row g-2">
+                                        <div class="col-4"><button id="bye-btn" class="btn btn-info w-100">Bye</button></div>
+                                        <div class="col-4"><button id="legbye-btn" class="btn btn-info w-100">Leg Bye</button></div>
+                                        <div class="col-4"><button id="undo-btn" class="btn btn-secondary w-100">Undo</button></div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-6">
-                            <div class="batsman p-2 border rounded d-flex justify-content-between align-items-center">
-                                <select id="batsman2-select" class="form-select form-select-sm w-auto" aria-label="Batsman 2"></select>
-                                <span id="batsman2-stats" class="badge bg-secondary">0 (0)</span>
+                        </section>
+                    </div>
+
+                    <!-- Back Face: Summary -->
+                    <div class="back-face">
+                        <section id="summary-section" class="card mb-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <h2 class="card-title h4 mb-0 text-primary">Match Summary</h2>
+                                    <button id="exit-screenshot-mode-btn" class="btn btn-outline-secondary btn-sm">Exit Screenshot Mode</button>
+                                </div>
+                                <div id="innings-summaries"></div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="bowler-display p-2 border rounded d-flex justify-content-between align-items-center mb-3">
-                        <div class="d-flex align-items-center">
-                            <label for="bowler-select" class="form-label mb-0 me-2">Bowler:</label>
-                            <select id="bowler-select" class="form-select form-select-sm w-auto" aria-label="Bowler"></select>
-                        </div>
-                        <span id="bowler-stats" class="badge bg-secondary">0/0 (0.0)</span>
-                    </div>
-
-                    <!-- Over Log -->
-                    <div class="over-log-container p-2 border rounded mb-3 d-flex align-items-center gap-2">
-                        <span class="fw-bold">This Over:</span>
-                        <div id="over-log" class="d-flex gap-1 flex-wrap"></div>
-                    </div>
-
-                    <div class="extras-display p-2 border rounded mb-3 text-center">
-                        Extras: <span id="extras-total" class="fw-bold">0</span> (W: <span id="wides-display">0</span>, NB: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, LB: <span id="legbyes-display">0</span>)
-                    </div>
-
-                    <!-- Controls -->
-                    <div id="controls-section">
-                        <div class="runs-buttons row g-2 mb-2">
-                            <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="0">0</button></div>
-                            <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="1">1</button></div>
-                            <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="2">2</button></div>
-                            <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="3">3</button></div>
-                            <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="4">4</button></div>
-                            <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="6">6</button></div>
-                        </div>
-                        <div class="extra-buttons row g-2 mb-2">
-                            <div class="col-4"><button id="wide-btn" class="btn btn-warning w-100">Wide</button></div>
-                            <div class="col-4"><button id="noball-btn" class="btn btn-warning w-100">No Ball</button></div>
-                            <div class="col-4"><button id="wicket-btn" class="btn btn-danger w-100">Wicket</button></div>
-                        </div>
-                        <div class="other-buttons row g-2">
-                            <div class="col-4"><button id="bye-btn" class="btn btn-info w-100">Bye</button></div>
-                            <div class="col-4"><button id="legbye-btn" class="btn btn-info w-100">Leg Bye</button></div>
-                            <div class="col-4"><button id="undo-btn" class="btn btn-secondary w-100">Undo</button></div>
-                        </div>
+                        </section>
                     </div>
                 </div>
-            </section>
-
-            <!-- Summary Section (Visible in Screenshot Mode) -->
-            <section id="summary-section" class="card mb-3 hidden">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
-                        <h2 class="card-title h4 mb-0 text-primary">Match Summary</h2>
-                        <button id="exit-screenshot-mode-btn" class="btn btn-outline-secondary btn-sm">Exit Screenshot Mode</button>
-                    </div>
-                    <div id="innings-summaries"></div>
-                </div>
-            </section>
+            </div>
         </main>
     </div>
 
