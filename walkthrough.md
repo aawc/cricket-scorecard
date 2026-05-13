@@ -5,9 +5,7 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**:
-    - Fixed visibility issues: The scoreboard (flip container) is now hidden when on the settings page.
-    - Fixed controls regression: Relaxed the logic so that if "Allow single batsman" is enabled, buttons are enabled as long as at least one batsman and a bowler are selected.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added a footer at the bottom of the page with version `1.1.0` and deployment date `2026-05-13`.
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -20,10 +18,6 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Scoreboard Visibility**: On the settings page, verify that the scoreboard section is NOT visible at all.
-3.  **Verify Controls Enabling**:
-    *   Start a match with "Allow single batsman" checked.
-    *   Select ONE batsman and a bowler. Verify if controls become enabled (if this is what you intended for single batsman play).
-    *   If you intended that BOTH must be selected at the start even with that setting, please let me know.
+2.  **Verify Footer**: Scroll to the bottom and verify that the footer displays "Version: 1.1.0 | Deployed: 2026-05-13".
 
 Please let me know if you encounter any issues!
