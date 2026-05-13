@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Leg byes option and button disabling added to the plan.
+In progress. Core files created. Option to disable leg byes and button states implemented.
 
 ## Features (Implemented)
 
@@ -34,11 +34,9 @@ In progress. Core files created. Leg byes option and button disabling added to t
 - Themes: Support for Light, Dark, and Green themes.
 - Flipping Page Effect: Smooth transition between score entry and screenshot mode.
 - Enhanced Screenshot Layout: Uses tables and monospace font.
-
-## Features (Planned)
-
-- **Disable Leg Byes**: Option in settings to disable leg byes.
-- **Disable Buttons on Settings**: Disable Screenshot and Reset buttons when match is not started.
+- Retain Players on Reset: Keep player names in settings inputs when hitting reset.
+- **Disable Leg Byes**: Option in settings to disable leg byes (off by default).
+- **Disable Buttons on Settings**: Screenshot and Reset buttons are disabled when match is not started.
 
 ## Tech Stack
 

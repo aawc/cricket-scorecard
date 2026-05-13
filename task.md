@@ -50,7 +50,7 @@
 - [x] Update summary view to use monospace font and refine table layout
 - [x] Update `app.js` to handle flip animation
 - [x] Update `resetMatch` in `app.js` to retain player names
-- [ ] Add "Enable Leg Byes" checkbox in `index.html`
-- [ ] Update `app.js` to disable buttons on settings page
-- [ ] Update `app.js` to hide/show Leg Bye button based on setting
+- [x] Add "Enable Leg Byes" checkbox in `index.html`
+- [x] Update `app.js` to disable buttons on settings page
+- [x] Update `app.js` to hide/show Leg Bye button based on setting
 - [/] Verify implementation

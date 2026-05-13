@@ -7,7 +7,8 @@ let gameState = {
         widePenalty: 1,
         noBallPenalty: 1,
         allowSingleBatsman: true,
-        theme: 'light'
+        theme: 'light',
+        enableLegByes: false
     },
     match: {
         currentInnings: 1,
@@ -51,6 +52,7 @@ const maxOversPerBowlerInput = document.getElementById('max-overs-per-bowler');
 const widePenaltyInput = document.getElementById('wide-penalty');
 const noBallPenaltyInput = document.getElementById('no-ball-penalty');
 const allowSingleBatsmanInput = document.getElementById('allow-single-batsman');
+const enableLegByesInput = document.getElementById('enable-legbyes');
 const team1PlayersInput = document.getElementById('team1-players');
 const team2PlayersInput = document.getElementById('team2-players');
 
@@ -195,6 +197,7 @@ function startMatch() {
     gameState.settings.widePenalty = parseInt(widePenaltyInput.value);
     gameState.settings.noBallPenalty = parseInt(noBallPenaltyInput.value);
     gameState.settings.allowSingleBatsman = allowSingleBatsmanInput.checked;
+    gameState.settings.enableLegByes = enableLegByesInput.checked;
 
     // Parse player names
     gameState.match.team1.players = team1PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
@@ -382,6 +385,17 @@ function updateUI() {
     oversDisplay.textContent = `Overs: ${overs}.${balls} / ${gameState.settings.oversPerInnings}`;
 
     matchStatusDisplay.textContent = `Innings ${gameState.match.currentInnings}`;
+
+    // Disable buttons on settings page
+    screenshotModeBtn.disabled = !gameState.matchStarted;
+    resetMatchBtn.disabled = !gameState.matchStarted;
+
+    // Show/Hide Leg Bye button
+    if (gameState.settings.enableLegByes) {
+        legbyeBtn.classList.remove('hidden');
+    } else {
+        legbyeBtn.classList.add('hidden');
+    }
 
     // Populate dropdowns with filtering
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
@@ -712,7 +726,8 @@ function resetMatch() {
             widePenalty: 1,
             noBallPenalty: 1,
             allowSingleBatsman: true,
-            theme: 'light'
+            theme: 'light',
+            enableLegByes: false
         },
         match: {
             currentInnings: 1,
