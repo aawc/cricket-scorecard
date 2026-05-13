@@ -46,7 +46,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
 - **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
-- **Footer**: **Always include a version number for the scorecard on the footer of the page and when it was deployed.**
+- **Footer**: Always include a version number for the scorecard on the footer of the page and when it was deployed. **Automatically update version number each time a new version of the site is published.**
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.

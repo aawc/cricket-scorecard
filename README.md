@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Footer with version and date added to the plan.
+In progress. Core files created. Auto-updating footer added to the plan.
 
 ## Features (Implemented)
 
@@ -41,7 +41,7 @@ In progress. Core files created. Footer with version and date added to the plan.
 
 ## Features (Planned)
 
-- **Footer**: Display version number and deployment date.
+- **Auto-Updating Footer**: Display version number and deployment date, updated by the agent on changes.
 
 ## Tech Stack
 
