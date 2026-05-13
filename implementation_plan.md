@@ -24,7 +24,8 @@ Based on your feedback, I will proceed with the following:
 5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode. Fix bug where extra innings is shown in summary when match is over.
 6.  **Over Log**: Display details of previous balls in the current over (e.g., "1wd", "4", "W", "0") to track progress within the over.
 7.  **Player Selection Workflow**: Use dropdowns on the scorecard to select players, filtering for eligibility. Disable controls when selection is needed. Bring attention to the dropdowns when selection is required.
-8.  **Innings End**: **End the innings when the maximum total allowed overs have been bowled for the first innings.** (Second innings is already handled in match over logic).
+8.  **Innings End**: End the innings when the maximum total allowed overs have been bowled for the first innings.
+9.  **Second Innings Stats**: **Show target, current run rate (CRR), and required run rate (RRR) during the second innings.**
 
 ## Open Questions
 
@@ -34,11 +35,23 @@ None. I am ready to execute this plan.
 
 ### Core Application
 
+#### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
+- Add `#target-display` div in the scoreboard header.
+
 #### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `checkOverComplete` to call `endInnings` if max overs reached in the first innings.
+- Update `updateUI` to calculate and display CRR and RRR when `currentInnings === 2`.
+
+### Testing
+
+#### [MODIFY] [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)
+- Refactor DOM mocks to retain state in a map.
+- Add tests for CRR/RRR calculations.
+- Add test for innings end on max overs.
 
 ## Verification Plan
 
+### Automated Tests
+- Run `node test.js` to verify all functionality including new tests.
+
 ### Manual Verification
-- Simulate a match and bowl all allowed overs in the first innings.
-- Verify that it automatically ends the innings and prompts for target/starts next innings.
+- Play a match to 2nd innings and verify target, CRR, and RRR are displayed and correct.

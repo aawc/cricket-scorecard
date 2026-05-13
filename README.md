@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Innings end on max overs added to the plan.
+In progress. Core files created. 2nd innings stats and more tests added to the plan.
 
 ## Features (Implemented)
 
@@ -42,10 +42,13 @@ In progress. Core files created. Innings end on max overs added to the plan.
 - Max Overs Enforcement: Bowlers who reach their limit are filtered out.
 - Player Count Validation: Ensures enough players to bowl all overs.
 - Summary View Fix: No extra innings when match over.
+- Credits: Added to footer with emojis.
+- Automated Tests: Node.js script for core logic.
 
 ## Features (Planned)
 
-- **Innings End on Max Overs**: End the first innings automatically when the maximum total allowed overs have been bowled.
+- **Second Innings Stats**: Show target, current run rate (CRR), and required run rate (RRR) on the scorecard.
+- **More Tests**: Add tests for CRR/RRR display and innings end on max overs.
 
 ## Tech Stack
 

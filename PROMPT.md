@@ -25,7 +25,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Strike Rotation**: Make sure to switch the batsman on strike at the end of the over.
 - **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. Do not show the name of the bowler who has reached their max overs limit.
 - **Striker Marker**: Use a clear mechanism (e.g., distinct styling like background color) to indicate the striker.
-- **Innings End**: Once all eligible batsmen are out, **or the maximum total allowed overs have been bowled**, the innings is over.
+- **Innings End**: Once all eligible batsmen are out, or the maximum total allowed overs have been bowled, the innings is over.
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
@@ -33,6 +33,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.
 - **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
 - **Visibility**: When on the match settings page, do not show the scoreboard section.
+- **Second Innings Stats**: **During the second innings, show the target, the current run rate, and the target run rate.**
 
 ### 2. Technical Specifications
 - **Hosting**: Static website to be hosted on GitHub Pages.
@@ -41,14 +42,14 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Offline Support**: Implement a Service Worker and Web App Manifest to allow the app to be installed and used offline as a PWA.
 - **State Persistence**: Use `localStorage` to persist the game state so that progress is not lost on page reload or if the app is closed.
 - **License**: The project should be licensed under the MIT License.
-- **Testing**: Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit.
+- **Testing**: Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit. **Add tests for CRR/RRR display and innings end on max overs.**
 
 ### 3. UI/UX
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
 - **Usability**: Use large, easy-to-tap buttons for score input. Disable controls when a valid player needs to be selected or when the match is over.
 - **Clean Layout**: The interface should be intuitive and clear, enhanced by Bootstrap.
 - **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
-- **Footer**: Always include a version number for the scorecard on the footer of the page and when it was deployed (include date and time).
+- **Footer**: Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update.
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.

@@ -66,5 +66,9 @@
 - [x] Add credits to footer in `index.html`
 - [x] Create `test.js` with unit tests
 - [x] Add test documentation to `README.md`
-- [ ] End innings on max overs in `app.js`
+- [x] End innings on max overs in `app.js`
+- [ ] Add `#target-display` in `index.html`
+- [ ] Update `updateUI` in `app.js` to show Target, CRR, RRR
+- [ ] Refactor mocks in `test.js` to retain state
+- [ ] Add tests for CRR/RRR and innings end in `test.js`
 - [/] Verify implementation
