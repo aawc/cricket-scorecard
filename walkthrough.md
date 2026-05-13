@@ -5,8 +5,8 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.3.0 | Deployed: 2026-05-13 07:03".
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md)**: Added standing instruction to always update the footer on each update.
+- **[FAVICON.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/FAVICON.md)**: Created with a prompt to generate a favicon.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.4.0 | Deployed: 2026-05-13 07:07".
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -19,6 +19,7 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Footer**: Verify that the footer displays "Version: 1.3.0 | Deployed: 2026-05-13 07:03".
+2.  **Verify Footer**: Verify that the footer displays "Version: 1.4.0 | Deployed: 2026-05-13 07:07".
+3.  **Read `FAVICON.md`**: Verify that it contains a clear prompt for generating a favicon.
 
 Please let me know if you encounter any issues!
