@@ -3,7 +3,10 @@ const ASSETS = [
     'index.html',
     'style.css',
     'app.js',
-    'manifest.json'
+    'manifest.json',
+    'favicon.png',
+    'icon-192x192.png',
+    'icon-512x512.png'
 ];
 
 // Install Service Worker
