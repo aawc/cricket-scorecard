@@ -1,0 +1,70 @@
+/* Custom overrides for Bootstrap */
+
+.hidden {
+    display: none !important;
+}
+
+/* Scoreboard specific styles that Bootstrap doesn't cover well */
+.batsman.active {
+    background-color: rgba(40, 167, 69, 0.2) !important; /* Light green tint */
+    border-color: #28a745 !important;
+}
+
+.ball-log {
+    background-color: #e9ecef;
+    color: #495057;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.ball-log.wicket {
+    background-color: #dc3545;
+    color: white;
+}
+
+.ball-log.extra {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+/* Screenshot Mode Styles */
+body.screenshot-mode #app-container {
+    max-width: 100% !important;
+    padding: 0 !important;
+}
+
+body.screenshot-mode #summary-section {
+    border: 2px solid #0d6efd;
+}
+
+/* Custom Green Theme */
+[data-bs-theme="green"] {
+    --bs-body-bg: #e8f5e9;
+    --bs-body-color: #2c3e50;
+    --bs-primary: #2e7d32;
+    --bs-primary-rgb: 46, 125, 50;
+    --bs-link-color: #2e7d32;
+    --bs-link-hover-color: #1b5e20;
+    --bs-border-color: #a5d6a7;
+}
+
+[data-bs-theme="green"] .card {
+    background-color: #ffffff;
+    border-color: #a5d6a7;
+}
+
+[data-bs-theme="green"] .btn-primary {
+    background-color: #2e7d32;
+    border-color: #2e7d32;
+}
+
+[data-bs-theme="green"] .btn-primary:hover {
+    background-color: #1b5e20;
+    border-color: #1b5e20;
+}
+
+[data-bs-theme="green"] .text-primary {
+    color: #2e7d32 !important;
+}

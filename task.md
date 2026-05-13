@@ -1,0 +1,48 @@
+- [x] Setup project structure
+- [x] Create `index.html` with basic structure and settings UI
+- [x] Create `style.css` for responsive design and screenshot mode
+- [x] Create `app.js` for core logic
+    - [x] State management (localStorage)
+    - [x] Scoring logic and rule configuration
+    - [x] Screenshot mode toggle
+- [x] Create `manifest.json` for PWA
+- [x] Create `sw.js` for offline support
+- [x] Add MIT License
+- [x] Update UI for player name inputs
+- [x] Update UI for over log display
+- [x] Update logic in `app.js` for player names and shared player
+- [x] Update logic in `app.js` for over log
+- [x] Update UI for selectable batsmen and bowler
+- [x] Update logic in `app.js` to handle selectable players and strike rotation
+- [x] Refactor state management in `app.js` to support multiple innings and full player stats
+- [x] Create UI for comprehensive match summary in `index.html`
+- [x] Update screenshot mode logic in `app.js` to show the summary
+- [x] Fix screenshot mode toggle (add exit button to summary)
+- [x] Add prompt for bowler on new over
+- [x] Add prompt for batsman on wicket
+- [x] Prompt for starting players
+- [x] Update UI to use `*` for striker instead of labels
+- [x] Add marker spans for striker in HTML
+- [x] Update UI to use marker spans instead of CSS after rule
+- [x] Implement innings end logic in `app.js`
+- [x] Implement bowler validation in `app.js`
+- [x] Update UI to move marker span before select in `index.html`
+- [x] Refactor `app.js` to use dropdowns instead of prompts
+- [x] Implement filtering in dropdowns in `app.js`
+- [x] Implement control disabling when selection is needed in `app.js`
+- [x] Add "Allow single batsman to play" checkbox in `index.html`
+- [x] Remove marker spans from `index.html`
+- [x] Update `.batsman.active` styles in `style.css`
+- [x] Fix balls faced on wicket in `app.js`
+- [x] Implement single batsman rule in `app.js`
+- [x] Implement target calculation in `app.js`
+- [x] Implement `checkMatchOver` in `app.js`
+- [x] Disable controls on match over in `app.js`
+- [x] Add "Share Match" button in `index.html`
+- [x] Implement state serialization to URL in `app.js`
+- [x] Implement state deserialization from URL in `app.js`
+- [x] Include Bootstrap CSS and JS in `index.html`
+- [x] Refactor `index.html` layout with Bootstrap
+- [x] Add theme selector in `index.html`
+- [x] Implement theme switching in `app.js`
+- [/] Verify implementation

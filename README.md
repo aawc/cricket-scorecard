@@ -1,0 +1,46 @@
+# Cricket Scorecard PWA
+
+A standalone website on GitHub Pages that can be used as an offline PWA to enter and keep track of score during a game of cricket.
+
+## Current Status
+
+In progress. Core files created. Permalink feature implemented. Ready for Bootstrap integration.
+
+## Features (Implemented)
+
+- Score tracking (Runs, Wickets, Overs, Extras).
+- Configurable match parameters (Innings, Overs, Bowler limits, Penalties).
+- Mobile-first design with large buttons.
+- State persistence using `localStorage`.
+- Screenshot mode with full match summary.
+- Screenshot Mode Toggle Fix: Added exit button in summary view.
+- Undo functionality.
+- Reset Match functionality.
+- Web App Manifest for PWA installation.
+- Service Worker for offline support.
+- MIT License.
+- Player Management: Enter names for both teams, support for a player playing in both teams.
+- Over Log: Display details of previous balls in the current over.
+- Selectable Active Players: Allow selecting current batsmen and bowler on the scorecard.
+- Strike Rotation: Automatic strike rotation at the end of the over.
+- Dropdown Player Selection: Filtered to only show eligible players.
+- Controls Disabling: When selection is needed.
+- Single Batsman Rule: Setting to allow a single batsman to play (default: true).
+- Striker Indicator: Used background color/border instead of `*`.
+- Fixes: Count ball faced on wicket.
+- Match Over Logic: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
+- **Permalink**: Generate a URL to share match state across devices (excluding undo history).
+
+## Features (Planned)
+
+- **Bootstrap Integration**: Make the website more visually pleasing.
+- **Themes**: Support a few different themes (e.g., Light, Dark, Cricket Green).
+
+## Tech Stack
+
+- Vanilla HTML, CSS, and JavaScript (no build step).
+- **Bootstrap 5** (via CDN).
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
