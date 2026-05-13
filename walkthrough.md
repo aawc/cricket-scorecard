@@ -5,8 +5,8 @@ I have implemented the requested features and core files for the Cricket Scoreca
 ## Changes Made
 
 ### Core Application
-- **Favicons**: The user updated the favicons locally, and I have committed these changes.
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.6.0 | Deployed: 2026-05-13 07:32".
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Fixed `generateSummaryView` to not show the live innings stats when the match is over, preventing an extra invalid innings from appearing.
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Updated the footer to display "Version: 1.8.0 | Deployed: 2026-05-13 07:40".
 
 ### PWA Support and License
 - **[manifest.json](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/manifest.json)**: Created for installability.
@@ -19,7 +19,9 @@ I have implemented the requested features and core files for the Cricket Scoreca
 Please perform the following manual verification steps:
 
 1.  **Open `index.html`** in a browser.
-2.  **Verify Favicon**: Confirm that the user-updated favicon is displayed in the browser tab.
-3.  **Verify Footer**: Verify that the footer displays "Version: 1.6.0 | Deployed: 2026-05-13 07:32".
+2.  **Verify Footer**: Verify that the footer displays "Version: 1.8.0 | Deployed: 2026-05-13 07:40".
+3.  **Verify Summary View Fix**:
+    *   Simulate a match until the second team gets all out or match ends.
+    *   Verify that the summary view does NOT show an extra innings for Team 1 at the bottom.
 
 Please let me know if you encounter any issues!
