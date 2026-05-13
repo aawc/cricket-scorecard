@@ -4,12 +4,12 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Footer updated with time and selection cues implemented.
+In progress. Core files created. Validation for enough players and max overs enforcement added to the plan.
 
 ## Features (Implemented)
 
 - Score tracking (Runs, Wickets, Overs, Extras).
-- Configurable match parameters (Innings, Overs, Bowler limits, Penalties).
+- Configurable match parameters (Overs, Bowler limits, Penalties).
 - Mobile-first design with large buttons.
 - State persistence using `localStorage`.
 - Screenshot mode with full match summary.
@@ -38,8 +38,13 @@ In progress. Core files created. Footer updated with time and selection cues imp
 - Disable Leg Byes: Option in settings to disable leg byes (off by default).
 - Disable Buttons on Settings: Screenshot and Reset buttons are disabled when match is not started.
 - Visibility Fix: Scoreboard section is hidden when on the match settings page.
-- **Footer**: Added version number, deployment date, and **time**.
-- **Selection Cues**: Dropdowns turn red (using Bootstrap `is-invalid`) when a selection is required.
+- Footer: Added version number, deployment date, and time.
+
+## Features (Planned)
+
+- **Player Count Validation**: Ensure enough players are entered to bowl all overs based on max overs per bowler.
+- **Max Overs Enforcement**: Filter out bowlers who have reached their limit.
+- **Innings Limit**: Innings per team set to 1 always (removed setting).
 
 ## Tech Stack
 
