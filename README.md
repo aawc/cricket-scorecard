@@ -4,7 +4,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-In progress. Core files created. Retain players on reset implemented.
+In progress. Core files created. Leg byes option and button disabling added to the plan.
 
 ## Features (Implemented)
 
@@ -15,7 +15,7 @@ In progress. Core files created. Retain players on reset implemented.
 - Screenshot mode with full match summary.
 - Screenshot Mode Toggle Fix: Added exit button in summary view.
 - Undo functionality.
-- Reset Match functionality.
+- Reset Match functionality (retains players).
 - Web App Manifest for PWA installation.
 - Service Worker for offline support.
 - MIT License.
@@ -34,7 +34,11 @@ In progress. Core files created. Retain players on reset implemented.
 - Themes: Support for Light, Dark, and Green themes.
 - Flipping Page Effect: Smooth transition between score entry and screenshot mode.
 - Enhanced Screenshot Layout: Uses tables and monospace font.
-- **Retain Players on Reset**: Keep player names in settings inputs when hitting reset.
+
+## Features (Planned)
+
+- **Disable Leg Byes**: Option in settings to disable leg byes.
+- **Disable Buttons on Settings**: Disable Screenshot and Reset buttons when match is not started.
 
 ## Tech Stack
 

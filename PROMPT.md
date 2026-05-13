@@ -14,6 +14,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Standard rules should apply by default (e.g., 1 run + extra ball for wides/no balls).
     - Provide options to configure these rules (e.g., changing the run penalty for extras).
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
+    - **Leg Byes Option**: Provide an option to disable leg byes in settings.
 - **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far.
 - **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. Use a flipping page effect that rotates back and forth when the mode is switched.
 - **Player Management**:
@@ -28,7 +29,8 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Permalink**: Provide a way to create a permalink so that the scoreboard state can be transferred to a different device for continuing there.
-- **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. **When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.**
+- **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. When hitting reset, retain information about the players in each team in draft mode so that it can be changed if needed.
+- **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
 
 ### 2. Technical Specifications
 - **Hosting**: Static website to be hosted on GitHub Pages.
