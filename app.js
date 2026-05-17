@@ -48,8 +48,6 @@ const themeBtns = document.querySelectorAll('.theme-btn');
 // Settings Inputs
 const oversPerInningsInput = document.getElementById('overs-per-innings');
 const maxOversPerBowlerInput = document.getElementById('max-overs-per-bowler');
-const widePenaltyInput = document.getElementById('wide-penalty');
-const noBallPenaltyInput = document.getElementById('no-ball-penalty');
 const allowSingleBatsmanInput = document.getElementById('allow-single-batsman');
 const enableLegByesInput = document.getElementById('enable-legbyes');
 const team1PlayersInput = document.getElementById('team1-players');
@@ -239,8 +237,8 @@ function startMatch() {
     gameState.settings.totalInnings = 1; // Hardcoded to 1
     gameState.settings.oversPerInnings = parseInt(oversPerInningsInput.value);
     gameState.settings.maxOversPerBowler = parseInt(maxOversPerBowlerInput.value);
-    gameState.settings.widePenalty = parseInt(widePenaltyInput.value);
-    gameState.settings.noBallPenalty = parseInt(noBallPenaltyInput.value);
+    gameState.settings.widePenalty = 1;
+    gameState.settings.noBallPenalty = 1;
     gameState.settings.allowSingleBatsman = allowSingleBatsmanInput.checked;
     gameState.settings.enableLegByes = enableLegByesInput.checked;
 
@@ -1005,8 +1003,6 @@ function resetMatch() {
     // Repopulate UI inputs with current gameState.settings
     oversPerInningsInput.value = gameState.settings.oversPerInnings;
     maxOversPerBowlerInput.value = gameState.settings.maxOversPerBowler;
-    widePenaltyInput.value = gameState.settings.widePenalty;
-    noBallPenaltyInput.value = gameState.settings.noBallPenalty;
     allowSingleBatsmanInput.checked = gameState.settings.allowSingleBatsman;
     enableLegByesInput.checked = gameState.settings.enableLegByes;
     

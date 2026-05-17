@@ -11,7 +11,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 ## Features (Implemented)
 
 - Score tracking (Runs, Wickets, Overs, Extras).
-- Configurable match parameters (Overs, Bowler limits, Penalties).
+- Configurable match parameters (Overs per innings, Bowler limits). Wide and No Ball penalties fixed at official 1 run.
 - Mobile-first design with large buttons.
 - State persistence using `localStorage`.
 - Screenshot mode with full match summary.

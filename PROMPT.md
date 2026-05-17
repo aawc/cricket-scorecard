@@ -13,8 +13,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Number of overs per innings (default: 8).
     - Maximum allowed overs per bowler (default: 2).
 - **Configurable Rules**:
-    - Standard rules should apply by default (e.g., 1 run + extra ball for wides/no balls).
-    - Provide options to configure these rules (e.g., changing the run penalty for extras).
+    - Standard rules apply (1 run penalty + extra ball for wides/no balls, penalty runs fixed at 1).
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
     - **Leg Byes Option**: Provide an option to disable leg byes in settings.
 - **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far. Ensure that the summary view does not show an extra invalid innings at the bottom when the match is over.

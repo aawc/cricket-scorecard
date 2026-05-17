@@ -1,18 +1,8 @@
-# Task List - Run Out & Extra Runs Specification
+# Task List - Fixed Wide & No Ball Penalties
 
-## Phase 1: Run Out Specification (Striker vs Non-Striker)
-- [x] Add "Run Out" button and `#runoutModal` to `index.html`
-- [x] Implement `processRunOut(isStriker)` logic in `app.js`
-- [x] Update footer version to `1.18.0` in `index.html`
-- [x] Add unit tests for Run Out in `test.js`
+- [x] Remove `#wide-penalty` and `#no-ball-penalty` from `index.html`
+- [x] Update footer version to `1.20.0` in `index.html`
+- [x] Remove penalty inputs from DOM references, `startMatch`, and `resetMatch` in `app.js`
+- [x] Update `PROMPT.md` and `README.md` to reflect fixed penalty rules
 - [x] Verify automated tests pass (`node test.js`)
-- [x] Commit Phase 1 changes separately without special tags
-
-## Phase 2: Extra Runs on Wides, No Balls, and Run Outs
-- [x] Add `#extraRunsModal` to `index.html`
-- [x] Update `addWide`, `addNoBall`, and `processRunOut` to use `#extraRunsModal` in `app.js`
-- [x] Update footer version to `1.19.0` in `index.html`
-- [x] Add unit tests for extra runs on Wides, No Balls, and Run Outs in `test.js`
-- [x] Verify automated tests pass (`node test.js`)
-- [x] Update `PROMPT.md` and `README.md` with confirmed requirements and status
-- [x] Commit Phase 2 changes separately without special tags
+- [x] Commit changes cleanly without special tags
