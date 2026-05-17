@@ -313,6 +313,14 @@ if (gameState.match.liveInnings.batsmen["P1"].runs !== 4) {
     console.error(`Test 10 Failed: Batsman P1 runs should be 4`);
     process.exit(1);
 }
+if (gameState.match.liveInnings.batsmen["P1"].balls !== 1) {
+    console.error(`Test 10 Failed: Batsman P1 balls should be 1 on noball`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].balls !== 0) {
+    console.error(`Test 10 Failed: Bowler balls should remain 0 on noball`);
+    process.exit(1);
+}
 
 // Test 11: Run Out + extra runs (Batsman)
 resetTestState();

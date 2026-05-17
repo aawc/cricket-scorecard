@@ -1052,6 +1052,7 @@ function finalizeDelivery(type, extraRuns, accrueTo) {
             bowler.runs += totalRuns;
             bowler.noballs = (bowler.noballs || 0) + 1;
         }
+        if (activeB) activeB.balls++;
 
         if (extraRuns > 0) {
             if (accrualSection && accrueTo === 'batsman' && activeB) {
