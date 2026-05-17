@@ -1,7 +1,5 @@
-# Task List - Auto-Accrue Wide Extras to Byes
+# Task List - Create SECURITY.md
 
-- [x] Update footer version to `1.26.0` in `index.html`
-- [x] Refactor modal number button listener in `app.js` to instantly finalize Wides as byes
-- [x] Verify automated unit tests pass (`node test.js`)
-- [x] Update `PROMPT.md` to document auto-bye behavior for wides
-- [x] Commit changes cleanly without special tags
+- [x] Create `SECURITY.md` with public vulnerability reporting section
+- [x] Verify automated tests pass (`node test.js`)
+- [x] Commit `SECURITY.md` cleanly without special tags

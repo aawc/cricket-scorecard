@@ -1,16 +1,12 @@
-# Walkthrough - Auto-Accrue Wide Extras to Byes
+# Walkthrough - Security Policy Creation
 
-I have successfully streamlined the extra runs workflow for Wides in a clean, independent commit without any special tags.
+I have successfully created the project's security policy in a clean commit without any special tags.
 
 ## Changes Made
 
-### 1. Auto-Accrue Wides to Byes (Commit `app.js`)
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Updated the modal number button click listener (`extraRunValBtns`). Selecting any extra runs > 0 on a Wide delivery instantly closes `#extraRunsModal` and executes `finalizeDelivery('wide', runs, 'byes')`, skipping the unnecessary "Batsman vs Byes" prompt.
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Footer version updated to `v1.26.0`.
-
-### 2. Documentation & Tests
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md)** Updated to explicitly document that extra runs on wides automatically default to byes without prompting.
-- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)** Automated tests verified.
+### 1. Security Policy Document (`SECURITY.md`)
+- **[SECURITY.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/SECURITY.md)**: Created a new security document outlining the PWA's zero-backend architecture, local data storage privacy guarantees, HTTPS/Service Worker caching, and CDN dependency safety.
+- **Vulnerability Reporting**: In accordance with user instructions, the reporting policy explicitly guides users to open public bug reports directly on the GitHub repository issues tracker.
 
 ## Verification Results
 
