@@ -50,7 +50,18 @@ In progress. Core files created. Reset match behavior update added to the plan.
 
 ## Features (Planned)
 
-- **Reset Match Behavior**: Retain all match settings (overs, penalties, etc.) and player names on reset, but clear all innings data.
+- None at this moment.
+
+## Documentation Structure
+
+The repository maintains several core documentation files to manage the AI-assisted development lifecycle:
+
+| Document | Phase | Primary Audience | Core Question Answered |
+| :--- | :--- | :--- | :--- |
+| **`implementation_plan.md`** | Planning | User & AI | *How are we going to build this feature technically?* |
+| **`task.md`** | Execution | AI (Progress Tracking) | *What exact step are we working on right now?* |
+| **`walkthrough.md`** | Verification | User | *What exactly did we build and how was it tested?* |
+| **`PROMPT.md`** | Project Lifecycle | Future AI / Developers | *What is this entire application and all of its rules?* |
 
 ## Tech Stack
 
