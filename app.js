@@ -60,6 +60,9 @@ const bulkImportTextarea = document.getElementById('bulk-import-textarea');
 const executeBulkImportBtn = document.getElementById('execute-bulk-import-btn');
 const team1BulkBtn = document.getElementById('team1-bulk-btn');
 const team2BulkBtn = document.getElementById('team2-bulk-btn');
+const tossModalEl = document.getElementById('tossModal');
+const tossTeam1Btn = document.getElementById('toss-team1-btn');
+const tossTeam2Btn = document.getElementById('toss-team2-btn');
 
 // Display Elements
 const scoreDisplay = document.getElementById('score-display');
@@ -97,6 +100,7 @@ const undoBtn = document.getElementById('undo-btn');
 
 let runoutModalInstance = null;
 let extraRunsModalInstance = null;
+let tossModalInstance = null;
 let currentDeliveryType = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
@@ -127,6 +131,9 @@ function setupEventListeners() {
     if (team1BulkBtn) team1BulkBtn.addEventListener('click', () => { activeBulkImportTeam = 1; });
     if (team2BulkBtn) team2BulkBtn.addEventListener('click', () => { activeBulkImportTeam = 2; });
     if (executeBulkImportBtn) executeBulkImportBtn.addEventListener('click', handleBulkImport);
+
+    if (tossTeam1Btn) tossTeam1Btn.addEventListener('click', () => executeStartMatch(1));
+    if (tossTeam2Btn) tossTeam2Btn.addEventListener('click', () => executeStartMatch(2));
 
     themeBtns.forEach(btn => {
         btn.addEventListener('click', () => setTheme(btn.dataset.theme));
@@ -202,8 +209,8 @@ function renderRosters() {
     team1RosterList.innerHTML = '';
     team2RosterList.innerHTML = '';
 
-    const t1 = gameState.match.team1.players && gameState.match.team1.players.length > 0 ? gameState.match.team1.players : ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8"];
-    const t2 = gameState.match.team2.players && gameState.match.team2.players.length > 0 ? gameState.match.team2.players : ["Player 9", "Player 10", "Player 11", "Player 12", "Player 13", "Player 14", "Player 15", "Player 16"];
+    const t1 = gameState.match.team1.players || [];
+    const t2 = gameState.match.team2.players || [];
 
     t1.forEach(name => addPlayerToRoster(1, name));
     t2.forEach(name => addPlayerToRoster(2, name));
@@ -429,6 +436,23 @@ function startMatch() {
         return;
     }
 
+    if (typeof bootstrap === 'undefined') {
+        executeStartMatch(1);
+        return;
+    }
+
+    if (tossTeam1Btn) tossTeam1Btn.textContent = `${gameState.match.team1.name || 'Team 1'} Batting`;
+    if (tossTeam2Btn) tossTeam2Btn.textContent = `${gameState.match.team2.name || 'Team 2'} Batting`;
+
+    if (!tossModalInstance && tossModalEl) {
+        tossModalInstance = new bootstrap.Modal(tossModalEl);
+    }
+    if (tossModalInstance) tossModalInstance.show();
+}
+
+function executeStartMatch(battingTeamNum) {
+    gameState.match.currentBattingTeam = battingTeamNum;
+    
     // Initialize live innings
     gameState.match.liveInnings = {
         score: 0,
@@ -437,9 +461,9 @@ function startMatch() {
         extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
         batsmen: {},
         bowlers: {},
-        currentBatsman1: "", // Force selection
-        currentBatsman2: "", // Force selection
-        currentBowler: "", // Force selection
+        currentBatsman1: "",
+        currentBatsman2: "",
+        currentBowler: "",
         previousBowler: null,
         outBatsmen: [],
         overLog: []

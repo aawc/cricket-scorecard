@@ -1,25 +1,26 @@
-# Implementation Plan - Full Scorecard Mode & Bowler Extras
+# Implementation Plan - Toss Selection & Empty Initial Rosters
 
-The goal is to rename the screenshot mode to "Full Scorecard" mode and enhance the bowler summary tables to display the total number of wides and no balls bowled by each bowler.
+The goal is to introduce a toss selection prompt when starting a match to choose which team bats first, and to remove default placeholder players ("Player 1", "Player 2") on initial load while retaining rosters upon reset.
 
 ## Proposed Changes
 
-### 1. Rename Screenshot Mode to Full Scorecard Mode
+### 1. Toss Selection Modal (`index.html`)
 #### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
-- Change `#screenshot-mode-btn` text from "Screenshot" to "Full Scorecard".
-- Change `#exit-screenshot-mode-btn` text from "Exit Screenshot Mode" to "Exit Full Scorecard".
-- Change `#summary-section` card title from "Match Summary" to "Full Scorecard".
-- Update footer version to `1.24.0`.
+- Add `#tossModal` Bootstrap modal to prompt for the team batting first upon clicking "Start Match".
+- Update footer version to `1.25.0`.
 
 #### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `initBowlerStats` to initialize `wides: 0` and `noballs: 0`.
-- In `finalizeDelivery`, increment `bowler.wides` on a wide delivery and `bowler.noballs` on a no ball delivery.
-- In `generateSummaryView`, update bowlers table headers to include `Wides` and `No Balls` columns and populate row data.
+- When `startMatch()` runs: validate player counts first. If valid, open `#tossModal` showing exact team names.
+- Add `executeStartMatch(battingTeamNum)` function to finalize match start and flip to scorecard.
 
-### 2. Documentation & Verification
-- Update [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) and [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md) to reflect "Full Scorecard" terminology and bowler extras tracking.
-- Add unit tests in [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js) verifying bowler wides and noballs count correctly.
+### 2. Empty Initial Rosters (`app.js`)
+#### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
+- Update `renderRosters()` to NOT load placeholder names ("Player 1", "Player 2") if player arrays are empty. Initial lists will be blank on first load, but will repopulate correctly on `resetMatch()`.
+
+### 3. Documentation & Tests
+- Update [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) and [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md).
+- Run `node test.js` automatically to verify scoring functionality.
 
 ## Verification Plan
-- Run `node test.js` to verify unit tests pass.
-- Manual verification: Click "Wide" and "No Ball", open "Full Scorecard", verify bowler row displays exact wide and no ball tallies.
+- Run `node test.js` to ensure automated tests pass.
+- Open browser: Verify team rosters are empty on first load. Add players, click Start Match, verify `#tossModal` appears. Select Team 2, verify Team 2 players populate batsman dropdowns. Reset match, verify roster lists retain names.

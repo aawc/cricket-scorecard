@@ -21,6 +21,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Web App Manifest for PWA installation.
 - Service Worker for offline support.
 - MIT License.
+- Toss & Lineup Setup: Start match prompt for toss selection (batting team choice), empty initial rosters that auto-retain upon reset.
 - Player Management: Interactive Drag & Drop lineup sorting, between-team transfers, bulk paste import modal, and shared player mirroring.
 - Over Log: Display details of previous balls in the current over.
 - Selectable Active Players: Allow selecting current batsmen and bowler on the scorecard.

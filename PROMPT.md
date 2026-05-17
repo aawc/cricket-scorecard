@@ -19,6 +19,8 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Full Scorecard Mode**: Include a toggle to display the scoreboard in a clean, compact monospace table layout optimized for taking screenshots to share. Display complete match status and individual player stats for each innings, including individual bowler Wides and No Balls columns. Ensure no invalid extra innings appear when the match ends.
 - **Full Scorecard Toggle**: Provide a smooth 3D page flip animation to switch back and forth between scoring entry and Full Scorecard mode.
 - **Player Management**:
+    - **Toss Selection**: When starting the match, prompt for toss winner (batting first choice) and populate scorecard dropdowns based on that selection.
+    - **Initial Roster Rule**: Roster lists start completely empty on initial load (no placeholder pre-population), but retain entered names upon match reset.
     - Interactive drag-and-drop roster cards with SortableJS for batting order sorting and between-team transfers.
     - Bulk paste import modal for rapid roster loading.
     - Dual-team toggle button (`🔁`) to flag and automatically mirror shared players across both teams.

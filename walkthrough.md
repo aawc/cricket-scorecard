@@ -1,18 +1,19 @@
-# Walkthrough - Full Scorecard Mode & Bowler Extras Tracking
+# Walkthrough - Toss Selection & Initial Roster Cleanup
 
-I have successfully implemented the requested view renaming and enhanced bowler statistics across clean, independent commits without any special tags.
+I have successfully implemented the toss prompt and empty initial roster rules across clean, independent commits without any special tags.
 
 ## Changes Made
 
-### 1. UI Renaming & Header Updates (Commit `index.html`)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Renamed `#screenshot-mode-btn`, `#exit-screenshot-mode-btn`, and `#summary-section` titles from "Screenshot" / "Match Summary" to "Full Scorecard". Footer version updated to `v1.24.0`.
+### 1. Empty Initial Rosters (Commit `app.js`)
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Refactored `renderRosters()` to prevent automatic pre-population of placeholder names ("Player 1"). Rosters remain blank on initial page load without saved state, while correctly repopulating on match reset.
 
-### 2. Bowler Wides & No Balls Columns (Commit `app.js`)
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Enhanced bowler data structures (`liveInnings.bowlers`) to track individual wide and no-ball counts. Updated `finalizeDelivery` to increment tallies on wide and no-ball deliveries. Updated `generateSummaryView` to render two new table columns: `Wides` and `No Balls`.
+### 2. Toss Selection Modal (Commit `index.html`)
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added `#tossModal` prompting for which team is batting first. Footer version updated to `v1.25.0`.
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: `startMatch()` validates players and opens `#tossModal`. Selecting a team sets `currentBattingTeam` and initializes the match. `updateUI()` populates the scorecard dropdowns correctly based on the toss decision.
 
 ### 3. Documentation & Tests
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated to reflect "Full Scorecard" terminology and bowler extras columns.
-- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)** Added Test 12 to verify bowler wide and no-ball tallies count accurately in memory.
+- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated to reflect toss selection and roster pre-population rules.
+- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)** Automated tests fully verified.
 
 ## Verification Results
 
