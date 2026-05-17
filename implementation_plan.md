@@ -1,48 +1,64 @@
-# Implementation Plan - Cricket Scorecard PWA
+# Implementation Plan - Run Out & Extra Runs Specification
 
-Create a standalone website on GitHub Pages that can be used as an offline PWA to enter and keep track of score during a game of cricket.
+The goal is to implement two new scoring capabilities in the Cricket Scorecard PWA, committed separately without any special tags:
+1. **Run Out Specification**: Allow specifying whether the striker or non-striker is run out when a run out occurs.
+2. **Extra Runs Specification**: Allow specifying extra runs on Wides, No Balls, and Run Outs, asking whether runs accrue to the batsman or byes (always counting against the current bowler).
 
-## Confirmed Decisions
-
-Based on your feedback, I will proceed with the following:
-
-1.  **Tech Stack**: Vanilla HTML, CSS, and JavaScript (no build step, easy hosting on GitHub Pages). Use Bootstrap 5 via CDN for styling.
-2.  **State Management**: `localStorage` will be used to persist the game state.
-3.  **Cricket Rules**: Standard rules by default, but with **configuration options** in the UI.
-    *   **Default Parameters**:
-        *   Total number of innings: 1 per team (Always).
-        *   Number of overs per innings: 8 (default).
-        *   Max allowed overs per bowler: 2 (default).
-        *   Wides/No Balls: 1 run penalty + extra ball (default).
-        *   Allow single batsman to play: Yes (default).
-        *   Enable Leg Byes: Yes (default).
-    *   **Configurable**: The user should be able to adjust these parameters before or during the game (if applicable). Added option to disable leg byes.
-    *   **Teams/Players**: Support entering player names for both teams. Allow one player to be in both teams. Allow selecting current batsmen and bowler from the player list on the scorecard.
-    *   **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
-    *   **Validation**: Count the number of players and ensure there are enough to complete the overs based on the max overs per bowler limit. Do not start the match if insufficient.
-4.  **UI Design**: Mobile-first, large buttons for easy tapping on a field. Visually enhanced using Bootstrap. Support multiple themes (e.g., Light, Dark, Cricket Green). Use a flipping page effect to switch between score entry and screenshot mode. Disable screenshot and reset buttons on the settings page. Do not show the scoreboard section when on the match settings page. Include a footer with a version number, deployment date, and time. **Update version only on code changes.**
-5.  **Sharing/Screenshot**: Include a mechanism to display a clean, compact scoreboard view optimized for taking screenshots. Ensure a way to switch back and forth. Permalink support included. Use a table layout and fixed-width font for the summary in screenshot mode. Fix bug where extra innings is shown in summary when match is over.
-6.  **Over Log**: Display details of previous balls in the current over (e.g., "1wd", "4", "W", "0") to track progress within the over.
-7.  **Player Selection Workflow**: Use dropdowns on the scorecard to select players, filtering for eligibility. Disable controls when selection is needed. Bring attention to the dropdowns when selection is required.
-8.  **Innings End**: End the innings when the maximum total allowed overs have been bowled for the first innings.
-9.  **Second Innings Stats**: Show target, current run rate (CRR), and required run rate (RRR) during the second innings.
-10. **Reset Match Behavior**: **When hitting "Reset", retain all match settings (overs, penalties, etc.) and player names, but forget all information about the innings (score, wickets, balls, etc.).**
+## User Review Required
+- **UI/UX Workflow**: We will introduce two Bootstrap modals (`runoutModal` and `extraRunsModal`) to provide quick, touch-friendly prompts for on-field scoring without cluttering the main interface.
+- **Commit Strategy**: As requested, changes will be made and committed in two distinct phases (Change 1, then Change 2).
 
 ## Open Questions
-
-None. I am ready to execute this plan.
+None. The requirements and cricket scoring rules are clear.
 
 ## Proposed Changes
 
-### Core Application
+### Phase 1: Run Out Specification (Striker vs Non-Striker)
+
+#### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
+- Add a dedicated "Run Out" button in the `extra-buttons` row (adjusting columns from `col-4` to `col-3` to fit Wide, No Ball, Wicket, and Run Out).
+- Add a Bootstrap modal (`#runoutModal`) with buttons to select either the Striker or Non-Striker.
+- Update footer version to `1.18.0`.
 
 #### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `resetMatch` to retain settings and players, and repopulate UI inputs.
+- Add event listener for the "Run Out" button to trigger `#runoutModal`.
+- Add `processRunOut(isStriker)` function:
+  - Increments team wickets.
+  - Increments bowler balls and live balls (but does NOT credit the bowler with a wicket in bowler stats, per cricket laws).
+  - Marks the selected batsman as out (`outBatsmen.push`).
+  - Clears the current batsman slot to prompt selection of the incoming batsman.
+  - Logs 'W-RO' in the over log.
+- Save state to `localStorage` and update UI.
+
+#### [MODIFY] [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)
+- Add unit tests for Run Out (verifying correct batsman is removed, ball counts, but bowler wicket count does not increment).
+
+---
+
+### Phase 2: Extra Runs on Wides, No Balls, and Run Outs
+
+#### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
+- Add `#extraRunsModal` Bootstrap modal. It will prompt for extra runs (0, 1, 2, 3, 4, 6) and whether they accrue to Batsman or Byes.
+- Update footer version to `1.19.0`.
+
+#### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
+- Refactor `addWide`, `addNoBall`, and `processRunOut` to trigger `#extraRunsModal`.
+- When extra runs are specified:
+  - If Wide: Add base wide penalty + extra runs to total score and to current bowler runs. (Ball does not count).
+  - If No Ball: Add base no ball penalty + extra runs to total score and to current bowler runs. (Ball does not count).
+  - If Run Out: Add extra runs to total score and current bowler runs. Ball counts. Wicket is taken.
+  - If accrued to Batsman: Add extra runs to active batsman.
+  - If accrued to Byes: Add extra runs to byes tally. (For byes, ball counts unless Wide/No Ball).
+
+#### [MODIFY] [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)
+- Add unit tests for Wide + extra runs (Batsman vs Byes), No Ball + extra runs, and Run Out + extra runs.
 
 ## Verification Plan
 
+### Automated Tests
+- Run `node test.js` to verify all unit tests pass.
+
 ### Manual Verification
-- Change some settings and enter players. Start match.
-- Score some runs.
-- Click "Reset".
-- Verify that settings and players are retained in the inputs, but score is gone and we are on settings page.
+1. Start match in browser.
+2. Click "Run Out". Verify modal opens showing correct striker and non-striker names. Select one, verify they are marked out and wicket increases.
+3. Click "Wide", select 2 extra runs accrued to Byes. Verify score increases by 3 (1 wide penalty + 2 byes), bowler runs increase by 3, balls do not increase.

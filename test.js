@@ -228,4 +228,34 @@ if (targetDisplay.textContent !== expectedText) {
     process.exit(1);
 }
 
+// Test 8: Run Out specification (Striker vs Non-Striker)
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3"];
+// P1 is striker (active), P2 is non-striker
+// Mock confirm to return false (Non-striker run out)
+global.confirm = () => false;
+triggerRunOutModal();
+
+if (gameState.match.liveInnings.wickets !== 1) {
+    console.error("Test 8 Failed: Wickets should be 1 on run out");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.balls !== 1) {
+    console.error("Test 8 Failed: Balls should be 1 on run out");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].wickets !== 0) {
+    console.error("Test 8 Failed: Bowler wickets should remain 0 on run out");
+    process.exit(1);
+}
+if (!gameState.match.liveInnings.outBatsmen.includes("P2")) {
+    console.error("Test 8 Failed: Non-striker P2 should be out");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].balls !== 1) {
+    console.error("Test 8 Failed: Striker P1 should have faced 1 ball");
+    process.exit(1);
+}
+
 console.log("All tests passed!");

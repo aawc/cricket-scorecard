@@ -138,9 +138,10 @@
                                         <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="6">6</button></div>
                                     </div>
                                     <div class="extra-buttons row g-2 mb-2">
-                                        <div class="col-4"><button id="wide-btn" class="btn btn-warning w-100">Wide</button></div>
-                                        <div class="col-4"><button id="noball-btn" class="btn btn-warning w-100">No Ball</button></div>
-                                        <div class="col-4"><button id="wicket-btn" class="btn btn-danger w-100">Wicket</button></div>
+                                        <div class="col-3"><button id="wide-btn" class="btn btn-warning w-100">Wide</button></div>
+                                        <div class="col-3"><button id="noball-btn" class="btn btn-warning w-100">No Ball</button></div>
+                                        <div class="col-3"><button id="wicket-btn" class="btn btn-danger w-100">Wicket</button></div>
+                                        <div class="col-3"><button id="runout-btn" class="btn btn-danger w-100">Run Out</button></div>
                                     </div>
                                     <div class="other-buttons row g-2">
                                         <div class="col-4"><button id="bye-btn" class="btn btn-info w-100">Bye</button></div>
@@ -166,10 +167,29 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Run Out Modal -->
+            <div class="modal fade" id="runoutModal" tabindex="-1" aria-labelledby="runoutModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="runoutModalLabel">Run Out Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="mb-3">Which batsman was run out?</p>
+                            <div class="d-grid gap-2">
+                                <button id="runout-striker-btn" class="btn btn-danger" data-bs-dismiss="modal">Striker</button>
+                                <button id="runout-nonstriker-btn" class="btn btn-danger" data-bs-dismiss="modal">Non-Striker</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <footer class="text-center text-muted mt-auto py-2 border-top">
-            <small>Version: 1.17.0 | Deployed: 2026-05-13 08:18</small>
+            <small>Version: 1.18.0 | Deployed: 2026-05-17 07:35</small>
             <div class="mt-1">
                 <small>🚀 Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with ✨ Gemini</small>
             </div>

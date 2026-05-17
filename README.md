@@ -27,6 +27,7 @@ In progress. Core files created. Reset match behavior update added to the plan.
 - Controls Disabling: When selection is needed.
 - Single Batsman Rule: Setting to allow a single batsman to play (default: true).
 - Striker Indicator: Used background color/border instead of `*`.
+- Run Out Specification: Select whether striker or non-striker is run out.
 - Fixes: Count ball faced on wicket.
 - Match Over Logic: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - Permalink: Generate a URL to share match state across devices.

@@ -78,9 +78,13 @@ const runBtns = document.querySelectorAll('.run-btn');
 const wideBtn = document.getElementById('wide-btn');
 const noballBtn = document.getElementById('noball-btn');
 const wicketBtn = document.getElementById('wicket-btn');
+const runoutBtn = document.getElementById('runout-btn');
+const runoutStrikerBtn = document.getElementById('runout-striker-btn');
+const runoutNonstrikerBtn = document.getElementById('runout-nonstriker-btn');
 const byeBtn = document.getElementById('bye-btn');
 const legbyeBtn = document.getElementById('legbye-btn');
 const undoBtn = document.getElementById('undo-btn');
+let runoutModalInstance = null;
 
 // Initialize
 function init() {
@@ -108,6 +112,9 @@ function setupEventListeners() {
     wideBtn.addEventListener('click', addWide);
     noballBtn.addEventListener('click', addNoBall);
     wicketBtn.addEventListener('click', addWicket);
+    runoutBtn.addEventListener('click', triggerRunOutModal);
+    runoutStrikerBtn.addEventListener('click', () => processRunOut(true));
+    runoutNonstrikerBtn.addEventListener('click', () => processRunOut(false));
     byeBtn.addEventListener('click', addBye);
     legbyeBtn.addEventListener('click', addLegBye);
     undoBtn.addEventListener('click', undoLastAction);
@@ -691,6 +698,88 @@ function addWicket() {
     live.outBatsmen.push(activeBatsmanName);
     
     if (live.currentBatsman1 === activeBatsmanName) {
+        live.currentBatsman1 = ""; // Force selection
+    } else {
+        live.currentBatsman2 = ""; // Force selection
+    }
+    
+    if (gameState.settings.allowSingleBatsman && live.wickets === totalPlayers - 1) {
+        if (live.currentBatsman1 && live.batsmen[live.currentBatsman1]) live.batsmen[live.currentBatsman1].active = true;
+        if (live.currentBatsman2 && live.batsmen[live.currentBatsman2]) live.batsmen[live.currentBatsman2].active = true;
+    }
+
+    checkOverComplete();
+    checkMatchOver();
+    saveToLocalStorage();
+    updateUI();
+}
+
+function triggerRunOutModal() {
+    if (gameState.match.matchOver) return;
+    const live = gameState.match.liveInnings;
+    
+    const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+    const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
+
+    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
+    if (gameState.settings.allowSingleBatsman && live.wickets === battingTeam.players.length - 1) {
+        processRunOut(true); // Single batsman out
+        return;
+    }
+
+    runoutStrikerBtn.textContent = `Striker (${striker || 'None'})`;
+    runoutNonstrikerBtn.textContent = `Non-Striker (${nonStriker || 'None'})`;
+
+    if (typeof bootstrap !== 'undefined') {
+        if (!runoutModalInstance) {
+            runoutModalInstance = new bootstrap.Modal(document.getElementById('runoutModal'));
+        }
+        runoutModalInstance.show();
+    } else {
+        const isStriker = confirm(`Who was run out?\n[OK] Striker: ${striker}\n[Cancel] Non-Striker: ${nonStriker}`);
+        processRunOut(isStriker);
+    }
+}
+
+function processRunOut(isStriker) {
+    if (gameState.match.matchOver) return;
+    saveHistory();
+    const live = gameState.match.liveInnings;
+    
+    const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+    const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
+    const outBatsmanName = isStriker ? striker : nonStriker;
+
+    if (!outBatsmanName) return;
+
+    const outB = live.batsmen[outBatsmanName];
+    if (outB && isStriker) {
+        outB.balls++; // Striker faced the ball
+    } else if (!isStriker) {
+        const strikerB = live.batsmen[striker];
+        if (strikerB) strikerB.balls++; // Striker still faced the ball
+    }
+
+    live.wickets++;
+    live.balls++;
+    if (live.currentBowler && live.bowlers[live.currentBowler]) {
+        live.bowlers[live.currentBowler].balls++;
+    }
+    live.overLog.push('W-RO');
+
+    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
+    const totalPlayers = battingTeam.players.length;
+    const maxWickets = gameState.settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
+
+    if (live.wickets >= maxWickets && totalPlayers > 0) {
+        alert("Innings Over! All batsmen out.");
+        endInnings();
+        return;
+    }
+
+    live.outBatsmen.push(outBatsmanName);
+    
+    if (live.currentBatsman1 === outBatsmanName) {
         live.currentBatsman1 = ""; // Force selection
     } else {
         live.currentBatsman2 = ""; // Force selection

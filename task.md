@@ -1,75 +1,18 @@
-- [x] Setup project structure
-- [x] Create `index.html` with basic structure and settings UI
-- [x] Create `style.css` for responsive design and screenshot mode
-- [x] Create `app.js` for core logic
-    - [x] State management (localStorage)
-    - [x] Scoring logic and rule configuration
-    - [x] Screenshot mode toggle
-- [x] Create `manifest.json` for PWA
-- [x] Create `sw.js` for offline support
-- [x] Add MIT License
-- [x] Update UI for player name inputs
-- [x] Update UI for over log display
-- [x] Update logic in `app.js` for player names and shared player
-- [x] Update logic in `app.js` for over log
-- [x] Update UI for selectable batsmen and bowler
-- [x] Update logic in `app.js` to handle selectable players and strike rotation
-- [x] Refactor state management in `app.js` to support multiple innings and full player stats
-- [x] Create UI for comprehensive match summary in `index.html`
-- [x] Update screenshot mode logic in `app.js` to show the summary
-- [x] Fix screenshot mode toggle (add exit button to summary)
-- [x] Add prompt for bowler on new over
-- [x] Add prompt for batsman on wicket
-- [x] Prompt for starting players
-- [x] Update UI to use `*` for striker instead of labels
-- [x] Add marker spans for striker in HTML
-- [x] Update UI to use marker spans instead of CSS after rule
-- [x] Implement innings end logic in `app.js`
-- [x] Implement bowler validation in `app.js`
-- [x] Update UI to move marker span before select in `index.html`
-- [x] Refactor `app.js` to use dropdowns instead of prompts
-- [x] Implement filtering in dropdowns in `app.js`
-- [x] Implement control disabling when selection is needed in `app.js`
-- [x] Add "Allow single batsman to play" checkbox in `index.html`
-- [x] Remove marker spans from `index.html`
-- [x] Update `.batsman.active` styles in `style.css`
-- [x] Fix balls faced on wicket in `app.js`
-- [x] Implement single batsman rule in `app.js`
-- [x] Implement target calculation in `app.js`
-- [x] Implement `checkMatchOver` in `app.js`
-- [x] Disable controls on match over in `app.js`
-- [x] Add "Share Match" button in `index.html`
-- [x] Implement state serialization to URL in `app.js`
-- [x] Implement state deserialization from URL in `app.js`
-- [x] Include Bootstrap CSS and JS in `index.html`
-- [x] Refactor `index.html` layout with Bootstrap
-- [x] Add theme selector in `index.html`
-- [x] Implement theme switching in `app.js`
-- [x] Wrap sections in flip container in `index.html`
-- [x] Add CSS for flipping effect in `style.css`
-- [x] Update summary view to use monospace font and refine table layout
-- [x] Update `app.js` to handle flip animation
-- [x] Update `resetMatch` in `app.js` to retain player names
-- [x] Add "Enable Leg Byes" checkbox in `index.html`
-- [x] Update `app.js` to disable buttons on settings page
-- [x] Update `app.js` to hide/show Leg Bye button based on setting
-- [x] Hide flip container on settings page in `app.js`
-- [x] Debug and fix controls disabling logic in `app.js`
-- [x] Add footer to `index.html` with auto-updating version (by agent)
-- [x] Update footer in `index.html` with time
-- [x] Implement visual cues for player selection in `app.js`
-- [x] Remove "Innings per Team" from `index.html`
-- [x] Enforce max overs per bowler in `app.js` by filtering dropdown
-- [x] Add player count validation in `startMatch` in `app.js`
-- [x] Create `FAVICON.md` with favicon prompt
-- [x] Fix `generateSummaryView` in `app.js` to not show extra innings
-- [x] Add credits to footer in `index.html`
-- [x] Create `test.js` with unit tests
-- [x] Add test documentation to `README.md`
-- [x] End innings on max overs in `app.js`
-- [x] Add `#target-display` in `index.html`
-- [x] Update `updateUI` in `app.js` to show Target, CRR, RRR
-- [x] Refactor mocks in `test.js` to retain state
-- [x] Add tests for CRR/RRR and innings end in `test.js`
-- [/] Update `resetMatch` in `app.js` to retain all settings
-- [/] Verify implementation
+# Task List - Run Out & Extra Runs Specification
+
+## Phase 1: Run Out Specification (Striker vs Non-Striker)
+- [x] Add "Run Out" button and `#runoutModal` to `index.html`
+- [x] Implement `processRunOut(isStriker)` logic in `app.js`
+- [x] Update footer version to `1.18.0` in `index.html`
+- [x] Add unit tests for Run Out in `test.js`
+- [x] Verify automated tests pass (`node test.js`)
+- [x] Commit Phase 1 changes separately without special tags
+
+## Phase 2: Extra Runs on Wides, No Balls, and Run Outs
+- [ ] Add `#extraRunsModal` to `index.html`
+- [ ] Update `addWide`, `addNoBall`, and `processRunOut` to use `#extraRunsModal` in `app.js`
+- [ ] Update footer version to `1.19.0` in `index.html`
+- [ ] Add unit tests for extra runs on Wides, No Balls, and Run Outs in `test.js`
+- [ ] Verify automated tests pass (`node test.js`)
+- [ ] Update `PROMPT.md` and `README.md` with confirmed requirements and status
+- [ ] Commit Phase 2 changes separately without special tags
