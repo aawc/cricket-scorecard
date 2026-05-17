@@ -56,6 +56,10 @@ const team1QuickAdd = document.getElementById('team1-quick-add');
 const team2QuickAdd = document.getElementById('team2-quick-add');
 const team1AddBtn = document.getElementById('team1-add-btn');
 const team2AddBtn = document.getElementById('team2-add-btn');
+const bulkImportTextarea = document.getElementById('bulk-import-textarea');
+const executeBulkImportBtn = document.getElementById('execute-bulk-import-btn');
+const team1BulkBtn = document.getElementById('team1-bulk-btn');
+const team2BulkBtn = document.getElementById('team2-bulk-btn');
 
 // Display Elements
 const scoreDisplay = document.getElementById('score-display');
@@ -96,6 +100,7 @@ let extraRunsModalInstance = null;
 let currentDeliveryType = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
+let activeBulkImportTeam = 1;
 
 // Initialize
 function init() {
@@ -118,6 +123,10 @@ function setupEventListeners() {
     if (team2AddBtn) team2AddBtn.addEventListener('click', () => handleQuickAdd(2));
     if (team1QuickAdd) team1QuickAdd.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleQuickAdd(1); });
     if (team2QuickAdd) team2QuickAdd.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleQuickAdd(2); });
+
+    if (team1BulkBtn) team1BulkBtn.addEventListener('click', () => { activeBulkImportTeam = 1; });
+    if (team2BulkBtn) team2BulkBtn.addEventListener('click', () => { activeBulkImportTeam = 2; });
+    if (executeBulkImportBtn) executeBulkImportBtn.addEventListener('click', handleBulkImport);
 
     themeBtns.forEach(btn => {
         btn.addEventListener('click', () => setTheme(btn.dataset.theme));
@@ -246,6 +255,18 @@ function handleQuickAdd(teamNum) {
         addPlayerToRoster(teamNum, val);
         input.value = '';
     }
+}
+
+function handleBulkImport() {
+    if (!bulkImportTextarea) return;
+    const rawText = bulkImportTextarea.value;
+    const names = rawText.split(/[\n,]+/).map(n => n.trim()).filter(n => n !== '');
+    if (names.length > 0) {
+        const targetList = activeBulkImportTeam === 1 ? team1RosterList : team2RosterList;
+        if (targetList) targetList.innerHTML = ''; // Clear current roster
+        names.forEach(name => addPlayerToRoster(activeBulkImportTeam, name));
+    }
+    bulkImportTextarea.value = '';
 }
 
 // Load from LocalStorage or URL

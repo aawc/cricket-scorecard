@@ -10,10 +10,10 @@
 - [x] Commit Phase 1 changes cleanly without special tags
 
 ## Phase 2: Bulk Paste Import Capability (Commit 2)
-- [ ] Add `#bulkImportModal` to `index.html` and update version to `1.22.0`
-- [ ] Implement modal event listeners and import parsing logic in `app.js`
-- [ ] Verify automated unit tests pass (`node test.js`)
-- [ ] Commit Phase 2 changes cleanly without special tags
+- [x] Add `#bulkImportModal` to `index.html` and update version to `1.22.0`
+- [x] Implement modal event listeners and import parsing logic in `app.js`
+- [x] Verify automated unit tests pass (`node test.js`)
+- [x] Commit Phase 2 changes cleanly without special tags
 
 ## Phase 3: Shared Player Toggle (Commit 3)
 - [ ] Add shared player button (`🔁`) to roster items in `app.js`
