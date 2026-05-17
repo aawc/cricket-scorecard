@@ -1,9 +1,11 @@
-# Task List - Strike Rotation on Extra Runs
+# Task List - Auto-Selection & Dual Batsman Enforcement
 
-- [x] Update footer version to `1.31.0` in `index.html`
-- [x] Extract `rotateStrike()` helper function in `app.js`
-- [x] Update `addRuns`, `checkOverComplete`, and `finalizeDelivery` to use `rotateStrike()` in `app.js`
-- [x] Add unit Test 14 verifying strike rotation on extra runs in `test.js`
+- [x] Update footer version to `1.32.0` in `index.html`
+- [x] Implement `autoSelectEligiblePlayers()` helper in `app.js`
+- [x] Update `updateUI` and `checkControlsState` in `app.js`
+- [x] Update lone striker movement in `addWicket` and `executeRunOutWicket` in `app.js`
+- [x] Add unit Test 15 verifying auto-selection and lone striker in `test.js`
 - [x] Verify automated unit tests pass (`node test.js`)
-- [x] Update `PROMPT.md` and `README.md` with confirmed extras strike rotation rules
+- [x] Update `PROMPT.md` and `README.md` with confirmed selection rules
+- [x] Check `SECURITY.md`
 - [x] Commit changes cleanly without special tags

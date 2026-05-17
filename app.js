@@ -803,6 +803,8 @@ function updateUI() {
         legbyeBtn.classList.add('hidden');
     }
 
+    autoSelectEligiblePlayers();
+
     // Populate dropdowns with filtering
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
     const bowlingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
@@ -888,6 +890,45 @@ function updateUI() {
     checkControlsState();
 }
 
+function autoSelectEligiblePlayers() {
+    const live = gameState.match.liveInnings;
+    if (!live) return;
+
+    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
+    const bowlingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
+    if (!battingTeam || !bowlingTeam) return;
+
+    const eligibleBatsmen = battingTeam.players.filter(p => !live.outBatsmen.includes(p));
+
+    if (!live.currentBatsman1) {
+        const candidates = eligibleBatsmen.filter(p => p !== live.currentBatsman2);
+        if (candidates.length === 1) {
+            live.currentBatsman1 = candidates[0];
+            initBatsmanStats(candidates[0], true);
+        }
+    }
+
+    if (!live.currentBatsman2 && (live.wickets < battingTeam.players.length - 1 || !gameState.settings.allowSingleBatsman)) {
+        const candidates = eligibleBatsmen.filter(p => p !== live.currentBatsman1);
+        if (candidates.length === 1) {
+            live.currentBatsman2 = candidates[0];
+            initBatsmanStats(candidates[0], false);
+        }
+    }
+
+    if (!live.currentBowler) {
+        const maxBalls = gameState.settings.maxOversPerBowler * 6;
+        const candidates = bowlingTeam.players.filter(p => {
+            const stats = live.bowlers[p] || { balls: 0 };
+            return p !== live.previousBowler && stats.balls < maxBalls;
+        });
+        if (candidates.length === 1) {
+            live.currentBowler = candidates[0];
+            initBowlerStats(candidates[0]);
+        }
+    }
+}
+
 function checkControlsState() {
     const live = gameState.match.liveInnings;
     const controls = controlsSection.querySelectorAll('button:not(#undo-btn)');
@@ -897,12 +938,14 @@ function checkControlsState() {
         return;
     }
 
+    const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
+    const totalPlayers = battingTeam ? battingTeam.players.length : 2;
     const singleBatsmanAllowed = gameState.settings.allowSingleBatsman;
+    const lastManStanding = singleBatsmanAllowed && live.wickets === totalPlayers - 1;
     
     let needsSelection = false;
-    
-    if (singleBatsmanAllowed) {
-        needsSelection = !(live.currentBatsman1 || live.currentBatsman2) || !live.currentBowler;
+    if (lastManStanding) {
+        needsSelection = !live.currentBatsman1 || !live.currentBowler;
     } else {
         needsSelection = !live.currentBatsman1 || !live.currentBatsman2 || !live.currentBowler;
     }
@@ -1143,8 +1186,13 @@ function addWicket() {
     }
     
     if (gameState.settings.allowSingleBatsman && live.wickets === totalPlayers - 1) {
-        if (live.currentBatsman1 && live.batsmen[live.currentBatsman1]) live.batsmen[live.currentBatsman1].active = true;
-        if (live.currentBatsman2 && live.batsmen[live.currentBatsman2]) live.batsmen[live.currentBatsman2].active = true;
+        if (live.currentBatsman2) {
+            live.currentBatsman1 = live.currentBatsman2;
+            live.currentBatsman2 = "";
+        }
+        if (live.currentBatsman1 && live.batsmen[live.currentBatsman1]) {
+            live.batsmen[live.currentBatsman1].active = true;
+        }
     }
 
     checkOverComplete();
@@ -1233,8 +1281,13 @@ function executeRunOutWicket(isStriker, extraRuns, accrueTo) {
     }
     
     if (gameState.settings.allowSingleBatsman && live.wickets === totalPlayers - 1) {
-        if (live.currentBatsman1 && live.batsmen[live.currentBatsman1]) live.batsmen[live.currentBatsman1].active = true;
-        if (live.currentBatsman2 && live.batsmen[live.currentBatsman2]) live.batsmen[live.currentBatsman2].active = true;
+        if (live.currentBatsman2) {
+            live.currentBatsman1 = live.currentBatsman2;
+            live.currentBatsman2 = "";
+        }
+        if (live.currentBatsman1 && live.batsmen[live.currentBatsman1]) {
+            live.batsmen[live.currentBatsman1].active = true;
+        }
     }
 
     checkOverComplete();

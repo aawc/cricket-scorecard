@@ -416,4 +416,19 @@ if (!gameState.match.liveInnings.batsmen["P2"].active) {
     process.exit(1);
 }
 
+// Test 15: Auto-selection and lone striker enforcement
+resetTestState();
+gameState.match.team1.players = ["P1", "P2", "P3"];
+gameState.settings.allowSingleBatsman = true;
+addWicket(); // Take wicket on P1. P3 is only un-dismissed player on bench.
+if (gameState.match.liveInnings.currentBatsman1 !== "P3") {
+    console.error(`Test 15 Failed: P3 should be auto-selected into striker slot, got ${gameState.match.liveInnings.currentBatsman1}`);
+    process.exit(1);
+}
+addWicket(); // Take wicket on P3. Only P2 is left.
+if (gameState.match.liveInnings.currentBatsman1 !== "P2") {
+    console.error(`Test 15 Failed: Lone survivor P2 should be moved to striker slot, got ${gameState.match.liveInnings.currentBatsman1}`);
+    process.exit(1);
+}
+
 console.log("All tests passed!");

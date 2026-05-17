@@ -27,7 +27,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Select current batsmen and bowler from filtered dropdowns on the scorecard.
 - **Over Log**: For each over, display the details of the previous balls in the current over (e.g., showing a sequence like "0, 1, wd, 4, W").
 - **Strike Rotation**: Switch active batsman on strike at the end of each over and whenever an odd number of physical runs (1, 3) are completed, including physical extra runs on Wides, No Balls, Byes, and Run Outs.
-- **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. Do not show the name of the bowler who has reached their max overs limit.
+- **Player Selection**: Use dropdowns on scorecard to select active players. If only one candidate is eligible for a missing slot, automatically select that player. Scoring controls remain disabled unless both batsmen are chosen, except when only the lone final batsman remains (in which case, automatically move that player to the striker slot).
 - **Striker Marker**: Use a clear mechanism (e.g., distinct styling like background color) to indicate the striker.
 - **Innings End**: Once all eligible batsmen are out, or the maximum total allowed overs have been bowled, the innings is over.
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.

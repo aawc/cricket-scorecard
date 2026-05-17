@@ -26,7 +26,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Over Log: Display details of previous balls in the current over.
 - Selectable Active Players: Allow selecting current batsmen and bowler on the scorecard.
 - Strike Rotation: Automatic strike rotation on odd physical runs scored (including extras) and at the end of each over.
-- Dropdown Player Selection: Filtered to only show eligible players.
+- Dropdown Player Selection: Filtered for eligibility, with automatic selection when only one player is eligible, and strict dual-batsman enforcement (or lone striker transition).
 - Controls Disabling: When selection is needed.
 - Single Batsman Rule: Setting to allow a single batsman to play (default: true).
 - Striker Indicator: Used background color/border instead of `*`.
