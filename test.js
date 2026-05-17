@@ -5,12 +5,23 @@ const path = require('path');
 const elements = {};
 global.document = {
     createElement: function(tagName) {
-        return {
+        const elem = {
             value: '',
             textContent: '',
+            innerHTML: '',
+            classes: new Set(),
             appendChild: () => {},
-            classList: { add: () => {}, remove: () => {} }
+            remove: () => {},
+            querySelector: () => ({ addEventListener: () => {}, textContent: '', remove: () => {} }),
+            querySelectorAll: () => [],
+            addEventListener: () => {}
         };
+        elem.classList = {
+            add: function(c) { elem.classes.add(c); },
+            remove: function(c) { elem.classes.delete(c); },
+            contains: function(c) { return elem.classes.has(c); }
+        };
+        return elem;
     },
     getElementById: function(id) {
         if (!elements[id]) {
@@ -20,6 +31,7 @@ global.document = {
                 classes: new Set(),
                 appendChild: () => {},
                 innerHTML: '',
+                querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} } }),
                 querySelectorAll: () => [],
                 addEventListener: () => {},
                 parentElement: {

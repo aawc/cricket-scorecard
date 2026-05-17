@@ -50,8 +50,12 @@ const oversPerInningsInput = document.getElementById('overs-per-innings');
 const maxOversPerBowlerInput = document.getElementById('max-overs-per-bowler');
 const allowSingleBatsmanInput = document.getElementById('allow-single-batsman');
 const enableLegByesInput = document.getElementById('enable-legbyes');
-const team1PlayersInput = document.getElementById('team1-players');
-const team2PlayersInput = document.getElementById('team2-players');
+const team1RosterList = document.getElementById('team1-roster-list');
+const team2RosterList = document.getElementById('team2-roster-list');
+const team1QuickAdd = document.getElementById('team1-quick-add');
+const team2QuickAdd = document.getElementById('team2-quick-add');
+const team1AddBtn = document.getElementById('team1-add-btn');
+const team2AddBtn = document.getElementById('team2-add-btn');
 
 // Display Elements
 const scoreDisplay = document.getElementById('score-display');
@@ -97,6 +101,8 @@ let pendingRunOutStriker = true;
 function init() {
     loadFromLocalStorage();
     setupEventListeners();
+    initSortable();
+    renderRosters();
     updateUI();
 }
 
@@ -107,6 +113,11 @@ function setupEventListeners() {
     exitScreenshotModeBtn.addEventListener('click', toggleScreenshotMode);
     resetMatchBtn.addEventListener('click', resetMatch);
     shareMatchBtn.addEventListener('click', shareMatch);
+
+    if (team1AddBtn) team1AddBtn.addEventListener('click', () => handleQuickAdd(1));
+    if (team2AddBtn) team2AddBtn.addEventListener('click', () => handleQuickAdd(2));
+    if (team1QuickAdd) team1QuickAdd.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleQuickAdd(1); });
+    if (team2QuickAdd) team2QuickAdd.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleQuickAdd(2); });
 
     themeBtns.forEach(btn => {
         btn.addEventListener('click', () => setTheme(btn.dataset.theme));
@@ -153,6 +164,88 @@ function setupEventListeners() {
     batsman1Select.addEventListener('change', (e) => handleBatsmanChange(1, e.target.value));
     batsman2Select.addEventListener('change', (e) => handleBatsmanChange(2, e.target.value));
     bowlerSelect.addEventListener('change', (e) => handleBowlerChange(e.target.value));
+}
+
+// Roster Management Helpers
+function initSortable() {
+    if (typeof Sortable !== 'undefined') {
+        if (team1RosterList) {
+            new Sortable(team1RosterList, {
+                group: 'rosters',
+                animation: 150,
+                handle: '.drag-handle',
+                onSort: () => updateLineupNumbers()
+            });
+        }
+        if (team2RosterList) {
+            new Sortable(team2RosterList, {
+                group: 'rosters',
+                animation: 150,
+                handle: '.drag-handle',
+                onSort: () => updateLineupNumbers()
+            });
+        }
+    }
+}
+
+function renderRosters() {
+    if (!team1RosterList || !team2RosterList) return;
+    team1RosterList.innerHTML = '';
+    team2RosterList.innerHTML = '';
+
+    const t1 = gameState.match.team1.players && gameState.match.team1.players.length > 0 ? gameState.match.team1.players : ["Player 1", "Player 2", "Player 3", "Player 4", "Player 5", "Player 6", "Player 7", "Player 8"];
+    const t2 = gameState.match.team2.players && gameState.match.team2.players.length > 0 ? gameState.match.team2.players : ["Player 9", "Player 10", "Player 11", "Player 12", "Player 13", "Player 14", "Player 15", "Player 16"];
+
+    t1.forEach(name => addPlayerToRoster(1, name));
+    t2.forEach(name => addPlayerToRoster(2, name));
+}
+
+function addPlayerToRoster(teamNum, name) {
+    const targetList = teamNum === 1 ? team1RosterList : team2RosterList;
+    if (!targetList || !name || !name.trim()) return;
+
+    const li = document.createElement('li');
+    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item', 'small');
+    
+    li.innerHTML = `
+        <span class="drag-handle me-2 text-muted">🟰</span>
+        <span class="player-name flex-grow-1 text-truncate me-2">${name.trim()}</span>
+        <span class="badge bg-primary rounded-pill order-badge me-2">#0</span>
+        <button class="btn btn-xs btn-outline-danger delete-player-btn py-0 px-1" type="button">❌</button>
+    `;
+
+    const deleteBtn = li.querySelector('.delete-player-btn');
+    deleteBtn.addEventListener('click', () => {
+        li.remove();
+        updateLineupNumbers();
+    });
+
+    targetList.appendChild(li);
+    updateLineupNumbers();
+}
+
+function updateLineupNumbers() {
+    if (!team1RosterList || !team2RosterList) return;
+    const t1Items = team1RosterList.querySelectorAll('.roster-item');
+    t1Items.forEach((item, idx) => {
+        const badge = item.querySelector('.order-badge');
+        if (badge) badge.textContent = `#${idx + 1}`;
+    });
+
+    const t2Items = team2RosterList.querySelectorAll('.roster-item');
+    t2Items.forEach((item, idx) => {
+        const badge = item.querySelector('.order-badge');
+        if (badge) badge.textContent = `#${idx + 1}`;
+    });
+}
+
+function handleQuickAdd(teamNum) {
+    const input = teamNum === 1 ? team1QuickAdd : team2QuickAdd;
+    const val = input ? input.value.trim() : '';
+    if (val) {
+        addPlayerToRoster(teamNum, val);
+        input.value = '';
+    }
 }
 
 // Load from LocalStorage or URL
@@ -242,9 +335,11 @@ function startMatch() {
     gameState.settings.allowSingleBatsman = allowSingleBatsmanInput.checked;
     gameState.settings.enableLegByes = enableLegByesInput.checked;
 
-    // Parse player names
-    gameState.match.team1.players = team1PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
-    gameState.match.team2.players = team2PlayersInput.value.split(',').map(name => name.trim()).filter(name => name !== '');
+    // Parse player names from roster lists
+    if (team1RosterList && team2RosterList) {
+        gameState.match.team1.players = Array.from(team1RosterList.querySelectorAll('.player-name')).map(el => el.textContent.trim());
+        gameState.match.team2.players = Array.from(team2RosterList.querySelectorAll('.player-name')).map(el => el.textContent.trim());
+    }
 
     // Validation: Enough players to bowl
     const totalOvers = gameState.settings.oversPerInnings;
@@ -1006,8 +1101,7 @@ function resetMatch() {
     allowSingleBatsmanInput.checked = gameState.settings.allowSingleBatsman;
     enableLegByesInput.checked = gameState.settings.enableLegByes;
     
-    team1PlayersInput.value = gameState.match.team1.players.join(', ');
-    team2PlayersInput.value = gameState.match.team2.players.join(', ');
+    renderRosters();
     
     updateUI();
 }
