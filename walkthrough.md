@@ -1,11 +1,11 @@
-# Walkthrough - Security Policy Standing Instruction
+# Walkthrough - Security Policy Dependency Update
 
-I have successfully updated the project's standing instructions in a clean commit without any special tags.
+I have successfully updated `SECURITY.md` in a clean commit without any special tags.
 
 ## Changes Made
 
-### 1. Standing Instructions (`PROMPT.md`)
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md)**: Added a new requirement ensuring that `SECURITY.md` is continuously reviewed and updated alongside any future project updates if architectural or dependency changes occur.
+### 1. External Dependencies (`SECURITY.md`)
+- **[SECURITY.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/SECURITY.md)**: Added the recently integrated `lz-string` CDN library under the list of verified external dependencies.
 
 ## Verification Results
 

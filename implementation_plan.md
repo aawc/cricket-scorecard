@@ -1,12 +1,13 @@
-# Implementation Plan - Update Standing Instructions
+# Implementation Plan - Update SECURITY.md Dependencies
 
-The goal is to update the project's standing instructions in `PROMPT.md` to ensure that `SECURITY.md` is evaluated and updated alongside any future project modifications if needed.
+The goal is to update `SECURITY.md` to maintain strict accuracy by including the newly integrated `lz-string` CDN library under the list of external dependencies.
 
 ## Proposed Changes
 
-### 1. [MODIFY] [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md)
-Add a new bullet point under `Standing Instructions for Development`:
-- Review and update `SECURITY.md` on each project update if new dependencies or security relevant architectural changes are introduced.
+### 1. [MODIFY] [SECURITY.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/SECURITY.md)
+Add `lz-string` to the `External Dependencies` section:
+- [LZString](https://github.com/pieroxy/lz-string) (State Compression via cdnjs)
 
 ## Verification Plan
-- Verify automated unit tests pass (`node test.js`).
+- Verify markdown formatting renders cleanly.
+- Automated unit tests (`node test.js`) verified without confirmation.

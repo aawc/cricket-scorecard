@@ -1,5 +1,5 @@
-# Task List - Update Standing Instructions
+# Task List - Update SECURITY.md Dependencies
 
-- [x] Add `SECURITY.md` maintenance rule to standing instructions in `PROMPT.md`
-- [x] Verify automated tests pass (`node test.js`)
+- [x] Add `lz-string` to external dependencies in `SECURITY.md`
+- [x] Verify automated unit tests pass (`node test.js`)
 - [x] Commit change cleanly without special tags

@@ -19,6 +19,7 @@ The **Cricket Scorecard PWA** is a standalone static web application designed wi
 4. **External Dependencies**: The app relies strictly on verified, highly reputable CDNs for styling and interactivity:
    - [Bootstrap 5](https://getbootstrap.com/) (CSS & JS Bundle via jsDelivr)
    - [SortableJS](https://github.com/SortableJS/Sortable) (Drag and Drop via jsDelivr)
+   - [LZString](https://github.com/pieroxy/lz-string) (State Compression via cdnjs)
 
 ## Reporting a Vulnerability
 
