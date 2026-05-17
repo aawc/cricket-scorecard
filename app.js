@@ -162,6 +162,9 @@ function setupEventListeners() {
             } else if (currentDeliveryType === 'wide') {
                 if (extraRunsModalInstance) extraRunsModalInstance.hide();
                 finalizeDelivery('wide', selectedExtraRuns, 'byes');
+            } else if (currentDeliveryType === 'bye') {
+                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                finalizeDelivery('bye', selectedExtraRuns, 'byes');
             } else {
                 if (accrualSection) accrualSection.classList.remove('hidden');
             }
@@ -176,7 +179,7 @@ function setupEventListeners() {
         finalizeDelivery(currentDeliveryType, selectedExtraRuns, 'byes');
     });
 
-    byeBtn.addEventListener('click', addBye);
+    byeBtn.addEventListener('click', () => triggerExtraRunsModal('bye'));
     legbyeBtn.addEventListener('click', addLegBye);
     undoBtn.addEventListener('click', undoLastAction);
 
@@ -1071,6 +1074,17 @@ function finalizeDelivery(type, extraRuns, accrueTo) {
         }
         executeRunOutWicket(pendingRunOutStriker, extraRuns, accrueTo);
         return;
+    } else if (type === 'bye') {
+        if (extraRuns === 0) return;
+        live.score += extraRuns;
+        live.extras.byes += extraRuns;
+        
+        live.balls++;
+        if (bowler) bowler.balls++;
+        if (activeB) activeB.balls++;
+        
+        live.overLog.push(`${extraRuns}b`);
+        checkOverComplete();
     }
 
     checkMatchOver();
@@ -1252,21 +1266,6 @@ function endInnings() {
         overLog: []
     };
     
-    saveToLocalStorage();
-    updateUI();
-}
-
-function addBye() {
-    if (gameState.match.matchOver) return;
-    saveHistory();
-    const live = gameState.match.liveInnings;
-    live.score += 1;
-    live.extras.byes += 1;
-    live.balls++;
-    live.bowlers[live.currentBowler].balls++;
-    live.overLog.push('b1');
-    checkOverComplete();
-    checkMatchOver();
     saveToLocalStorage();
     updateUI();
 }

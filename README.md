@@ -10,7 +10,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 
 ## Features (Implemented)
 
-- Score tracking (Runs, Wickets, Overs, Extras).
+- Score tracking: Complete ball-by-ball tallying (Runs, Wickets, Overs, Wides, No Balls, Byes, Leg Byes), with Byes counting towards batsman balls faced.
 - Configurable match parameters (Overs per innings, Bowler limits). Wide and No Ball penalties fixed at official 1 run.
 - Mobile-first design with large buttons.
 - State persistence using `localStorage`.

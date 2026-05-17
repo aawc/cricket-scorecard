@@ -357,4 +357,39 @@ if (b1.noballs !== 1) {
     process.exit(1);
 }
 
+// Test 13: Byes increment batsman balls and bowler balls
+resetTestState();
+global.mockExtraRuns = 3;
+global.mockAccrueTo = 'byes';
+triggerExtraRunsModal('bye');
+
+if (gameState.match.liveInnings.score !== 3) {
+    console.error(`Test 13 Failed: Score should be 3`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.extras.byes !== 3) {
+    console.error(`Test 13 Failed: Byes extras should be 3`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.balls !== 1) {
+    console.error(`Test 13 Failed: Live balls should be 1`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].balls !== 1) {
+    console.error(`Test 13 Failed: Batsman P1 balls should be 1`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 0) {
+    console.error(`Test 13 Failed: Batsman P1 runs should be 0`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].balls !== 1) {
+    console.error(`Test 13 Failed: Bowler B1 balls should be 1`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].runs !== 0) {
+    console.error(`Test 13 Failed: Bowler B1 runs should be 0`);
+    process.exit(1);
+}
+
 console.log("All tests passed!");
