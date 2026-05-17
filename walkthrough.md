@@ -1,19 +1,11 @@
-# Walkthrough - Permalink URL Shortening
+# Walkthrough - Security Policy Standing Instruction
 
-I have successfully implemented permalink URL shortening in a clean commit without any special tags.
+I have successfully updated the project's standing instructions in a clean commit without any special tags.
 
 ## Changes Made
 
-### 1. Compression & Minification (`app.js`)
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Added `minifyState(state)` and `unminifyState(min)` helpers to translate verbose JSON keys into dense 2-3 letter codes (`opi`, `cbt`, `li`). Updated `shareMatch()` to compress minified state via `LZString.compressToEncodedURIComponent()`. Generated permalink URLs now use the `?s=` query parameter.
-- **Backwards Compatibility**: Updated `loadFromLocalStorage()` to seamlessly parse both new compressed links (`?s=`) and legacy uncompressed links (`?state=`).
-
-### 2. Script Integration (`index.html`)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Included `lz-string` CDN before `app.js`. Footer version updated to `v1.27.0`.
-
-### 3. Documentation & Tests
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated to reflect LZString compression and key aliasing.
-- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)** Automated tests verified.
+### 1. Standing Instructions (`PROMPT.md`)
+- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md)**: Added a new requirement ensuring that `SECURITY.md` is continuously reviewed and updated alongside any future project updates if architectural or dependency changes occur.
 
 ## Verification Results
 
