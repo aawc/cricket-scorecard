@@ -180,7 +180,7 @@ if (!gameState.match.liveInnings.batsmen["P2"].active) {
 
 // Test 4: Wide
 resetTestState();
-addWide();
+triggerExtraRunsModal('wide');
 if (gameState.match.liveInnings.score !== 1) {
     console.error("Test 4 Failed: Score should be 1 on wide");
     process.exit(1);
@@ -255,6 +255,74 @@ if (!gameState.match.liveInnings.outBatsmen.includes("P2")) {
 }
 if (gameState.match.liveInnings.batsmen["P1"].balls !== 1) {
     console.error("Test 8 Failed: Striker P1 should have faced 1 ball");
+    process.exit(1);
+}
+
+// Test 9: Wide + extra runs (Byes)
+resetTestState();
+global.mockExtraRuns = 2;
+global.mockAccrueTo = 'byes';
+triggerExtraRunsModal('wide');
+
+if (gameState.match.liveInnings.score !== 3) { // 1 wide penalty + 2 byes = 3
+    console.error(`Test 9 Failed: Score should be 3, got ${gameState.match.liveInnings.score}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].runs !== 3) {
+    console.error(`Test 9 Failed: Bowler runs should be 3, got ${gameState.match.liveInnings.bowlers["B1"].runs}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.extras.byes !== 2) {
+    console.error(`Test 9 Failed: Byes should be 2, got ${gameState.match.liveInnings.extras.byes}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.balls !== 0) {
+    console.error(`Test 9 Failed: Balls should be 0 on wide`);
+    process.exit(1);
+}
+
+// Test 10: No Ball + extra runs (Batsman)
+resetTestState();
+global.mockExtraRuns = 4;
+global.mockAccrueTo = 'batsman';
+triggerExtraRunsModal('noball');
+
+if (gameState.match.liveInnings.score !== 5) { // 1 noball penalty + 4 = 5
+    console.error(`Test 10 Failed: Score should be 5, got ${gameState.match.liveInnings.score}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].runs !== 5) {
+    console.error(`Test 10 Failed: Bowler runs should be 5`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 4) {
+    console.error(`Test 10 Failed: Batsman P1 runs should be 4`);
+    process.exit(1);
+}
+
+// Test 11: Run Out + extra runs (Batsman)
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3"];
+global.confirm = () => true; // Striker P1 run out
+global.mockExtraRuns = 2;
+global.mockAccrueTo = 'batsman';
+triggerRunOutModal();
+
+if (gameState.match.liveInnings.score !== 2) {
+    console.error(`Test 11 Failed: Score should be 2 on run out + 2`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 2) {
+    console.error(`Test 11 Failed: Striker P1 runs should be 2`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.wickets !== 1) {
+    console.error(`Test 11 Failed: Wickets should be 1`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.balls !== 1) {
+    console.error(`Test 11 Failed: Balls should be 1`);
     process.exit(1);
 }
 

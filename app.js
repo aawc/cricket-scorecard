@@ -81,10 +81,19 @@ const wicketBtn = document.getElementById('wicket-btn');
 const runoutBtn = document.getElementById('runout-btn');
 const runoutStrikerBtn = document.getElementById('runout-striker-btn');
 const runoutNonstrikerBtn = document.getElementById('runout-nonstriker-btn');
+const extraRunValBtns = document.querySelectorAll('.extra-run-val-btn');
+const accrualSection = document.getElementById('accrual-section');
+const accrueBatsmanBtn = document.getElementById('accrue-batsman-btn');
+const accrueByesBtn = document.getElementById('accrue-byes-btn');
 const byeBtn = document.getElementById('bye-btn');
 const legbyeBtn = document.getElementById('legbye-btn');
 const undoBtn = document.getElementById('undo-btn');
+
 let runoutModalInstance = null;
+let extraRunsModalInstance = null;
+let currentDeliveryType = null;
+let selectedExtraRuns = 0;
+let pendingRunOutStriker = true;
 
 // Initialize
 function init() {
@@ -109,12 +118,36 @@ function setupEventListeners() {
         btn.addEventListener('click', () => addRuns(parseInt(btn.dataset.runs)));
     });
 
-    wideBtn.addEventListener('click', addWide);
-    noballBtn.addEventListener('click', addNoBall);
+    wideBtn.addEventListener('click', () => triggerExtraRunsModal('wide'));
+    noballBtn.addEventListener('click', () => triggerExtraRunsModal('noball'));
     wicketBtn.addEventListener('click', addWicket);
     runoutBtn.addEventListener('click', triggerRunOutModal);
     runoutStrikerBtn.addEventListener('click', () => processRunOut(true));
     runoutNonstrikerBtn.addEventListener('click', () => processRunOut(false));
+    
+    extraRunValBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            extraRunValBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            selectedExtraRuns = parseInt(btn.dataset.val);
+
+            if (selectedExtraRuns === 0) {
+                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                finalizeDelivery(currentDeliveryType, 0, 'byes');
+            } else {
+                if (accrualSection) accrualSection.classList.remove('hidden');
+            }
+        });
+    });
+
+    accrueBatsmanBtn.addEventListener('click', () => {
+        finalizeDelivery(currentDeliveryType, selectedExtraRuns, 'batsman');
+    });
+
+    accrueByesBtn.addEventListener('click', () => {
+        finalizeDelivery(currentDeliveryType, selectedExtraRuns, 'byes');
+    });
+
     byeBtn.addEventListener('click', addBye);
     legbyeBtn.addEventListener('click', addLegBye);
     undoBtn.addEventListener('click', undoLastAction);
@@ -640,27 +673,79 @@ function checkMatchOver() {
     }
 }
 
-function addWide() {
+function triggerExtraRunsModal(deliveryType) {
     if (gameState.match.matchOver) return;
-    saveHistory();
-    const live = gameState.match.liveInnings;
-    live.score += gameState.settings.widePenalty;
-    live.extras.wides += gameState.settings.widePenalty;
-    live.bowlers[live.currentBowler].runs += gameState.settings.widePenalty;
-    live.overLog.push('wd');
-    checkMatchOver();
-    saveToLocalStorage();
-    updateUI();
+    currentDeliveryType = deliveryType;
+    selectedExtraRuns = 0;
+    
+    if (accrualSection) accrualSection.classList.add('hidden');
+    extraRunValBtns.forEach(b => b.classList.remove('active'));
+
+    if (typeof bootstrap !== 'undefined') {
+        if (!extraRunsModalInstance) {
+            extraRunsModalInstance = new bootstrap.Modal(document.getElementById('extraRunsModal'));
+        }
+        extraRunsModalInstance.show();
+    } else {
+        if (typeof global.mockExtraRuns !== 'undefined') {
+            selectedExtraRuns = global.mockExtraRuns;
+        }
+        const accrueTo = global.mockAccrueTo || 'byes';
+        finalizeDelivery(currentDeliveryType, selectedExtraRuns, accrueTo);
+    }
 }
 
-function addNoBall() {
+function finalizeDelivery(type, extraRuns, accrueTo) {
     if (gameState.match.matchOver) return;
     saveHistory();
     const live = gameState.match.liveInnings;
-    live.score += gameState.settings.noBallPenalty;
-    live.extras.noballs += gameState.settings.noBallPenalty;
-    live.bowlers[live.currentBowler].runs += gameState.settings.noBallPenalty;
-    live.overLog.push('nb');
+    const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+    const activeB = live.batsmen[striker];
+    const bowler = live.bowlers[live.currentBowler];
+
+    if (type === 'wide') {
+        const totalRuns = gameState.settings.widePenalty + extraRuns;
+        live.score += totalRuns;
+        live.extras.wides += gameState.settings.widePenalty;
+        if (bowler) bowler.runs += totalRuns;
+
+        if (extraRuns > 0) {
+            if (accrualSection && accrueTo === 'batsman' && activeB) {
+                activeB.runs += extraRuns;
+            } else {
+                live.extras.byes += extraRuns;
+            }
+        }
+        live.overLog.push(extraRuns > 0 ? `wd+${extraRuns}${accrueTo === 'byes' ? 'b' : ''}` : 'wd');
+    } else if (type === 'noball') {
+        const totalRuns = gameState.settings.noBallPenalty + extraRuns;
+        live.score += totalRuns;
+        live.extras.noballs += gameState.settings.noBallPenalty;
+        if (bowler) bowler.runs += totalRuns;
+
+        if (extraRuns > 0) {
+            if (accrualSection && accrueTo === 'batsman' && activeB) {
+                activeB.runs += extraRuns;
+            } else {
+                live.extras.byes += extraRuns;
+            }
+        }
+        live.overLog.push(extraRuns > 0 ? `nb+${extraRuns}${accrueTo === 'byes' ? 'b' : ''}` : 'nb');
+    } else if (type === 'runout') {
+        live.score += extraRuns;
+        if (bowler) bowler.runs += extraRuns;
+        
+        if (extraRuns > 0) {
+            if (accrualSection && accrueTo === 'batsman' && activeB) {
+                activeB.runs += extraRuns;
+            } else {
+                live.extras.byes += extraRuns;
+            }
+        }
+        executeRunOutWicket(pendingRunOutStriker, extraRuns, accrueTo);
+        return;
+    }
+
     checkMatchOver();
     saveToLocalStorage();
     updateUI();
@@ -723,7 +808,7 @@ function triggerRunOutModal() {
 
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
     if (gameState.settings.allowSingleBatsman && live.wickets === battingTeam.players.length - 1) {
-        processRunOut(true); // Single batsman out
+        processRunOut(true);
         return;
     }
 
@@ -743,9 +828,12 @@ function triggerRunOutModal() {
 
 function processRunOut(isStriker) {
     if (gameState.match.matchOver) return;
-    saveHistory();
+    pendingRunOutStriker = isStriker;
+    triggerExtraRunsModal('runout');
+}
+
+function executeRunOutWicket(isStriker, extraRuns, accrueTo) {
     const live = gameState.match.liveInnings;
-    
     const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
     const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
     const outBatsmanName = isStriker ? striker : nonStriker;
@@ -754,10 +842,10 @@ function processRunOut(isStriker) {
 
     const outB = live.batsmen[outBatsmanName];
     if (outB && isStriker) {
-        outB.balls++; // Striker faced the ball
+        outB.balls++;
     } else if (!isStriker) {
         const strikerB = live.batsmen[striker];
-        if (strikerB) strikerB.balls++; // Striker still faced the ball
+        if (strikerB) strikerB.balls++;
     }
 
     live.wickets++;
@@ -765,7 +853,12 @@ function processRunOut(isStriker) {
     if (live.currentBowler && live.bowlers[live.currentBowler]) {
         live.bowlers[live.currentBowler].balls++;
     }
-    live.overLog.push('W-RO');
+    
+    let logStr = 'W-RO';
+    if (extraRuns > 0) {
+        logStr = `${extraRuns}${accrueTo === 'byes' ? 'b' : ''}+W-RO`;
+    }
+    live.overLog.push(logStr);
 
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
     const totalPlayers = battingTeam.players.length;
@@ -780,9 +873,9 @@ function processRunOut(isStriker) {
     live.outBatsmen.push(outBatsmanName);
     
     if (live.currentBatsman1 === outBatsmanName) {
-        live.currentBatsman1 = ""; // Force selection
+        live.currentBatsman1 = "";
     } else {
-        live.currentBatsman2 = ""; // Force selection
+        live.currentBatsman2 = "";
     }
     
     if (gameState.settings.allowSingleBatsman && live.wickets === totalPlayers - 1) {

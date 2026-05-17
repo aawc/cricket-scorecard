@@ -7,6 +7,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 ### 1. Functionality
 - **Score Tracking**: Allow users to input runs, wickets, extras (wides, no balls, byes, leg byes).
     - **Run Out Specification**: When a run out occurs, allow specifying whether the striker or non-striker was run out.
+    - **Extra Runs Specification**: Allow specifying extra runs when a wide, no ball, or run out happens, and whether they accrue to the batsman or byes (always against the current bowler). For byes, the ball counts unless it is a wide or no ball.
 - **Configurable Match Parameters**:
     - Innings per team is always 1. (Remove option to configure this).
     - Number of overs per innings (default: 8).

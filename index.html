@@ -186,10 +186,40 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Extra Runs Modal -->
+            <div class="modal fade" id="extraRunsModal" tabindex="-1" aria-labelledby="extraRunsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="extraRunsModalLabel">Extra Runs Details</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <p class="mb-2">How many extra runs were scored?</p>
+                            <div class="row g-2 mb-3">
+                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="0">0</button></div>
+                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="1">1</button></div>
+                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="2">2</button></div>
+                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="3">3</button></div>
+                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="4">4</button></div>
+                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="6">6</button></div>
+                            </div>
+                            <div id="accrual-section" class="hidden">
+                                <p class="mb-2">Accrue extra runs to:</p>
+                                <div class="d-grid gap-2">
+                                    <button id="accrue-batsman-btn" class="btn btn-success" data-bs-dismiss="modal">Batsman</button>
+                                    <button id="accrue-byes-btn" class="btn btn-info" data-bs-dismiss="modal">Byes</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <footer class="text-center text-muted mt-auto py-2 border-top">
-            <small>Version: 1.18.0 | Deployed: 2026-05-17 07:35</small>
+            <small>Version: 1.19.0 | Deployed: 2026-05-17 07:39</small>
             <div class="mt-1">
                 <small>🚀 Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with ✨ Gemini</small>
             </div>
