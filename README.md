@@ -2,9 +2,11 @@
 
 A standalone website on GitHub Pages that can be used as an offline PWA to enter and keep track of score during a game of cricket.
 
+**🌐 Live App:** [https://varun.khaneja.org/cricket-scorecard/](https://varun.khaneja.org/cricket-scorecard/)
+
 ## Current Status
 
-In progress. Core files created. Reset match behavior update added to the plan.
+Fully functional and verified. Advanced extra runs and run out specification implemented. All automated tests passing.
 
 ## Features (Implemented)
 
