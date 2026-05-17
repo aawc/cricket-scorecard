@@ -159,6 +159,9 @@ function setupEventListeners() {
             if (selectedExtraRuns === 0) {
                 if (extraRunsModalInstance) extraRunsModalInstance.hide();
                 finalizeDelivery(currentDeliveryType, 0, 'byes');
+            } else if (currentDeliveryType === 'wide') {
+                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                finalizeDelivery('wide', selectedExtraRuns, 'byes');
             } else {
                 if (accrualSection) accrualSection.classList.remove('hidden');
             }

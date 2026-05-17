@@ -1,9 +1,7 @@
-# Task List - Toss Selection & Empty Initial Rosters
+# Task List - Auto-Accrue Wide Extras to Byes
 
-- [x] Add `#tossModal` to `index.html` and update version to `1.25.0`
-- [x] Remove default placeholder player pre-population from `renderRosters` in `app.js`
-- [x] Update `startMatch` to validate players and trigger `#tossModal` in `app.js`
-- [x] Add `executeStartMatch(battingTeamNum)` to finalize match setup in `app.js`
+- [x] Update footer version to `1.26.0` in `index.html`
+- [x] Refactor modal number button listener in `app.js` to instantly finalize Wides as byes
 - [x] Verify automated unit tests pass (`node test.js`)
-- [x] Update `PROMPT.md` and `README.md` to reflect toss selection and empty roster behavior
+- [x] Update `PROMPT.md` to document auto-bye behavior for wides
 - [x] Commit changes cleanly without special tags

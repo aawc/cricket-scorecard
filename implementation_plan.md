@@ -1,26 +1,22 @@
-# Implementation Plan - Toss Selection & Empty Initial Rosters
+# Implementation Plan - Auto-Accrue Wide Extras to Byes
 
-The goal is to introduce a toss selection prompt when starting a match to choose which team bats first, and to remove default placeholder players ("Player 1", "Player 2") on initial load while retaining rosters upon reset.
+The goal is to streamline the extra runs workflow for Wides by automatically accruing any extra runs to Byes, skipping the "Batsman vs Byes" selection prompt since runs cannot be credited to a batsman on a wide delivery.
 
 ## Proposed Changes
 
-### 1. Toss Selection Modal (`index.html`)
-#### [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
-- Add `#tossModal` Bootstrap modal to prompt for the team batting first upon clicking "Start Match".
-- Update footer version to `1.25.0`.
+### 1. [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
+- Update footer version to `1.26.0`.
 
-#### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- When `startMatch()` runs: validate player counts first. If valid, open `#tossModal` showing exact team names.
-- Add `executeStartMatch(battingTeamNum)` function to finalize match start and flip to scorecard.
-
-### 2. Empty Initial Rosters (`app.js`)
-#### [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `renderRosters()` to NOT load placeholder names ("Player 1", "Player 2") if player arrays are empty. Initial lists will be blank on first load, but will repopulate correctly on `resetMatch()`.
+### 2. [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
+- In the `extraRunValBtns` click listener inside `setupEventListeners()`:
+  - Check if `currentDeliveryType === 'wide'`.
+  - If it is a Wide and extra runs > 0 are selected, immediately dismiss `#extraRunsModal` and execute `finalizeDelivery('wide', selectedExtraRuns, 'byes')` rather than revealing the `accrualSection`.
+  - For No Balls and Run Outs, continue to reveal `accrualSection` as normal when extra runs > 0.
 
 ### 3. Documentation & Tests
-- Update [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) and [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md).
-- Run `node test.js` automatically to verify scoring functionality.
+- Update [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) to explicitly document that wide extra runs always default to byes without prompting.
+- Run automated unit tests (`node test.js`) to verify Test 9 and scoring stability.
 
 ## Verification Plan
-- Run `node test.js` to ensure automated tests pass.
-- Open browser: Verify team rosters are empty on first load. Add players, click Start Match, verify `#tossModal` appears. Select Team 2, verify Team 2 players populate batsman dropdowns. Reset match, verify roster lists retain names.
+- Automated: Verify `node test.js` passes successfully.
+- Manual: Open browser, start match, click "Wide". Click "2" extra runs. Verify modal instantly closes (does not ask Batsman vs Byes), and total score increases by 3 runs (1 wide penalty + 2 byes).
