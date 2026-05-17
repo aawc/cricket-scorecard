@@ -16,8 +16,8 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Standard rules apply (1 run penalty + extra ball for wides/no balls, penalty runs fixed at 1).
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
     - **Leg Byes Option**: Provide an option to disable leg byes in settings.
-- **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far. Ensure that the summary view does not show an extra invalid innings at the bottom when the match is over.
-- **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. Use a flipping page effect that rotates back and forth when the mode is switched.
+- **Full Scorecard Mode**: Include a toggle to display the scoreboard in a clean, compact monospace table layout optimized for taking screenshots to share. Display complete match status and individual player stats for each innings, including individual bowler Wides and No Balls columns. Ensure no invalid extra innings appear when the match ends.
+- **Full Scorecard Toggle**: Provide a smooth 3D page flip animation to switch back and forth between scoring entry and Full Scorecard mode.
 - **Player Management**:
     - Interactive drag-and-drop roster cards with SortableJS for batting order sorting and between-team transfers.
     - Bulk paste import modal for rapid roster loading.

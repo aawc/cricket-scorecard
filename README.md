@@ -14,8 +14,8 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Configurable match parameters (Overs per innings, Bowler limits). Wide and No Ball penalties fixed at official 1 run.
 - Mobile-first design with large buttons.
 - State persistence using `localStorage`.
-- Screenshot mode with full match summary.
-- Screenshot Mode Toggle Fix: Added exit button in summary view.
+- Full Scorecard mode: Clean monospace match summary featuring individual bowler wide and no-ball tallies.
+- Full Scorecard Mode Toggle: Toggle and exit button for switching views.
 - Undo functionality.
 - Reset Match functionality (retains players).
 - Web App Manifest for PWA installation.

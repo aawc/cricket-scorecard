@@ -466,7 +466,7 @@ function initBatsmanStats(name, active) {
 
 function initBowlerStats(name) {
     if (name && !gameState.match.liveInnings.bowlers[name]) {
-        gameState.match.liveInnings.bowlers[name] = { runs: 0, balls: 0, wickets: 0 };
+        gameState.match.liveInnings.bowlers[name] = { runs: 0, balls: 0, wickets: 0, wides: 0, noballs: 0 };
     }
 }
 
@@ -564,14 +564,16 @@ function generateSummaryView() {
 
         const bowlersTable = document.createElement('table');
         bowlersTable.classList.add('summary-table');
-        bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th></tr></thead>`;
+        bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th><th>Wides</th><th>No Balls</th></tr></thead>`;
         const bowlersTbody = document.createElement('tbody');
         for (const name in inningsData.bowlers) {
             const b = inningsData.bowlers[name];
             const tr = document.createElement('tr');
             const bOvers = Math.floor(b.balls / 6);
             const bBalls = b.balls % 6;
-            tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.runs}</td><td>${b.wickets}</td>`;
+            const bWides = b.wides || 0;
+            const bNoBalls = b.noballs || 0;
+            tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
             bowlersTbody.appendChild(tr);
         }
         bowlersTable.appendChild(bowlersTbody);
@@ -868,7 +870,10 @@ function finalizeDelivery(type, extraRuns, accrueTo) {
         const totalRuns = gameState.settings.widePenalty + extraRuns;
         live.score += totalRuns;
         live.extras.wides += gameState.settings.widePenalty;
-        if (bowler) bowler.runs += totalRuns;
+        if (bowler) {
+            bowler.runs += totalRuns;
+            bowler.wides = (bowler.wides || 0) + 1;
+        }
 
         if (extraRuns > 0) {
             if (accrualSection && accrueTo === 'batsman' && activeB) {
@@ -882,7 +887,10 @@ function finalizeDelivery(type, extraRuns, accrueTo) {
         const totalRuns = gameState.settings.noBallPenalty + extraRuns;
         live.score += totalRuns;
         live.extras.noballs += gameState.settings.noBallPenalty;
-        if (bowler) bowler.runs += totalRuns;
+        if (bowler) {
+            bowler.runs += totalRuns;
+            bowler.noballs = (bowler.noballs || 0) + 1;
+        }
 
         if (extraRuns > 0) {
             if (accrualSection && accrueTo === 'batsman' && activeB) {

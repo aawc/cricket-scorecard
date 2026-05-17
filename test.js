@@ -340,4 +340,21 @@ if (gameState.match.liveInnings.balls !== 1) {
     process.exit(1);
 }
 
+// Test 12: Bowler extras tracking in Full Scorecard mode
+resetTestState();
+global.mockExtraRuns = 2;
+global.mockAccrueTo = 'byes';
+triggerExtraRunsModal('wide');
+triggerExtraRunsModal('noball');
+
+const b1 = gameState.match.liveInnings.bowlers["B1"];
+if (!b1 || b1.wides !== 1) {
+    console.error(`Test 12 Failed: Bowler B1 wides should be 1`);
+    process.exit(1);
+}
+if (b1.noballs !== 1) {
+    console.error(`Test 12 Failed: Bowler B1 noballs should be 1`);
+    process.exit(1);
+}
+
 console.log("All tests passed!");

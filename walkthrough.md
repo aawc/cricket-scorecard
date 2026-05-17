@@ -1,26 +1,23 @@
-# Walkthrough - Drag & Drop Player Roster Management
+# Walkthrough - Full Scorecard Mode & Bowler Extras Tracking
 
-I have successfully transformed the player entry experience from simple text boxes to fully interactive, mobile-first drag-and-drop roster cards across 3 clean, independent commits without any special tags.
+I have successfully implemented the requested view renaming and enhanced bowler statistics across clean, independent commits without any special tags.
 
 ## Changes Made
 
-### 1. SortableJS Roster Cards (Commit `6f2848a`)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Replaced textareas with two Bootstrap roster cards containing quick-add inputs and sortable list containers. Loaded SortableJS CDN. Footer version updated to `v1.21.0`.
-- **[style.css](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/style.css)**: Added styling for drag handles (`🟰`), ghost drag state, and minimum container heights.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Enabled drag-and-drop lineup reordering and between-team transfers. Created dynamic order badges (`#1`, `#2`) and updated `startMatch`/`resetMatch` to interface with DOM lists.
+### 1. UI Renaming & Header Updates (Commit `index.html`)
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Renamed `#screenshot-mode-btn`, `#exit-screenshot-mode-btn`, and `#summary-section` titles from "Screenshot" / "Match Summary" to "Full Scorecard". Footer version updated to `v1.24.0`.
 
-### 2. Bulk Paste Import Modal (Commit `5c0dcfd`)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added `#bulkImportModal` with a multi-line textarea. Footer version updated to `v1.22.0`.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Implemented parsing logic to split pasted text by newlines or commas, clearing existing rosters and instantly rendering beautiful draggable cards.
+### 2. Bowler Wides & No Balls Columns (Commit `app.js`)
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Enhanced bowler data structures (`liveInnings.bowlers`) to track individual wide and no-ball counts. Updated `finalizeDelivery` to increment tallies on wide and no-ball deliveries. Updated `generateSummaryView` to render two new table columns: `Wides` and `No Balls`.
 
-### 3. Shared Player Toggle (Current Commit)
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Added a dual-team toggle button (`🔁`) on every player card to flag shared players (`[Shared]`). `startMatch()` scans and automatically mirrors shared players across both team lineups.
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated with confirmed interactive roster management features. Footer version updated to `v1.23.0`.
+### 3. Documentation & Tests
+- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated to reflect "Full Scorecard" terminology and bowler extras columns.
+- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)** Added Test 12 to verify bowler wide and no-ball tallies count accurately in memory.
 
 ## Verification Results
 
 ### Automated Verification
-All 11 unit tests executed via Node.js passed cleanly:
+All 12 unit tests executed via Node.js passed cleanly:
 ```
 Running tests...
 All tests passed!
