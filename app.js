@@ -302,15 +302,143 @@ function handleBulkImport() {
     bulkImportTextarea.value = '';
 }
 
+// Permalink Compression & Minification Helpers
+function minifyState(state) {
+    const minifyInnings = (inn) => {
+        if (!inn) return {};
+        return {
+            sc: inn.score || 0,
+            w: inn.wickets || 0,
+            b: inn.balls || 0,
+            ex: { wd: inn.extras ? inn.extras.wides : 0, nb: inn.extras ? inn.extras.noballs : 0, by: inn.extras ? inn.extras.byes : 0, lb: inn.extras ? inn.extras.legbyes : 0 },
+            bat: Object.fromEntries(Object.entries(inn.batsmen || {}).map(([k, v]) => [k, { r: v.runs, b: v.balls, a: v.active ? 1 : 0 }])),
+            bowl: Object.fromEntries(Object.entries(inn.bowlers || {}).map(([k, v]) => [k, { r: v.runs, b: v.balls, wk: v.wickets, wd: v.wides || 0, nb: v.noballs || 0 }])),
+            cb1: inn.currentBatsman1 || "",
+            cb2: inn.currentBatsman2 || "",
+            cbo: inn.currentBowler || "",
+            pbo: inn.previousBowler || null,
+            ob: inn.outBatsmen || [],
+            ol: inn.overLog || []
+        };
+    };
+
+    const minifyTeam = (t) => {
+        if (!t) return { n: "", p: [], in: [] };
+        return {
+            n: t.name || "",
+            p: t.players || [],
+            in: (t.innings || []).map(minifyInnings)
+        };
+    };
+
+    return {
+        s: {
+            opi: state.settings ? state.settings.oversPerInnings : 8,
+            mob: state.settings ? state.settings.maxOversPerBowler : 2,
+            asb: (state.settings && state.settings.allowSingleBatsman) ? 1 : 0,
+            elb: (state.settings && state.settings.enableLegByes) ? 1 : 0,
+            th: state.settings ? state.settings.theme : 'light'
+        },
+        m: {
+            ci: state.match ? state.match.currentInnings : 1,
+            cbt: state.match ? state.match.currentBattingTeam : 1,
+            t1: minifyTeam(state.match ? state.match.team1 : null),
+            t2: minifyTeam(state.match ? state.match.team2 : null),
+            li: minifyInnings(state.match ? state.match.liveInnings : null),
+            tg: state.match ? state.match.target : null,
+            mo: (state.match && state.match.matchOver) ? 1 : 0
+        }
+    };
+}
+
+function unminifyState(min) {
+    const unminifyInnings = (inn) => {
+        if (!inn) return {};
+        return {
+            score: inn.sc || 0,
+            wickets: inn.w || 0,
+            balls: inn.b || 0,
+            extras: {
+                wides: inn.ex ? (inn.ex.wd || 0) : 0,
+                noballs: inn.ex ? (inn.ex.nb || 0) : 0,
+                byes: inn.ex ? (inn.ex.by || 0) : 0,
+                legbyes: inn.ex ? (inn.ex.lb || 0) : 0
+            },
+            batsmen: Object.fromEntries(Object.entries(inn.bat || {}).map(([k, v]) => [k, { runs: v.r || 0, balls: v.b || 0, active: v.a === 1 }])),
+            bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
+            currentBatsman1: inn.cb1 || "",
+            currentBatsman2: inn.cb2 || "",
+            currentBowler: inn.cbo || "",
+            previousBowler: inn.pbo || null,
+            outBatsmen: inn.ob || [],
+            overLog: inn.ol || []
+        };
+    };
+
+    const unminifyTeam = (t, defName) => {
+        if (!t) return { name: defName, players: [], innings: [] };
+        return {
+            name: t.n || defName,
+            players: t.p || [],
+            innings: (t.in || []).map(unminifyInnings)
+        };
+    };
+
+    return {
+        settings: {
+            totalInnings: 1,
+            oversPerInnings: min.s ? (min.s.opi || 8) : 8,
+            maxOversPerBowler: min.s ? (min.s.mob || 2) : 2,
+            widePenalty: 1,
+            noBallPenalty: 1,
+            allowSingleBatsman: min.s ? min.s.asb === 1 : true,
+            enableLegByes: min.s ? min.s.elb === 1 : false,
+            theme: min.s ? (min.s.th || 'light') : 'light'
+        },
+        match: {
+            currentInnings: min.m ? (min.m.ci || 1) : 1,
+            currentBattingTeam: min.m ? (min.m.cbt || 1) : 1,
+            team1: unminifyTeam(min.m ? min.m.t1 : null, "Team 1"),
+            team2: unminifyTeam(min.m ? min.m.t2 : null, "Team 2"),
+            liveInnings: unminifyInnings(min.m ? min.m.li : null),
+            target: min.m ? min.m.tg : null,
+            matchOver: min.m ? min.m.mo === 1 : false
+        }
+    };
+}
+
 // Load from LocalStorage or URL
 function loadFromLocalStorage() {
     const urlParams = new URLSearchParams(window.location.search);
-    const urlState = urlParams.get('state');
+    const urlStateCompressed = urlParams.get('s');
+    const urlStateLegacy = urlParams.get('state');
     const flipContainer = document.querySelector('.flip-container');
 
-    if (urlState) {
+    if (urlStateCompressed && typeof LZString !== 'undefined') {
         try {
-            const decodedState = JSON.parse(decodeURIComponent(urlState));
+            const decompressed = LZString.decompressFromEncodedURIComponent(urlStateCompressed);
+            const minified = JSON.parse(decompressed);
+            const fullState = unminifyState(minified);
+            gameState.settings = fullState.settings;
+            gameState.match = fullState.match;
+            gameState.matchStarted = true;
+
+            window.history.replaceState({}, '', window.location.pathname);
+            
+            settingsSection.classList.add('hidden');
+            if (flipContainer) flipContainer.classList.remove('hidden');
+            
+            if (gameState.settings.theme) {
+                setTheme(gameState.settings.theme);
+            }
+            return;
+        } catch (e) {
+            console.error("Failed to parse compressed state from URL", e);
+            alert("Failed to load match from compressed link.");
+        }
+    } else if (urlStateLegacy) {
+        try {
+            const decodedState = JSON.parse(decodeURIComponent(urlStateLegacy));
             gameState.settings = decodedState.settings;
             gameState.match = decodedState.match;
             gameState.matchStarted = true;
@@ -325,7 +453,7 @@ function loadFromLocalStorage() {
             }
             return;
         } catch (e) {
-            console.error("Failed to parse state from URL", e);
+            console.error("Failed to parse legacy state from URL", e);
             alert("Failed to load match from link.");
         }
     }
@@ -363,12 +491,15 @@ function setTheme(theme) {
 
 // Share Match (Permalink)
 function shareMatch() {
-    const stateToShare = {
-        settings: gameState.settings,
-        match: gameState.match
-    };
-    const serializedState = encodeURIComponent(JSON.stringify(stateToShare));
-    const url = window.location.origin + window.location.pathname + '?state=' + serializedState;
+    const minified = minifyState(gameState);
+    let url;
+    if (typeof LZString !== 'undefined') {
+        const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(minified));
+        url = window.location.origin + window.location.pathname + '?s=' + compressed;
+    } else {
+        const serializedState = encodeURIComponent(JSON.stringify({ settings: gameState.settings, match: gameState.match }));
+        url = window.location.origin + window.location.pathname + '?state=' + serializedState;
+    }
     
     navigator.clipboard.writeText(url).then(() => {
         alert("Permalink copied to clipboard!");

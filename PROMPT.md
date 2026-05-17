@@ -33,7 +33,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
-- **Permalink**: Provide a way to create a permalink so that the scoreboard state can be transferred to a different device for continuing there.
+- **Permalink Sharing**: Compress and minify match state using client-side LZString compression and key aliasing (`?s=`), ensuring shareable URLs remain highly compact while preserving support for legacy uncompressed links (`?state=`).
 - **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. **When hitting reset, retain all match settings (such as overs per innings or max overs per baller or teams) but forget all information about the innings i.e. balls bowled, runs scored, etc.**
 - **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
 - **Visibility**: When on the match settings page, do not show the scoreboard section.

@@ -34,7 +34,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Extra Runs Specification: Specify extra runs on Wides, No Balls, and Run Outs, and whether they accrue to the batsman or byes.
 - Fixes: Count ball faced on wicket.
 - Match Over Logic: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, or overs run out.
-- Permalink: Generate a URL to share match state across devices.
+- Permalink Sharing: Extremely compact, LZString-compressed permalink URL (minified state via `?s=`) for seamless session transfer.
 - Bootstrap Integration: Visually pleasing layout.
 - Themes: Support for Light, Dark, and Green themes.
 - Flipping Page Effect: Smooth transition between score entry and screenshot mode.
