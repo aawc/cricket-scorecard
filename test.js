@@ -359,7 +359,7 @@ if (b1.noballs !== 1) {
 
 // Test 13: Byes increment batsman balls and bowler balls
 resetTestState();
-global.mockExtraRuns = 3;
+global.mockExtraRuns = 2;
 global.mockAccrueTo = 'byes';
 triggerExtraRunsModal('bye');
 

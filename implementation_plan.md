@@ -1,22 +1,20 @@
-# Implementation Plan - Comprehensive Byes Handling
+# Implementation Plan - Byes Base Run Calculation
 
-The goal is to update the Bye scoring workflow so that byes correctly count as a valid delivery faced by both the bowler and the active batsman. Clicking "Bye" will trigger the extra runs modal, instantly auto-accruing any selected runs (1, 2, 3, 4) directly to byes without prompting for batsman vs byes.
+The goal is to align the Byes extra runs calculation with Wides and No Balls, treating 1 bye as a base given. Selecting extra runs (e.g., 2) in the modal will add to the base 1 bye (resulting in 3 total byes). Selecting 0 extra runs will correctly score exactly 1 standard bye.
 
 ## Proposed Changes
 
 ### 1. [MODIFY] [index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)
-- Update footer version to `1.28.0`.
+- Update footer version to `1.29.0`.
 
 ### 2. [MODIFY] [app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)
-- Update `setupEventListeners()`: point `byeBtn` click listener to `triggerExtraRunsModal('bye')`.
-- In `extraRunValBtns` click listener: if `currentDeliveryType === 'bye'` and extra runs > 0, immediately dismiss modal and call `finalizeDelivery('bye', runs, 'byes')`. (Clicking 0 cancels).
-- Update `finalizeDelivery`: Add `'bye'` handling branch that increments `live.balls`, `bowler.balls`, and `activeB.balls` while adding extra runs strictly to total score and byes tally (never against bowler runs or batsman runs).
-- Remove obsolete `addBye()` function.
+- In `finalizeDelivery`, update the `'bye'` handling branch: `const totalByes = 1 + extraRuns;`
+- Remove `if (extraRuns === 0) return;` so that selecting 0 extra runs correctly scores 1 base bye.
 
 ### 3. Documentation & Tests
-- Update [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) and [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md).
-- Add unit test in [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js) verifying that byes increment batsman balls faced without adding runs.
+- Update [PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) to explicitly document that 1 bye is a base given.
+- Update Test 13 in [test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js) with `global.mockExtraRuns = 2` to verify 3 byes total (1 + 2). Automated unit tests run automatically.
 
 ## Verification Plan
 - Automated: Verify `node test.js` passes successfully.
-- Manual: Open browser, start match. Note active batsman balls faced. Click "Bye", select "2". Verify modal instantly closes, score increases by 2 byes, active batsman balls faced increases by 1, and bowler runs do not increase.
+- Manual: Open browser, start match. Click "Bye", select "0". Verify score increases by 1 bye and over log shows `1b`. Click "Bye", select "2". Verify score increases by 3 byes and over log shows `3b`.

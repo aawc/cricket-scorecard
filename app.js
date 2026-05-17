@@ -1075,15 +1075,15 @@ function finalizeDelivery(type, extraRuns, accrueTo) {
         executeRunOutWicket(pendingRunOutStriker, extraRuns, accrueTo);
         return;
     } else if (type === 'bye') {
-        if (extraRuns === 0) return;
-        live.score += extraRuns;
-        live.extras.byes += extraRuns;
+        const totalByes = 1 + extraRuns;
+        live.score += totalByes;
+        live.extras.byes += totalByes;
         
         live.balls++;
         if (bowler) bowler.balls++;
         if (activeB) activeB.balls++;
         
-        live.overLog.push(`${extraRuns}b`);
+        live.overLog.push(`${totalByes}b`);
         checkOverComplete();
     }
 

@@ -1,10 +1,8 @@
-# Task List - Comprehensive Byes Handling
+# Task List - Byes Base Run Calculation
 
-- [x] Update footer version to `1.28.0` in `index.html`
-- [x] Refactor `byeBtn` listener and modal number buttons for Byes in `app.js`
-- [x] Implement `'bye'` scoring in `finalizeDelivery` and remove `addBye()` in `app.js`
-- [x] Add unit test in `test.js` verifying byes increment batsman balls
+- [x] Update footer version to `1.29.0` in `index.html`
+- [x] Update `'bye'` branch in `finalizeDelivery` (1 base + extras) in `app.js`
+- [x] Update Test 13 in `test.js` (`mockExtraRuns = 2`)
 - [x] Verify automated unit tests pass (`node test.js`)
-- [x] Update `PROMPT.md` and `README.md` with confirmed byes rules
-- [x] Check if `SECURITY.md` needs update
+- [x] Update `PROMPT.md` with base bye rule
 - [x] Commit changes cleanly without special tags
