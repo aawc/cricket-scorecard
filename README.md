@@ -21,7 +21,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Web App Manifest for PWA installation.
 - Service Worker for offline support.
 - MIT License.
-- Player Management: Enter names for both teams, support for a player playing in both teams.
+- Player Management: Interactive Drag & Drop lineup sorting, between-team transfers, bulk paste import modal, and shared player mirroring.
 - Over Log: Display details of previous balls in the current over.
 - Selectable Active Players: Allow selecting current batsmen and bowler on the scorecard.
 - Strike Rotation: Automatic strike rotation at the end of the over.

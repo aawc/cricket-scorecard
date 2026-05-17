@@ -12,9 +12,10 @@ global.document = {
             classes: new Set(),
             appendChild: () => {},
             remove: () => {},
-            querySelector: () => ({ addEventListener: () => {}, textContent: '', remove: () => {} }),
+            querySelector: () => ({ addEventListener: () => {}, textContent: '', remove: () => {}, classList: { add: () => {}, remove: () => {} } }),
             querySelectorAll: () => [],
-            addEventListener: () => {}
+            addEventListener: () => {},
+            dataset: {}
         };
         elem.classList = {
             add: function(c) { elem.classes.add(c); },
@@ -31,9 +32,10 @@ global.document = {
                 classes: new Set(),
                 appendChild: () => {},
                 innerHTML: '',
-                querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} } }),
+                querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} }, dataset: {} }),
                 querySelectorAll: () => [],
                 addEventListener: () => {},
+                dataset: {},
                 parentElement: {
                     classList: {
                         add: () => {},

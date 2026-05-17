@@ -209,25 +209,48 @@ function renderRosters() {
     t2.forEach(name => addPlayerToRoster(2, name));
 }
 
-function addPlayerToRoster(teamNum, name) {
+function addPlayerToRoster(teamNum, name, isShared = false) {
     const targetList = teamNum === 1 ? team1RosterList : team2RosterList;
     if (!targetList || !name || !name.trim()) return;
 
     const li = document.createElement('li');
     li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item', 'small');
+    li.dataset.shared = isShared ? "true" : "false";
+    if (isShared) li.classList.add('bg-warning-subtle');
     
     li.innerHTML = `
         <span class="drag-handle me-2 text-muted">🟰</span>
-        <span class="player-name flex-grow-1 text-truncate me-2">${name.trim()}</span>
-        <span class="badge bg-primary rounded-pill order-badge me-2">#0</span>
-        <button class="btn btn-xs btn-outline-danger delete-player-btn py-0 px-1" type="button">❌</button>
+        <span class="player-name flex-grow-1 text-truncate me-1">${name.trim()}</span>
+        <span class="badge bg-primary rounded-pill order-badge me-1">#0</span>
+        <button class="btn btn-xs ${isShared ? 'btn-warning' : 'btn-outline-warning'} shared-player-btn py-0 px-1 me-1" type="button" title="Toggle Shared Player">🔁</button>
+        <button class="btn btn-xs btn-outline-danger delete-player-btn py-0 px-1" type="button" title="Delete Player">❌</button>
     `;
 
     const deleteBtn = li.querySelector('.delete-player-btn');
-    deleteBtn.addEventListener('click', () => {
-        li.remove();
-        updateLineupNumbers();
-    });
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            li.remove();
+            updateLineupNumbers();
+        });
+    }
+
+    const sharedBtn = li.querySelector('.shared-player-btn');
+    if (sharedBtn) {
+        sharedBtn.addEventListener('click', () => {
+            const currShared = li.dataset.shared === "true";
+            if (currShared) {
+                li.dataset.shared = "false";
+                li.classList.remove('bg-warning-subtle');
+                sharedBtn.classList.remove('btn-warning');
+                sharedBtn.classList.add('btn-outline-warning');
+            } else {
+                li.dataset.shared = "true";
+                li.classList.add('bg-warning-subtle');
+                sharedBtn.classList.remove('btn-outline-warning');
+                sharedBtn.classList.add('btn-warning');
+            }
+        });
+    }
 
     targetList.appendChild(li);
     updateLineupNumbers();
@@ -356,10 +379,34 @@ function startMatch() {
     gameState.settings.allowSingleBatsman = allowSingleBatsmanInput.checked;
     gameState.settings.enableLegByes = enableLegByesInput.checked;
 
-    // Parse player names from roster lists
+    // Parse player names from roster lists and mirror shared players
     if (team1RosterList && team2RosterList) {
-        gameState.match.team1.players = Array.from(team1RosterList.querySelectorAll('.player-name')).map(el => el.textContent.trim());
-        gameState.match.team2.players = Array.from(team2RosterList.querySelectorAll('.player-name')).map(el => el.textContent.trim());
+        const t1Names = [];
+        const t2Names = [];
+        const t1Shared = [];
+        const t2Shared = [];
+
+        team1RosterList.querySelectorAll('.roster-item').forEach(el => {
+            const name = el.querySelector('.player-name').textContent.trim();
+            t1Names.push(name);
+            if (el.dataset.shared === "true") t1Shared.push(name);
+        });
+
+        team2RosterList.querySelectorAll('.roster-item').forEach(el => {
+            const name = el.querySelector('.player-name').textContent.trim();
+            t2Names.push(name);
+            if (el.dataset.shared === "true") t2Shared.push(name);
+        });
+
+        t1Shared.forEach(name => {
+            if (!t2Names.includes(name)) t2Names.push(name);
+        });
+        t2Shared.forEach(name => {
+            if (!t1Names.includes(name)) t1Names.push(name);
+        });
+
+        gameState.match.team1.players = t1Names;
+        gameState.match.team2.players = t2Names;
     }
 
     // Validation: Enough players to bowl

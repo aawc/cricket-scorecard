@@ -16,9 +16,9 @@
 - [x] Commit Phase 2 changes cleanly without special tags
 
 ## Phase 3: Shared Player Toggle (Commit 3)
-- [ ] Add shared player button (`🔁`) to roster items in `app.js`
-- [ ] Update `startMatch` to mirror shared players across teams in `app.js`
-- [ ] Update version to `1.23.0` in `index.html`
-- [ ] Verify automated unit tests pass (`node test.js`)
-- [ ] Update `PROMPT.md` and `README.md` with confirmed roster features
-- [ ] Commit Phase 3 changes cleanly without special tags
+- [x] Add shared player button (`🔁`) to roster items in `app.js`
+- [x] Update `startMatch` to mirror shared players across teams in `app.js`
+- [x] Update version to `1.23.0` in `index.html`
+- [x] Verify automated unit tests pass (`node test.js`)
+- [x] Update `PROMPT.md` and `README.md` with confirmed roster features
+- [x] Commit Phase 3 changes cleanly without special tags

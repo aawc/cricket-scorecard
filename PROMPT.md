@@ -19,9 +19,10 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Screenshot Mode**: Include a toggle or mechanism to display the scoreboard in a clean, compact layout optimized for taking screenshots to share, hiding all input controls and navigation elements. This mode should display the details about the current state of the match, including the scores of each team and player (batsmen and bowlers) for each inning (completed or in progress) so far. Ensure that the summary view does not show an extra invalid innings at the bottom when the match is over.
 - **Screenshot Mode Toggle**: Provide a way to switch back and forth between the screenshot mode and the score entry mode. Use a flipping page effect that rotates back and forth when the mode is switched.
 - **Player Management**:
-    - Allow specifying the names of the players for each team.
-    - Allow the ability for 1 player to play from both teams.
-    - Allow selecting the current batsmen and bowler in the scorecard from the player list.
+    - Interactive drag-and-drop roster cards with SortableJS for batting order sorting and between-team transfers.
+    - Bulk paste import modal for rapid roster loading.
+    - Dual-team toggle button (`🔁`) to flag and automatically mirror shared players across both teams.
+    - Select current batsmen and bowler from filtered dropdowns on the scorecard.
 - **Over Log**: For each over, display the details of the previous balls in the current over (e.g., showing a sequence like "0, 1, wd, 4, W").
 - **Strike Rotation**: Make sure to switch the batsman on strike at the end of the over.
 - **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. Do not show the name of the bowler who has reached their max overs limit.

@@ -1,24 +1,21 @@
-# Walkthrough - Feature Updates & Penalty Configuration Cleanup
+# Walkthrough - Drag & Drop Player Roster Management
 
-I have successfully implemented the requested feature additions and UI simplifications across clean, independent commits without any special tags.
+I have successfully transformed the player entry experience from simple text boxes to fully interactive, mobile-first drag-and-drop roster cards across 3 clean, independent commits without any special tags.
 
 ## Changes Made
 
-### 1. Run Out Specification (Commit `abf1fb4`)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added a dedicated "Run Out" button in the `extra-buttons` grid and a touch-friendly Bootstrap modal (`#runoutModal`) prompting to select either the Striker or Non-Striker.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Implemented run-out processing logic where team wickets and balls bowled increase, but the bowler does not receive a wicket credit in bowling stats (conforming to official cricket laws).
+### 1. SortableJS Roster Cards (Commit `6f2848a`)
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Replaced textareas with two Bootstrap roster cards containing quick-add inputs and sortable list containers. Loaded SortableJS CDN. Footer version updated to `v1.21.0`.
+- **[style.css](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/style.css)**: Added styling for drag handles (`🟰`), ghost drag state, and minimum container heights.
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Enabled drag-and-drop lineup reordering and between-team transfers. Created dynamic order badges (`#1`, `#2`) and updated `startMatch`/`resetMatch` to interface with DOM lists.
 
-### 2. Extra Runs Specification (Commit `35880aa`)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added `#extraRunsModal` prompting for extra runs (0, 1, 2, 3, 4, 6) and whether they accrue to the Batsman or Byes.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Wides, No Balls, and Run Outs trigger the extra runs modal. Wides/No Balls add base penalty + extra runs without incrementing balls. Run Outs add extra runs while incrementing balls.
+### 2. Bulk Paste Import Modal (Commit `5c0dcfd`)
+- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Added `#bulkImportModal` with a multi-line textarea. Footer version updated to `v1.22.0`.
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Implemented parsing logic to split pasted text by newlines or commas, clearing existing rosters and instantly rendering beautiful draggable cards.
 
-### 3. Fixed Wide & No Ball Penalties (Current Commit)
-- **[index.html](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html)**: Removed custom `#wide-penalty` and `#no-ball-penalty` input fields from match settings. Footer version updated to `v1.20.0`.
-- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Hardcoded wide and no-ball penalties to official standard `1` run in `gameState.settings`. Removed input assignments in `startMatch` and `resetMatch`.
-
-### 4. Documentation & Tests
-- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated with live hosting URL, documentation structure table, and fixed penalty rules.
-- **[test.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test.js)** Automated unit tests fully verified.
+### 3. Shared Player Toggle (Current Commit)
+- **[app.js](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/app.js)**: Added a dual-team toggle button (`🔁`) on every player card to flag shared players (`[Shared]`). `startMatch()` scans and automatically mirrors shared players across both team lineups.
+- **[PROMPT.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/PROMPT.md) & [README.md](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md)** Updated with confirmed interactive roster management features. Footer version updated to `v1.23.0`.
 
 ## Verification Results
 
