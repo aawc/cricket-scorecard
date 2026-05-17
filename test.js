@@ -400,4 +400,20 @@ if (gameState.match.liveInnings.bowlers["B1"].runs !== 0) {
     process.exit(1);
 }
 
+// Test 14: Strike rotation on odd extra runs (Wide + 1 run)
+resetTestState();
+// P1 is active (striker), P2 is inactive
+global.mockExtraRuns = 1;
+global.mockAccrueTo = 'byes';
+triggerExtraRunsModal('wide');
+
+if (gameState.match.liveInnings.batsmen["P1"].active) {
+    console.error(`Test 14 Failed: Striker P1 should no longer be active`);
+    process.exit(1);
+}
+if (!gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error(`Test 14 Failed: Non-striker P2 should now be active`);
+    process.exit(1);
+}
+
 console.log("All tests passed!");

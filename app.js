@@ -912,6 +912,14 @@ function checkControlsState() {
     });
 }
 
+function rotateStrike() {
+    const live = gameState.match.liveInnings;
+    if (live.currentBatsman1 && live.currentBatsman2 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman2]) {
+        live.batsmen[live.currentBatsman1].active = !live.batsmen[live.currentBatsman1].active;
+        live.batsmen[live.currentBatsman2].active = !live.batsmen[live.currentBatsman2].active;
+    }
+}
+
 // Scoring Functions
 function addRuns(runs) {
     if (gameState.match.matchOver) return;
@@ -933,9 +941,8 @@ function addRuns(runs) {
 
     live.overLog.push(runs.toString());
 
-    if (runs % 2 !== 0 && live.currentBatsman1 && live.currentBatsman2) {
-        live.batsmen[live.currentBatsman1].active = !live.batsmen[live.currentBatsman1].active;
-        live.batsmen[live.currentBatsman2].active = !live.batsmen[live.currentBatsman2].active;
+    if (runs % 2 !== 0) {
+        rotateStrike();
     }
 
     checkOverComplete();
@@ -947,10 +954,7 @@ function addRuns(runs) {
 function checkOverComplete() {
     const live = gameState.match.liveInnings;
     if (live.balls % 6 === 0 && live.balls > 0) {
-        if (live.currentBatsman1 && live.currentBatsman2) {
-            live.batsmen[live.currentBatsman1].active = !live.batsmen[live.currentBatsman1].active;
-            live.batsmen[live.currentBatsman2].active = !live.batsmen[live.currentBatsman2].active;
-        }
+        rotateStrike();
         live.overLog = []; // Clear for next over
         
         const maxBalls = gameState.settings.oversPerInnings * 6;
@@ -1086,6 +1090,14 @@ function finalizeDelivery(type, extraRuns, accrueTo) {
         
         live.overLog.push(`${totalByes}b`);
         checkOverComplete();
+    }
+
+    let physicalRuns = extraRuns;
+    if (type === 'bye') {
+        physicalRuns = 1 + extraRuns;
+    }
+    if (physicalRuns % 2 !== 0) {
+        rotateStrike();
     }
 
     checkMatchOver();

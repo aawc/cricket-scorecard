@@ -25,7 +25,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Player Management: Interactive Drag & Drop lineup sorting, between-team transfers, bulk paste import modal, and shared player mirroring.
 - Over Log: Display details of previous balls in the current over.
 - Selectable Active Players: Allow selecting current batsmen and bowler on the scorecard.
-- Strike Rotation: Automatic strike rotation at the end of the over.
+- Strike Rotation: Automatic strike rotation on odd physical runs scored (including extras) and at the end of each over.
 - Dropdown Player Selection: Filtered to only show eligible players.
 - Controls Disabling: When selection is needed.
 - Single Batsman Rule: Setting to allow a single batsman to play (default: true).

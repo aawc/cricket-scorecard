@@ -26,7 +26,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Dual-team toggle button (`🔁`) to flag and automatically mirror shared players across both teams.
     - Select current batsmen and bowler from filtered dropdowns on the scorecard.
 - **Over Log**: For each over, display the details of the previous balls in the current over (e.g., showing a sequence like "0, 1, wd, 4, W").
-- **Strike Rotation**: Make sure to switch the batsman on strike at the end of the over.
+- **Strike Rotation**: Switch active batsman on strike at the end of each over and whenever an odd number of physical runs (1, 3) are completed, including physical extra runs on Wides, No Balls, Byes, and Run Outs.
 - **Player Selection**: Use dropdowns on the scorecard to select players. Do not show player names that are not eligible. Do not show the name of the bowler who has reached their max overs limit.
 - **Striker Marker**: Use a clear mechanism (e.g., distinct styling like background color) to indicate the striker.
 - **Innings End**: Once all eligible batsmen are out, or the maximum total allowed overs have been bowled, the innings is over.
