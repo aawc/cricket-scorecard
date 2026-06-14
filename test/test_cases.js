@@ -946,4 +946,30 @@ if (bowlerStatsAfter !== '0/3 (0.2)') {
     process.exit(1);
 }
 
+// Test 34: Active striker container background green highlight
+resetTestState();
+
+const b1Container = document.getElementById('batsman1-container');
+const b2Container = document.getElementById('batsman2-container');
+
+if (!b1Container.classList.contains('active')) {
+    console.error("Test 34 Failed: Expected batsman 1 container to have 'active' class initially");
+    process.exit(1);
+}
+if (b2Container.classList.contains('active')) {
+    console.error("Test 34 Failed: Expected batsman 2 container to NOT have 'active' class initially");
+    process.exit(1);
+}
+
+addRuns(1);
+
+if (b1Container.classList.contains('active')) {
+    console.error("Test 34 Failed: Expected batsman 1 container to NOT have 'active' class after strike rotation");
+    process.exit(1);
+}
+if (!b2Container.classList.contains('active')) {
+    console.error("Test 34 Failed: Expected batsman 2 container to have 'active' class after strike rotation");
+    process.exit(1);
+}
+
 console.log("All tests passed!");

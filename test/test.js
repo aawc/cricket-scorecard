@@ -6,6 +6,14 @@ const path = require('path');
 const elements = {};
 global.elements = elements; // Expose to test_cases.js
 
+function createClassListMock(elem) {
+    return {
+        add: function(...classes) { classes.forEach(c => elem.classes.add(c)); },
+        remove: function(...classes) { classes.forEach(c => elem.classes.delete(c)); },
+        contains: function(c) { return elem.classes.has(c); }
+    };
+}
+
 global.document = {
     createElement: function(tagName) {
         const elem = {
@@ -26,11 +34,7 @@ global.document = {
             dataset: {},
             style: {}
         };
-        elem.classList = {
-            add: function(c) { elem.classes.add(c); },
-            remove: function(c) { elem.classes.delete(c); },
-            contains: function(c) { return elem.classes.has(c); }
-        };
+        elem.classList = createClassListMock(elem);
         return elem;
     },
     getElementById: function(id) {
@@ -68,11 +72,7 @@ global.document = {
                     }
                 }
             };
-            elem.classList = {
-                add: function(c) { elem.classes.add(c); },
-                remove: function(c) { elem.classes.delete(c); },
-                contains: function(c) { return elem.classes.has(c); }
-            };
+            elem.classList = createClassListMock(elem);
             elements[id] = elem;
         }
         return elements[id];
@@ -84,11 +84,7 @@ global.document = {
                  const elem = {
                      classes: new Set()
                  };
-                 elem.classList = {
-                     add: function(c) { elem.classes.add(c); },
-                     remove: function(c) { elem.classes.delete(c); },
-                     contains: function(c) { return elem.classes.has(c); }
-                 };
+                 elem.classList = createClassListMock(elem);
                  elements['flip-container'] = elem;
              }
              return elements['flip-container'];
