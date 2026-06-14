@@ -678,4 +678,98 @@ if (gameState.match.team2.innings[0].score !== 11) {
 // Restore localStorage mock
 global.localStorage.getItem = (key) => null;
 
+// Test 23: Match ends in a Tie at max overs limit
+resetTestState();
+gameState.settings.oversPerInnings = 2; // Max 12 balls
+gameState.match.currentInnings = 2;
+gameState.match.currentBattingTeam = 2;
+gameState.match.target = 30;
+gameState.match.liveInnings.score = 26;
+gameState.match.liveInnings.balls = 11;
+// Bowl 3 runs on the 12th ball (last ball of over 2)
+addRuns(3);
+
+if (!gameState.match.matchOver) {
+    console.error("Test 23 Failed: Match should be marked over (Tie)");
+    process.exit(1);
+}
+if (gameState.match.team2.innings.length !== 1) {
+    console.error(`Test 23 Failed: Innings 2 should be archived, got history length ${gameState.match.team2.innings.length}`);
+    process.exit(1);
+}
+
+// Test 24: Simulate user match sequence
+resetTestState();
+gameState.settings.oversPerInnings = 2;
+gameState.match.currentInnings = 2;
+gameState.match.currentBattingTeam = 2;
+gameState.match.target = 30; // Innings 1 score was 29
+
+// Bowl 5 balls of 4 runs
+for (let i = 0; i < 5; i++) addRuns(4);
+// Ball 6: 1 run (Over 1 ends)
+addRuns(1);
+
+// Verify Over 1 is archived
+if (gameState.match.liveInnings.overs.length !== 1) {
+    console.error(`Test 24 Failed: Over 1 should be archived, got ${gameState.match.liveInnings.overs.length}`);
+    process.exit(1);
+}
+
+// Select bowler B2 for Over 2
+handleBowlerChange("B2");
+
+// Bowl 5 balls of 1 run (Balls 7-11)
+for (let i = 0; i < 5; i++) addRuns(1);
+// Ball 12: 3 runs (Over 2 ends, score should be 29, match should be Tie)
+addRuns(3);
+
+if (!gameState.match.matchOver) {
+    console.error("Test 24 Failed: Match should be marked over (Tie) after Ball 12");
+    process.exit(1);
+}
+
+// Test 25: Verify migration of missing overs array on load from localStorage
+resetTestState();
+delete gameState.match.liveInnings.overs; // Simulate old state missing overs
+gameState.settings.oversPerInnings = 2;
+gameState.match.currentInnings = 2;
+gameState.match.currentBattingTeam = 2;
+gameState.match.target = 30;
+gameState.match.liveInnings.score = 26;
+gameState.match.liveInnings.balls = 11;
+
+const badStateString = JSON.stringify(gameState);
+global.localStorage.getItem = (key) => {
+    if (key === 'cricketScorecardState') {
+        return badStateString;
+    }
+    return null;
+};
+
+loadFromLocalStorage();
+
+if (!gameState.match.liveInnings.overs) {
+    console.error("Test 25 Failed: overs array was not restored on load");
+    process.exit(1);
+}
+
+try {
+    addRuns(3);
+} catch (e) {
+    console.error("Test 25 Failed: addRuns crashed even after migration", e);
+    process.exit(1);
+}
+
+if (!gameState.match.matchOver) {
+    console.error("Test 25 Failed: Match should be marked over (Tie)");
+    process.exit(1);
+}
+if (gameState.match.team2.innings.length !== 1) {
+    console.error(`Test 25 Failed: Innings 2 should be archived, got history length ${gameState.match.team2.innings.length}`);
+    process.exit(1);
+}
+
+global.localStorage.getItem = (key) => null;
+
 console.log("All tests passed!");

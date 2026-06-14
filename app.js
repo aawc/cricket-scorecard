@@ -476,6 +476,23 @@ function loadFromLocalStorage() {
     }
 
     if (loaded) {
+        // Ensure overs array exists in all innings states (migration for old states)
+        if (gameState.match) {
+            if (gameState.match.liveInnings && !gameState.match.liveInnings.overs) {
+                gameState.match.liveInnings.overs = [];
+            }
+            if (gameState.match.team1 && gameState.match.team1.innings) {
+                gameState.match.team1.innings.forEach(inn => {
+                    if (!inn.overs) inn.overs = [];
+                });
+            }
+            if (gameState.match.team2 && gameState.match.team2.innings) {
+                gameState.match.team2.innings.forEach(inn => {
+                    if (!inn.overs) inn.overs = [];
+                });
+            }
+        }
+
         if (gameState.matchStarted) {
             settingsSection.classList.add('hidden');
             if (flipContainer) flipContainer.classList.remove('hidden');
