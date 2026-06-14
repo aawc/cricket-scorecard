@@ -63,5 +63,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - Keep `SECURITY.md` updated with project security policies and reporting guidelines as architectural or dependency changes occur.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
-- Always update the footer in `index.html` with the version number, deployment date, and deployment time on each update (restricted to code changes as per above requirement).
+- Always use a new git branch for new bug fixes or features.
+- Always update the footer in `index.html` with the version number (in the format `vYYYYMMDD-NNN`, e.g., `v20260614-001`, where `YYYYMMDD` is the current date and `NNN` is a 3-digit sequence starting at `001` each day, incremented by 1 for each subsequent update), deployment date, and deployment time on each update (restricted to code changes as per above requirement).
+- Always update the cache version name in `sw.js` (e.g. `cricket-scorecard-vYYYYMMDD-NNN`) to match the new version.
 - Always run automated unit tests (`node test.js`) on each edit without requesting confirmation from the user.
