@@ -67,4 +67,5 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - Always use a new git branch for new bug fixes or features.
 - Always update the footer in `index.html` with the version number (in the format `vYYYYMMDD-NNN`, e.g., `v20260614-001`, where `YYYYMMDD` is the current date and `NNN` is a 3-digit sequence starting at `001` each day, incremented by 1 for each subsequent update), deployment date, and deployment time on each update (restricted to code changes as per above requirement).
 - Always update the cache version name in `sw.js` (e.g. `cricket-scorecard-vYYYYMMDD-NNN`) to match the new version.
+- Always write automated unit test assertions in `test/test_cases.js` for all new features and bug fixes to prevent regressions.
 - Always run automated unit tests (`node test/test.js`) on each edit without requesting confirmation from the user.

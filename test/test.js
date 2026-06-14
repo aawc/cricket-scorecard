@@ -142,6 +142,7 @@ async function loadModulesAndRun() {
     // Make gameState global
     global.gameState = stateMod.gameState;
     global.setGameState = stateMod.setGameState;
+    global.updateUI = uiMod.updateUI;
 
     // Bind functions to global scope for tests
     global.addRuns = uiMod.addRuns;

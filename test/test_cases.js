@@ -59,6 +59,7 @@ function resetTestState() {
         elements[id].checked = false;
         elements[id].dataset = {};
     }
+    updateUI();
 }
 
 // Test 1: Initial state
@@ -905,6 +906,43 @@ if (!firstOverItemHeader.innerHTML.includes("Over 2") || !firstOverItemHeader.in
 
 if (!secondOverItemHeader.innerHTML.includes("Over 1") || !secondOverItemHeader.innerHTML.includes("B1")) {
     console.error(`Test 32 Failed: Expected second item to be Over 1 by B1, got: ${secondOverItemHeader.innerHTML}`);
+    process.exit(1);
+}
+
+// Test 33: Compact stats layout for mobile view (Runs (Balls) & Wkts/Runs (Overs.Balls))
+resetTestState();
+
+const bat1StatsInit = document.getElementById('batsman1-stats').textContent;
+const bowlerStatsInit = document.getElementById('bowler-stats').textContent;
+
+if (bat1StatsInit !== '0 (0)') {
+    console.error(`Test 33 Failed: Expected initial batsman 1 stats to be '0 (0)', got: '${bat1StatsInit}'`);
+    process.exit(1);
+}
+if (bowlerStatsInit !== '0/0 (0.0)') {
+    console.error(`Test 33 Failed: Expected initial bowler stats to be '0/0 (0.0)', got: '${bowlerStatsInit}'`);
+    process.exit(1);
+}
+
+addRuns(1);
+addRuns(2);
+
+const bat1StatsAfter = document.getElementById('batsman1-stats').textContent;
+const bowlerStatsAfter = document.getElementById('bowler-stats').textContent;
+
+if (bat1StatsAfter !== '1 (1)') {
+    console.error(`Test 33 Failed: Expected batsman 1 stats to be '1 (1)', got: '${bat1StatsAfter}'`);
+    process.exit(1);
+}
+
+const bat2StatsAfter = document.getElementById('batsman2-stats').textContent;
+if (bat2StatsAfter !== '2 (1)') {
+    console.error(`Test 33 Failed: Expected batsman 2 stats to be '2 (1)', got: '${bat2StatsAfter}'`);
+    process.exit(1);
+}
+
+if (bowlerStatsAfter !== '0/3 (0.2)') {
+    console.error(`Test 33 Failed: Expected bowler stats to be '0/3 (0.2)', got: '${bowlerStatsAfter}'`);
     process.exit(1);
 }
 

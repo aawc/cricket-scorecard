@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cricket-scorecard-v20260614-010';
+const CACHE_NAME = 'cricket-scorecard-v20260614-011';
 const ASSETS = [
     'index.html',
     'style.css',

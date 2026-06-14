@@ -651,10 +651,10 @@ export function updateUI() {
         }
         if (batsman1Stats) {
             const b = live.batsmen[live.currentBatsman1];
-            batsman1Stats.textContent = `Runs: ${b.runs}, Balls: ${b.balls}`;
+            batsman1Stats.textContent = `${b.runs} (${b.balls})`;
         }
     } else {
-        if (batsman1Stats) batsman1Stats.textContent = 'Runs: 0, Balls: 0';
+        if (batsman1Stats) batsman1Stats.textContent = '0 (0)';
     }
 
     if (live.currentBatsman2 && live.batsmen[live.currentBatsman2]) {
@@ -664,10 +664,10 @@ export function updateUI() {
         }
         if (batsman2Stats) {
             const b = live.batsmen[live.currentBatsman2];
-            batsman2Stats.textContent = `Runs: ${b.runs}, Balls: ${b.balls}`;
+            batsman2Stats.textContent = `${b.runs} (${b.balls})`;
         }
     } else {
-        if (batsman2Stats) batsman2Stats.textContent = 'Runs: 0, Balls: 0';
+        if (batsman2Stats) batsman2Stats.textContent = '0 (0)';
     }
 
     if (live.currentBowler && live.bowlers[live.currentBowler]) {
@@ -675,12 +675,10 @@ export function updateUI() {
             const b = live.bowlers[live.currentBowler];
             const bOvers = Math.floor(b.balls / 6);
             const bBalls = b.balls % 6;
-            const bWides = b.wides || 0;
-            const bNoBalls = b.noballs || 0;
-            bowlerStats.textContent = `Overs: ${bOvers}.${bBalls}, Runs: ${b.runs}, Wkts: ${b.wickets} (Wd: ${bWides}, NB: ${bNoBalls})`;
+            bowlerStats.textContent = `${b.wickets}/${b.runs} (${bOvers}.${bBalls})`;
         }
     } else {
-        if (bowlerStats) bowlerStats.textContent = 'Overs: 0.0, Runs: 0, Wkts: 0';
+        if (bowlerStats) bowlerStats.textContent = '0/0 (0.0)';
     }
 
     // Extras
