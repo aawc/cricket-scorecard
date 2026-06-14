@@ -1,12 +1,12 @@
-// storage.js
+import { GameState, LiveInnings, Team } from './types.js';
 
-function getLZString() {
+function getLZString(): any {
     if (typeof window !== 'undefined' && window.LZString) return window.LZString;
-    if (typeof global !== 'undefined' && global.LZString) return global.LZString;
+    if (typeof global !== 'undefined' && (global as any).LZString) return (global as any).LZString;
     return null;
 }
 
-export function saveState(state) {
+export function saveState(state: GameState): void {
     try {
         localStorage.setItem('cricketScorecardState', JSON.stringify(state));
     } catch (e) {
@@ -14,7 +14,7 @@ export function saveState(state) {
     }
 }
 
-export function clearState() {
+export function clearState(): void {
     try {
         localStorage.removeItem('cricketScorecardState');
     } catch (e) {
@@ -22,20 +22,20 @@ export function clearState() {
     }
 }
 
-export function loadState() {
+export function loadState(): GameState | null {
     const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
     const urlStateCompressed = urlParams ? urlParams.get('s') : null;
     const urlStateLegacy = urlParams ? urlParams.get('state') : null;
     let loaded = false;
-    let loadedState = null;
+    let loadedState: any = null;
 
     if (urlStateCompressed) {
         try {
-            const LZString = getLZString();
-            if (!LZString) {
+            const LZStringInstance = getLZString();
+            if (!LZStringInstance) {
                 throw new Error("LZString library is not loaded.");
             }
-            const decompressed = LZString.decompressFromEncodedURIComponent(urlStateCompressed);
+            const decompressed = LZStringInstance.decompressFromEncodedURIComponent(urlStateCompressed);
             if (!decompressed) {
                 throw new Error("Decompression failed (invalid payload).");
             }
@@ -113,20 +113,20 @@ export function loadState() {
                 }
             }
         }
-        return loadedState;
+        return loadedState as GameState;
     }
 
     return null;
 }
 
-export function generatePermalink(state) {
+export function generatePermalink(state: GameState): string {
     const minified = minifyState(state);
-    let url;
-    const LZString = getLZString();
+    let url: string;
+    const LZStringInstance = getLZString();
     
     if (typeof window !== 'undefined') {
-        if (LZString) {
-            const compressed = LZString.compressToEncodedURIComponent(JSON.stringify(minified));
+        if (LZStringInstance) {
+            const compressed = LZStringInstance.compressToEncodedURIComponent(JSON.stringify(minified));
             url = window.location.origin + window.location.pathname + '?s=' + compressed;
         } else {
             const serializedState = encodeURIComponent(JSON.stringify({ settings: state.settings, match: state.match }));
@@ -138,14 +138,14 @@ export function generatePermalink(state) {
     return url;
 }
 
-export function healInningsOvers(innings) {
+export function healInningsOvers(innings: LiveInnings): void {
     if (!innings) return;
     if (!innings.overs) innings.overs = [];
     if (!innings.overLog) innings.overLog = [];
     
-    let currentOverBalls = [];
+    let currentOverBalls: string[] = [];
     let legalCount = 0;
-    const completedOvers = [];
+    const completedOvers: Array<{ bowler: string; balls: string[] }> = [];
     
     for (const ball of innings.overLog) {
         currentOverBalls.push(ball);
@@ -169,8 +169,8 @@ export function healInningsOvers(innings) {
     }
 }
 
-export function minifyState(state) {
-    const minifyInnings = (inn) => {
+export function minifyState(state: GameState): any {
+    const minifyInnings = (inn: LiveInnings | null): any => {
         if (!inn) return {};
         return {
             sc: inn.score || 0,
@@ -189,7 +189,7 @@ export function minifyState(state) {
         };
     };
 
-    const minifyTeam = (t) => {
+    const minifyTeam = (t: Team | null): any => {
         if (!t) return { n: "", p: [], in: [] };
         return {
             n: t.name || "",
@@ -219,9 +219,16 @@ export function minifyState(state) {
     };
 }
 
-export function unminifyState(min) {
-    const unminifyInnings = (inn) => {
-        if (!inn) return {};
+export function unminifyState(min: any): GameState {
+    const unminifyInnings = (inn: any): LiveInnings => {
+        if (!inn) return {
+            score: 0, wickets: 0, balls: 0,
+            extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+            batsmen: {}, bowlers: {},
+            currentBatsman1: "", currentBatsman2: "",
+            currentBowler: "", previousBowler: null,
+            outBatsmen: [], overs: [], overLog: []
+        };
         return {
             score: inn.sc || 0,
             wickets: inn.w || 0,
@@ -232,19 +239,19 @@ export function unminifyState(min) {
                 byes: inn.ex ? (inn.ex.by || 0) : 0,
                 legbyes: inn.ex ? (inn.ex.lb || 0) : 0
             },
-            batsmen: Object.fromEntries(Object.entries(inn.bat || {}).map(([k, v]) => [k, { runs: v.r || 0, balls: v.b || 0, active: v.a === 1 }])),
-            bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
+            batsmen: Object.fromEntries(Object.entries(inn.bat || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, active: v.a === 1 }])),
+            bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
             currentBatsman1: inn.cb1 || "",
             currentBatsman2: inn.cb2 || "",
             currentBowler: inn.cbo || "",
             previousBowler: inn.pbo || null,
             outBatsmen: inn.ob || [],
-            overs: (inn.ov || []).map(o => ({ bowler: o.bo, balls: o.bl })),
+            overs: (inn.ov || []).map((o: any) => ({ bowler: o.bo, balls: o.bl })),
             overLog: inn.ol || []
         };
     };
 
-    const unminifyTeam = (t, defName) => {
+    const unminifyTeam = (t: any, defName: string): Team => {
         if (!t) return { name: defName, players: [], innings: [] };
         return {
             name: t.n || defName,
@@ -253,13 +260,14 @@ export function unminifyState(min) {
         };
     };
 
-    // Infer phase for backward compatibility with older links
     const inferredPhase = min.m && min.m.mo === 1
         ? 'MATCH_OVER'
         : (min.m && min.m.tg !== null && min.m.ci === 1 ? 'INNINGS_BREAK' : 'PLAYING_INNINGS');
 
     return {
         phase: min.ph || inferredPhase,
+        matchStarted: true,
+        uiEvents: [],
         history: [],
         settings: {
             totalInnings: 1,

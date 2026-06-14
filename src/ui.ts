@@ -1,80 +1,80 @@
-// ui.js
 import { gameState, dispatch, setGameState } from './state.js';
-import { saveState, clearState, loadState, generatePermalink } from './storage.js';
+import { saveState, loadState, generatePermalink, clearState } from './storage.js';
+import { GameState, LiveInnings, Team } from './types.js';
 
 // DOM Elements
-const settingsSection = document.getElementById('settings-section');
-const scoreboardSection = document.getElementById('scoreboard-section');
-const startMatchBtn = document.getElementById('start-match-btn');
-const screenshotModeBtn = document.getElementById('screenshot-mode-btn');
-const resetMatchBtn = document.getElementById('reset-match-btn');
-const exitScreenshotModeBtn = document.getElementById('exit-screenshot-mode-btn');
-const shareMatchBtn = document.getElementById('share-match-btn');
-const themeBtns = document.querySelectorAll('.theme-btn');
+const settingsSection = document.getElementById('settings-section') as HTMLElement | null;
+const scoreboardSection = document.getElementById('scoreboard-section') as HTMLElement | null;
+const startMatchBtn = document.getElementById('start-match-btn') as HTMLButtonElement | null;
+const screenshotModeBtn = document.getElementById('screenshot-mode-btn') as HTMLButtonElement | null;
+const resetMatchBtn = document.getElementById('reset-match-btn') as HTMLButtonElement | null;
+const exitScreenshotModeBtn = document.getElementById('exit-screenshot-mode-btn') as HTMLButtonElement | null;
+const shareMatchBtn = document.getElementById('share-match-btn') as HTMLButtonElement | null;
+const themeBtns = document.querySelectorAll('.theme-btn') as NodeListOf<HTMLButtonElement>;
 
-const oversPerInningsInput = document.getElementById('overs-per-innings');
-const maxOversPerBowlerInput = document.getElementById('max-overs-per-bowler');
-const allowSingleBatsmanInput = document.getElementById('allow-single-batsman');
-const enableLegByesInput = document.getElementById('enable-legbyes');
-const team1RosterList = document.getElementById('team1-roster-list');
-const team2RosterList = document.getElementById('team2-roster-list');
-const team1QuickAdd = document.getElementById('team1-quick-add');
-const team2QuickAdd = document.getElementById('team2-quick-add');
-const team1AddBtn = document.getElementById('team1-add-btn');
-const team2AddBtn = document.getElementById('team2-add-btn');
-const bulkImportTextarea = document.getElementById('bulk-import-textarea');
-const executeBulkImportBtn = document.getElementById('execute-bulk-import-btn');
-const team1BulkBtn = document.getElementById('team1-bulk-btn');
-const team2BulkBtn = document.getElementById('team2-bulk-btn');
-const tossModalEl = document.getElementById('tossModal');
-const tossTeam1Btn = document.getElementById('toss-team1-btn');
-const tossTeam2Btn = document.getElementById('toss-team2-btn');
+const oversPerInningsInput = document.getElementById('overs-per-innings') as HTMLInputElement | null;
+const maxOversPerBowlerInput = document.getElementById('max-overs-per-bowler') as HTMLInputElement | null;
+const allowSingleBatsmanInput = document.getElementById('allow-single-batsman') as HTMLInputElement | null;
+const enableLegByesInput = document.getElementById('enable-legbyes') as HTMLInputElement | null;
+const team1RosterList = document.getElementById('team1-roster-list') as HTMLDivElement | null;
+const team2RosterList = document.getElementById('team2-roster-list') as HTMLDivElement | null;
+const team1QuickAdd = document.getElementById('team1-quick-add') as HTMLInputElement | null;
+const team2QuickAdd = document.getElementById('team2-quick-add') as HTMLInputElement | null;
+const team1AddBtn = document.getElementById('team1-add-btn') as HTMLButtonElement | null;
+const team2AddBtn = document.getElementById('team2-add-btn') as HTMLButtonElement | null;
+const bulkImportTextarea = document.getElementById('bulk-import-textarea') as HTMLTextAreaElement | null;
+const executeBulkImportBtn = document.getElementById('execute-bulk-import-btn') as HTMLButtonElement | null;
+const team1BulkBtn = document.getElementById('team1-bulk-btn') as HTMLButtonElement | null;
+const team2BulkBtn = document.getElementById('team2-bulk-btn') as HTMLButtonElement | null;
+const tossModalEl = document.getElementById('tossModal') as HTMLElement | null;
+const tossTeam1Btn = document.getElementById('toss-team1-btn') as HTMLButtonElement | null;
+const tossTeam2Btn = document.getElementById('toss-team2-btn') as HTMLButtonElement | null;
 
-const scoreDisplay = document.getElementById('score-display');
-const oversDisplay = document.getElementById('overs-display');
-const matchStatusDisplay = document.getElementById('match-status');
-const batsman1Select = document.getElementById('batsman1-select');
-const batsman2Select = document.getElementById('batsman2-select');
-const bowlerSelect = document.getElementById('bowler-select');
-const batsman1Stats = document.getElementById('batsman1-stats');
-const batsman2Stats = document.getElementById('batsman2-stats');
-const bowlerStats = document.getElementById('bowler-stats');
-const extrasTotalDisplay = document.getElementById('extras-total');
-const widesDisplay = document.getElementById('wides-display');
-const noballsDisplay = document.getElementById('noballs-display');
-const byesDisplay = document.getElementById('byes-display');
-const legbyesDisplay = document.getElementById('legbyes-display');
-const overLogDisplay = document.getElementById('over-log');
+const scoreDisplay = document.getElementById('score-display') as HTMLElement | null;
+const oversDisplay = document.getElementById('overs-display') as HTMLElement | null;
+const matchStatusDisplay = document.getElementById('match-status') as HTMLElement | null;
+const batsman1Select = document.getElementById('batsman1-select') as HTMLSelectElement | null;
+const batsman2Select = document.getElementById('batsman2-select') as HTMLSelectElement | null;
+const bowlerSelect = document.getElementById('bowler-select') as HTMLSelectElement | null;
+const batsman1Stats = document.getElementById('batsman1-stats') as HTMLElement | null;
+const batsman2Stats = document.getElementById('batsman2-stats') as HTMLElement | null;
+const bowlerStats = document.getElementById('bowler-stats') as HTMLElement | null;
+const extrasTotalDisplay = document.getElementById('extras-total') as HTMLElement | null;
+const widesDisplay = document.getElementById('wides-display') as HTMLElement | null;
+const noballsDisplay = document.getElementById('noballs-display') as HTMLElement | null;
+const byesDisplay = document.getElementById('byes-display') as HTMLElement | null;
+const legbyesDisplay = document.getElementById('legbyes-display') as HTMLElement | null;
+const overLogDisplay = document.getElementById('over-log') as HTMLElement | null;
 
-const controlsSection = document.getElementById('controls-section');
-const runBtns = document.querySelectorAll('.run-btn');
-const wideBtn = document.getElementById('wide-btn');
-const noballBtn = document.getElementById('noball-btn');
-const wicketBtn = document.getElementById('wicket-btn');
-const runoutBtn = document.getElementById('runout-btn');
-const runoutStrikerBtn = document.getElementById('runout-striker-btn');
-const runoutNonstrikerBtn = document.getElementById('runout-nonstriker-btn');
-const extraRunValBtns = document.querySelectorAll('.extra-run-val-btn');
-const accrualSection = document.getElementById('accrual-section');
-const accrueBatsmanBtn = document.getElementById('accrue-batsman-btn');
-const accrueByesBtn = document.getElementById('accrue-byes-btn');
-const byeBtn = document.getElementById('bye-btn');
-const legbyeBtn = document.getElementById('legbye-btn');
-const undoBtn = document.getElementById('undo-btn');
+const controlsSection = document.getElementById('controls-section') as HTMLElement | null;
+const runBtns = document.querySelectorAll('.run-btn') as NodeListOf<HTMLButtonElement>;
+const wideBtn = document.getElementById('wide-btn') as HTMLButtonElement | null;
+const noballBtn = document.getElementById('noball-btn') as HTMLButtonElement | null;
+const wicketBtn = document.getElementById('wicket-btn') as HTMLButtonElement | null;
+const runoutBtn = document.getElementById('runout-btn') as HTMLButtonElement | null;
+const runoutStrikerBtn = document.getElementById('runout-striker-btn') as HTMLButtonElement | null;
+const runoutNonstrikerBtn = document.getElementById('runout-nonstriker-btn') as HTMLButtonElement | null;
+const extraRunValBtns = document.querySelectorAll('.extra-run-val-btn') as NodeListOf<HTMLButtonElement>;
+const accrualSection = document.getElementById('accrual-section') as HTMLElement | null;
+const accrueBatsmanBtn = document.getElementById('accrue-batsman-btn') as HTMLButtonElement | null;
+const accrueByesBtn = document.getElementById('accrue-byes-btn') as HTMLButtonElement | null;
+const byeBtn = document.getElementById('bye-btn') as HTMLButtonElement | null;
+const legbyeBtn = document.getElementById('legbye-btn') as HTMLButtonElement | null;
+const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement | null;
 
-let runoutModalInstance = null;
-let extraRunsModalInstance = null;
-let tossModalInstance = null;
-let alertModalInstance = null;
-let alertCallback = null;
+let runoutModalInstance: any = null;
+let extraRunsModalInstance: any = null;
+let tossModalInstance: any = null;
+let alertModalInstance: any = null;
+let alertCallback: (() => void) | null = null;
 
-let currentDeliveryType = null;
+let currentDeliveryType: string | null = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
-let activeBulkImportTeam = 1;
-let expandedOvers = []; // Tracks expanded over indices in U1 UI
+let activeBulkImportTeam: 1 | 2 = 1;
+let expandedOvers: number[] = []; // Tracks expanded over indices in U1 UI
 
-export function initUI() {
+export function initUI(): void {
     setupEventListeners();
     initSortable();
     renderRosters();
@@ -97,7 +97,7 @@ export function initUI() {
         } else {
             if (settingsSection) settingsSection.classList.remove('hidden');
         }
-    } catch (e) {
+    } catch (e: any) {
         showAlert(e.message, "Error");
         if (settingsSection) settingsSection.classList.remove('hidden');
     }
@@ -105,7 +105,7 @@ export function initUI() {
     updateUI();
 }
 
-function setupEventListeners() {
+function setupEventListeners(): void {
     if (startMatchBtn) startMatchBtn.addEventListener('click', startMatch);
     if (screenshotModeBtn) screenshotModeBtn.addEventListener('click', toggleScreenshotMode);
     if (exitScreenshotModeBtn) exitScreenshotModeBtn.addEventListener('click', toggleScreenshotMode);
@@ -125,11 +125,17 @@ function setupEventListeners() {
     if (tossTeam2Btn) tossTeam2Btn.addEventListener('click', () => executeStartMatch(2));
 
     themeBtns.forEach(btn => {
-        btn.addEventListener('click', () => setTheme(btn.dataset.theme));
+        btn.addEventListener('click', () => {
+            const t = btn.dataset.theme;
+            if (t) setTheme(t as 'light' | 'dark' | 'green');
+        });
     });
 
     runBtns.forEach(btn => {
-        btn.addEventListener('click', () => addRuns(parseInt(btn.dataset.runs)));
+        btn.addEventListener('click', () => {
+            const r = btn.dataset.runs;
+            if (r) addRuns(parseInt(r));
+        });
     });
 
     if (wideBtn) wideBtn.addEventListener('click', () => triggerExtraRunsModal('wide'));
@@ -143,11 +149,12 @@ function setupEventListeners() {
         btn.addEventListener('click', () => {
             extraRunValBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-            selectedExtraRuns = parseInt(btn.dataset.val);
+            const v = btn.dataset.val;
+            selectedExtraRuns = v ? parseInt(v) : 0;
 
             if (selectedExtraRuns === 0) {
                 if (extraRunsModalInstance) extraRunsModalInstance.hide();
-                finalizeDelivery(currentDeliveryType, 0, 'byes');
+                finalizeDelivery(currentDeliveryType!, 0, 'byes');
             } else if (currentDeliveryType === 'wide') {
                 if (extraRunsModalInstance) extraRunsModalInstance.hide();
                 finalizeDelivery('wide', selectedExtraRuns, 'byes');
@@ -161,27 +168,31 @@ function setupEventListeners() {
     });
 
     if (accrueBatsmanBtn) accrueBatsmanBtn.addEventListener('click', () => {
-        finalizeDelivery(currentDeliveryType, selectedExtraRuns, 'batsman');
+        finalizeDelivery(currentDeliveryType!, selectedExtraRuns, 'batsman');
     });
 
     if (accrueByesBtn) accrueByesBtn.addEventListener('click', () => {
-        finalizeDelivery(currentDeliveryType, selectedExtraRuns, 'byes');
+        finalizeDelivery(currentDeliveryType!, selectedExtraRuns, 'byes');
     });
 
     if (byeBtn) byeBtn.addEventListener('click', () => triggerExtraRunsModal('bye'));
     if (legbyeBtn) legbyeBtn.addEventListener('click', addLegBye);
     if (undoBtn) undoBtn.addEventListener('click', undoLastAction);
 
-    if (batsman1Select) batsman1Select.addEventListener('change', (e) => handleBatsmanChange(1, e.target.value));
-    if (batsman2Select) batsman2Select.addEventListener('change', (e) => handleBatsmanChange(2, e.target.value));
-    if (bowlerSelect) bowlerSelect.addEventListener('change', (e) => handleBowlerChange(e.target.value));
+    if (batsman1Select) batsman1Select.addEventListener('change', (e) => handleBatsmanChange(1, (e.target as HTMLSelectElement).value));
+    if (batsman2Select) batsman2Select.addEventListener('change', (e) => handleBatsmanChange(2, (e.target as HTMLSelectElement).value));
+    if (bowlerSelect) bowlerSelect.addEventListener('change', (e) => handleBowlerChange((e.target as HTMLSelectElement).value));
 
     const completedOversSection = document.getElementById('completed-overs-section');
     if (completedOversSection) {
         completedOversSection.addEventListener('click', (e) => {
-            const header = e.target.closest('.completed-over-header');
+            const target = e.target as HTMLElement | null;
+            if (!target) return;
+            const header = target.closest('.completed-over-header') as HTMLElement | null;
             if (header) {
-                const idx = parseInt(header.dataset.index);
+                const idxStr = header.dataset.index;
+                if (!idxStr) return;
+                const idx = parseInt(idxStr);
                 const pos = expandedOvers.indexOf(idx);
                 if (pos === -1) {
                     expandedOvers.push(idx);
@@ -194,7 +205,7 @@ function setupEventListeners() {
     }
 }
 
-function initSortable() {
+function initSortable(): void {
     if (typeof Sortable !== 'undefined') {
         if (team1RosterList) {
             new Sortable(team1RosterList, {
@@ -215,12 +226,12 @@ function initSortable() {
     }
 }
 
-export function renderRosters() {
+export function renderRosters(): void {
     if (!team1RosterList || !team2RosterList) return;
     team1RosterList.innerHTML = '';
     team2RosterList.innerHTML = '';
 
-    const createRosterItem = (name, isShared) => {
+    const createRosterItem = (name: string, isShared: boolean): HTMLElement => {
         const li = document.createElement('li');
         li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item');
         li.dataset.shared = isShared ? "true" : "false";
@@ -235,15 +246,18 @@ export function renderRosters() {
                 <button type="button" class="btn-close btn-sm p-1 delete-player-btn" aria-label="Delete"></button>
             </div>
         `;
-        li.querySelector('.delete-player-btn').addEventListener('click', () => {
-            li.remove();
-            updateLineupNumbers();
-        });
+        const deleteBtn = li.querySelector('.delete-player-btn') as HTMLButtonElement | null;
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                li.remove();
+                updateLineupNumbers();
+            });
+        }
         return li;
     };
 
     gameState.match.team1.players.forEach(p => {
-        const isShared = gameState.match.team2.players.includes(p); // Mark shared if exists in both on load
+        const isShared = gameState.match.team2.players.includes(p);
         team1RosterList.appendChild(createRosterItem(p, isShared));
     });
     gameState.match.team2.players.forEach(p => {
@@ -254,20 +268,22 @@ export function renderRosters() {
     updateLineupNumbers();
 }
 
-function updateLineupNumbers() {
+function updateLineupNumbers(): void {
     if (team1RosterList) {
         team1RosterList.querySelectorAll('.roster-item').forEach((el, index) => {
-            el.querySelector('.lineup-number').textContent = index + 1;
+            const numSpan = el.querySelector('.lineup-number') as HTMLElement | null;
+            if (numSpan) numSpan.textContent = (index + 1).toString();
         });
     }
     if (team2RosterList) {
         team2RosterList.querySelectorAll('.roster-item').forEach((el, index) => {
-            el.querySelector('.lineup-number').textContent = index + 1;
+            const numSpan = el.querySelector('.lineup-number') as HTMLElement | null;
+            if (numSpan) numSpan.textContent = (index + 1).toString();
         });
     }
 }
 
-function handleQuickAdd(teamNum) {
+function handleQuickAdd(teamNum: number): void {
     const input = teamNum === 1 ? team1QuickAdd : team2QuickAdd;
     const roster = teamNum === 1 ? team1RosterList : team2RosterList;
     if (!input || !roster) return;
@@ -295,17 +311,20 @@ function handleQuickAdd(teamNum) {
             <button type="button" class="btn-close btn-sm p-1 delete-player-btn" aria-label="Delete"></button>
         </div>
     `;
-    li.querySelector('.delete-player-btn').addEventListener('click', () => {
-        li.remove();
-        updateLineupNumbers();
-    });
+    const deleteBtn = li.querySelector('.delete-player-btn') as HTMLButtonElement | null;
+    if (deleteBtn) {
+        deleteBtn.addEventListener('click', () => {
+            li.remove();
+            updateLineupNumbers();
+        });
+    }
 
     roster.appendChild(li);
     input.value = '';
     updateLineupNumbers();
 }
 
-function handleBulkImport() {
+function handleBulkImport(): void {
     if (!bulkImportTextarea) return;
     const text = bulkImportTextarea.value;
     const names = text.split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
@@ -335,10 +354,13 @@ function handleBulkImport() {
                 <button type="button" class="btn-close btn-sm p-1 delete-player-btn" aria-label="Delete"></button>
             </div>
         `;
-        li.querySelector('.delete-player-btn').addEventListener('click', () => {
-            li.remove();
-            updateLineupNumbers();
-        });
+        const deleteBtn = li.querySelector('.delete-player-btn') as HTMLButtonElement | null;
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', () => {
+                li.remove();
+                updateLineupNumbers();
+            });
+        }
         roster.appendChild(li);
     });
 
@@ -346,7 +368,7 @@ function handleBulkImport() {
     updateLineupNumbers();
 }
 
-export function toggleScreenshotMode() {
+export function toggleScreenshotMode(): void {
     const flipContainer = document.querySelector('.flip-container');
     if (!flipContainer) return;
     
@@ -360,7 +382,7 @@ export function toggleScreenshotMode() {
     }
 }
 
-export function parseBallLog(b) {
+export function parseBallLog(b: string): { runs: number; wicket: number } {
     let runs = 0;
     let wicket = 0;
     
@@ -395,13 +417,13 @@ export function parseBallLog(b) {
     return { runs, wicket };
 }
 
-export function generateSummaryView() {
+export function generateSummaryView(): void {
     try {
         const summariesDiv = document.getElementById('innings-summaries');
         if (!summariesDiv) return;
         summariesDiv.innerHTML = '';
 
-        function renderInningsSummary(teamName, inningsData, inningsNumber) {
+        const renderInningsSummary = (teamName: string, inningsData: any, inningsNumber: number): void => {
             const inningsDiv = document.createElement('div');
             inningsDiv.classList.add('innings-summary');
             
@@ -474,10 +496,10 @@ export function generateSummaryView() {
                 overLogTable.innerHTML = `<thead><tr><th>Over</th><th>Bowler</th><th>Runs</th><th>Wkts</th><th>Deliveries</th></tr></thead>`;
                 const overLogTbody = document.createElement('tbody');
                 
-                displayOvers.forEach((over, idx) => {
+                displayOvers.forEach((over: any, idx: number) => {
                     let overRuns = 0;
                     let overWickets = 0;
-                    over.balls.forEach(b => {
+                    over.balls.forEach((b: string) => {
                         const parsed = parseBallLog(b);
                         overRuns += parsed.runs;
                         overWickets += parsed.wicket;
@@ -500,7 +522,7 @@ export function generateSummaryView() {
             }
 
             summariesDiv.appendChild(inningsDiv);
-        }
+        };
 
         // Render completed innings for Team 1 and Team 2
         gameState.match.team1.innings.forEach(inn => renderInningsSummary(gameState.match.team1.name, inn, 1));
@@ -517,7 +539,7 @@ export function generateSummaryView() {
     }
 }
 
-export function setTheme(theme) {
+export function setTheme(theme: 'light' | 'dark' | 'green'): void {
     document.documentElement.setAttribute('data-bs-theme', theme === 'green' ? 'light' : theme);
     document.body.setAttribute('data-bs-theme', theme);
     gameState.settings.theme = theme;
@@ -532,7 +554,7 @@ export function setTheme(theme) {
     saveState(gameState);
 }
 
-function populateDropdown(selectElement, playerList, selectedValue, promptText, filterFn) {
+function populateDropdown(selectElement: HTMLSelectElement, playerList: string[], selectedValue: string | null, promptText: string, filterFn?: (player: string) => boolean): void {
     selectElement.innerHTML = '';
     
     if (promptText) {
@@ -555,7 +577,7 @@ function populateDropdown(selectElement, playerList, selectedValue, promptText, 
     });
 }
 
-export function updateUI() {
+export function updateUI(): void {
     if (!gameState.match || !gameState.match.liveInnings) return;
     
     const live = gameState.match.liveInnings;
@@ -577,7 +599,6 @@ export function updateUI() {
             const runsNeeded = target - live.score;
             const remainingBalls = (gameState.settings.oversPerInnings * 6) - live.balls;
             
-            // Calculate CRR and RRR
             const crr = live.balls > 0 ? (live.score / (live.balls / 6)) : 0;
             const rrr = remainingBalls > 0 ? (runsNeeded / (remainingBalls / 6)) : 0;
             
@@ -587,11 +608,9 @@ export function updateUI() {
         }
     }
 
-    // Disable buttons on settings page
     if (screenshotModeBtn) screenshotModeBtn.disabled = !gameState.matchStarted;
     if (resetMatchBtn) resetMatchBtn.disabled = !gameState.matchStarted;
 
-    // Show/Hide Leg Bye button
     if (legbyeBtn) {
         if (gameState.settings.enableLegByes) {
             legbyeBtn.classList.remove('hidden');
@@ -684,11 +703,11 @@ export function updateUI() {
     // Extras
     const ext = live.extras;
     const totalExtras = ext.wides + ext.noballs + ext.byes + ext.legbyes;
-    if (extrasTotalDisplay) extrasTotalDisplay.textContent = totalExtras;
-    if (widesDisplay) widesDisplay.textContent = ext.wides;
-    if (noballsDisplay) noballsDisplay.textContent = ext.noballs;
-    if (byesDisplay) byesDisplay.textContent = ext.byes;
-    if (legbyesDisplay) legbyesDisplay.textContent = ext.legbyes;
+    if (extrasTotalDisplay) extrasTotalDisplay.textContent = totalExtras.toString();
+    if (widesDisplay) widesDisplay.textContent = ext.wides.toString();
+    if (noballsDisplay) noballsDisplay.textContent = ext.noballs.toString();
+    if (byesDisplay) byesDisplay.textContent = ext.byes.toString();
+    if (legbyesDisplay) legbyesDisplay.textContent = ext.legbyes.toString();
 
     // Over Log
     if (overLogDisplay) {
@@ -750,7 +769,6 @@ export function updateUI() {
                 const itemDiv = document.createElement('div');
                 itemDiv.classList.add('completed-over-item');
                 
-                // Calculate over summary
                 let overRuns = 0;
                 let overWickets = 0;
                 over.balls.forEach(b => {
@@ -761,7 +779,7 @@ export function updateUI() {
                 
                 const headerDiv = document.createElement('div');
                 headerDiv.classList.add('completed-over-header');
-                headerDiv.dataset.index = idx;
+                headerDiv.dataset.index = idx.toString();
                 headerDiv.innerHTML = `
                     <span>Over ${idx + 1}: ${over.bowler}</span>
                     <span>Runs: ${overRuns} | Wkts: ${overWickets} <span class="arrow">${isExpanded ? '▲' : '▼'}</span></span>
@@ -800,10 +818,10 @@ export function updateUI() {
     handleUIEvents();
 }
 
-function checkControlsState() {
+function checkControlsState(): void {
     if (!controlsSection) return;
     const live = gameState.match.liveInnings;
-    const controls = controlsSection.querySelectorAll('button:not(#undo-btn)');
+    const controls = controlsSection.querySelectorAll('button:not(#undo-btn)') as NodeListOf<HTMLButtonElement>;
     
     if (gameState.match.matchOver) {
         controls.forEach(btn => btn.disabled = true);
@@ -826,7 +844,6 @@ function checkControlsState() {
         btn.disabled = needsSelection;
     });
 
-    // Mark invalid states on select elements
     if (batsman1Select) {
         if (!live.currentBatsman1) batsman1Select.classList.add('is-invalid');
         else batsman1Select.classList.remove('is-invalid');
@@ -841,9 +858,9 @@ function checkControlsState() {
     }
 }
 
-export function showAlert(message, title = "Alert", callback = null) {
-    const messageEl = document.getElementById('alert-message');
-    const labelEl = document.getElementById('alertDialogModalLabel');
+export function showAlert(message: string, title = "Alert", callback: (() => void) | null = null): void {
+    const messageEl = document.getElementById('alert-message') as HTMLElement | null;
+    const labelEl = document.getElementById('alertDialogModalLabel') as HTMLElement | null;
     
     if (messageEl) messageEl.textContent = message;
     if (labelEl) labelEl.textContent = title;
@@ -865,21 +882,20 @@ export function showAlert(message, title = "Alert", callback = null) {
         }
         if (alertModalInstance) alertModalInstance.show();
     } else {
-        // Fallback for Node.js test environment
         alert(message);
         if (callback) callback();
     }
 }
 
-export function triggerRunOutModal() {
+export function triggerRunOutModal(): void {
     if (gameState.match.matchOver) return;
     const live = gameState.match.liveInnings;
     
     const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
     const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
     
-    const strikerBtn = document.getElementById('runout-striker-btn');
-    const nonStrikerBtn = document.getElementById('runout-nonstriker-btn');
+    const strikerBtn = document.getElementById('runout-striker-btn') as HTMLButtonElement | null;
+    const nonStrikerBtn = document.getElementById('runout-nonstriker-btn') as HTMLButtonElement | null;
     
     if (strikerBtn) strikerBtn.textContent = `Striker: ${striker}`;
     if (nonStrikerBtn) nonStrikerBtn.textContent = `Non-Striker: ${nonStriker}`;
@@ -895,7 +911,7 @@ export function triggerRunOutModal() {
     }
 }
 
-export function triggerExtraRunsModal(deliveryType) {
+export function triggerExtraRunsModal(deliveryType: string): void {
     if (gameState.match.matchOver) return;
     currentDeliveryType = deliveryType;
     selectedExtraRuns = 0;
@@ -903,18 +919,17 @@ export function triggerExtraRunsModal(deliveryType) {
     extraRunValBtns.forEach(b => b.classList.remove('active'));
     if (accrualSection) accrualSection.classList.add('hidden');
     
-    const wideLabel = document.getElementById('extraRunsModalLabel');
+    const wideLabel = document.getElementById('extraRunsModalLabel') as HTMLElement | null;
     if (wideLabel) {
         wideLabel.textContent = `Runs scored on ${deliveryType.toUpperCase()}?`;
     }
 
-    // Hide/Show batsman accrual button depending on delivery type
-    const accrueBatsmanBtn = document.getElementById('accrue-batsman-btn');
-    if (accrueBatsmanBtn) {
+    const accrueBatsmanBtnLocal = document.getElementById('accrue-batsman-btn') as HTMLButtonElement | null;
+    if (accrueBatsmanBtnLocal) {
         if (deliveryType === 'wide') {
-            accrueBatsmanBtn.classList.add('hidden');
+            accrueBatsmanBtnLocal.classList.add('hidden');
         } else {
-            accrueBatsmanBtn.classList.remove('hidden');
+            accrueBatsmanBtnLocal.classList.remove('hidden');
         }
     }
     
@@ -924,31 +939,33 @@ export function triggerExtraRunsModal(deliveryType) {
         }
         extraRunsModalInstance.show();
     } else {
-        if (typeof global.mockExtraRuns !== 'undefined') {
-            selectedExtraRuns = global.mockExtraRuns;
+        if (typeof (global as any).mockExtraRuns !== 'undefined') {
+            selectedExtraRuns = (global as any).mockExtraRuns;
         }
-        const accrueTo = global.mockAccrueTo || 'byes';
+        const accrueTo = (global as any).mockAccrueTo || 'byes';
         finalizeDelivery(currentDeliveryType, selectedExtraRuns, accrueTo);
     }
 }
 
-export function processRunOut(isStriker) {
+export function processRunOut(isStriker: boolean): void {
     if (gameState.match.matchOver) return;
     pendingRunOutStriker = isStriker;
     triggerExtraRunsModal('runout');
 }
 
-export function handleBatsmanChange(batsmanNumber, newName) {
+export function handleBatsmanChange(batsmanNumber: 1 | 2, newName: string): void {
     dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: batsmanNumber, name: newName } });
     updateUI();
 }
 
-export function handleBowlerChange(newName) {
+export function handleBowlerChange(newName: string): void {
     dispatch({ type: 'CHANGE_BOWLER', payload: { name: newName } });
     updateUI();
 }
 
-export function startMatch() {
+export function startMatch(): void {
+    if (!oversPerInningsInput || !maxOversPerBowlerInput || !allowSingleBatsmanInput || !enableLegByesInput) return;
+
     const settings = {
         totalInnings: 1,
         oversPerInnings: parseInt(oversPerInningsInput.value),
@@ -959,23 +976,27 @@ export function startMatch() {
         enableLegByes: enableLegByesInput.checked
     };
 
-    let t1Names = [];
-    let t2Names = [];
+    let t1Names: string[] = [];
+    let t2Names: string[] = [];
 
     if (team1RosterList && team2RosterList) {
-        const t1Shared = [];
-        const t2Shared = [];
+        const t1Shared: string[] = [];
+        const t2Shared: string[] = [];
 
         team1RosterList.querySelectorAll('.roster-item').forEach(el => {
-            const name = el.querySelector('.player-name').textContent.trim();
+            const nameSpan = el.querySelector('.player-name') as HTMLElement | null;
+            if (!nameSpan) return;
+            const name = nameSpan.textContent!.trim();
             t1Names.push(name);
-            if (el.dataset.shared === "true") t1Shared.push(name);
+            if ((el as HTMLElement).dataset.shared === "true") t1Shared.push(name);
         });
 
         team2RosterList.querySelectorAll('.roster-item').forEach(el => {
-            const name = el.querySelector('.player-name').textContent.trim();
+            const nameSpan = el.querySelector('.player-name') as HTMLElement | null;
+            if (!nameSpan) return;
+            const name = nameSpan.textContent!.trim();
             t2Names.push(name);
-            if (el.dataset.shared === "true") t2Shared.push(name);
+            if ((el as HTMLElement).dataset.shared === "true") t2Shared.push(name);
         });
 
         t1Shared.forEach(name => {
@@ -1021,7 +1042,7 @@ export function startMatch() {
     if (tossModalInstance) tossModalInstance.show();
 }
 
-export function executeStartMatch(battingTeamNum) {
+export function executeStartMatch(battingTeamNum: 1 | 2): void {
     if (tossModalInstance) tossModalInstance.hide();
 
     dispatch({ type: 'CHOOSE_TOSS_BATTING', payload: { battingTeamNum } });
@@ -1033,7 +1054,7 @@ export function executeStartMatch(battingTeamNum) {
     updateUI();
 }
 
-export function resetMatch() {
+export function resetMatch(): void {
     clearState();
     dispatch({ type: 'RESET_MATCH' });
     expandedOvers = [];
@@ -1044,8 +1065,8 @@ export function resetMatch() {
     if (flipContainer) flipContainer.classList.add('hidden');
     document.body.classList.remove('screenshot-mode');
     
-    if (oversPerInningsInput) oversPerInningsInput.value = gameState.settings.oversPerInnings;
-    if (maxOversPerBowlerInput) maxOversPerBowlerInput.value = gameState.settings.maxOversPerBowler;
+    if (oversPerInningsInput) oversPerInningsInput.value = gameState.settings.oversPerInnings.toString();
+    if (maxOversPerBowlerInput) maxOversPerBowlerInput.value = gameState.settings.maxOversPerBowler.toString();
     if (allowSingleBatsmanInput) allowSingleBatsmanInput.checked = gameState.settings.allowSingleBatsman;
     if (enableLegByesInput) enableLegByesInput.checked = gameState.settings.enableLegByes;
     
@@ -1053,7 +1074,7 @@ export function resetMatch() {
     updateUI();
 }
 
-export function shareMatch() {
+export function shareMatch(): void {
     const url = generatePermalink(gameState);
     
     navigator.clipboard.writeText(url).then(() => {
@@ -1067,32 +1088,32 @@ export function shareMatch() {
     });
 }
 
-export function undoLastAction() {
+export function undoLastAction(): void {
     dispatch({ type: 'UNDO' });
     updateUI();
 }
 
-export function addRuns(runs) {
+export function addRuns(runs: number): void {
     dispatch({ type: 'ADD_RUNS', payload: { runs } });
     updateUI();
 }
 
-export function addLegBye() {
+export function addLegBye(): void {
     dispatch({ type: 'ADD_LEG_BYE' });
     updateUI();
 }
 
-export function addWicket() {
+export function addWicket(): void {
     dispatch({ type: 'ADD_WICKET' });
     updateUI();
 }
 
-export function finalizeDelivery(type, extraRuns, accrueTo) {
+export function finalizeDelivery(type: string, extraRuns: number, accrueTo: string): void {
     dispatch({ type: 'FINALIZE_DELIVERY', payload: { type, extraRuns, accrueTo, pendingRunOutStriker } });
     updateUI();
 }
 
-function handleUIEvents() {
+function handleUIEvents(): void {
     const events = [...(gameState.uiEvents || [])];
     if (gameState.uiEvents) {
         gameState.uiEvents = [];

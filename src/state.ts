@@ -1,8 +1,8 @@
-// src/state.js
 import { reducer } from './reducer.js';
 import { saveState } from './storage.js';
+import { GameState, Action } from './types.js';
 
-export let gameState = {
+export let gameState: GameState = {
     settings: {
         totalInnings: 1,
         oversPerInnings: 8,
@@ -42,26 +42,29 @@ export let gameState = {
     history: []
 };
 
-export function setGameState(newState) {
+export function setGameState(newState: GameState): void {
     if (newState === gameState) return;
-    for (const key in gameState) {
-        delete gameState[key];
+    
+    // Clear elements in place to preserve reference
+    const keys = Object.keys(gameState) as Array<keyof GameState>;
+    for (const key of keys) {
+        delete (gameState as any)[key];
     }
     Object.assign(gameState, newState);
 }
 
-function saveHistory(state) {
-    const copy = JSON.parse(JSON.stringify(state));
-    delete copy.history;
+function saveHistory(state: GameState): void {
+    const copy = JSON.parse(JSON.stringify(state)) as GameState;
+    delete (copy as any).history;
     state.history.push(copy);
 }
 
-function isUndoableAction(actionType) {
+function isUndoableAction(actionType: string): boolean {
     const nonUndoable = ['START_MATCH', 'CHOOSE_TOSS_BATTING', 'RESET_MATCH', 'UNDO'];
     return !nonUndoable.includes(actionType);
 }
 
-export function dispatch(action) {
+export function dispatch(action: Action): void {
     if (isUndoableAction(action.type)) {
         saveHistory(gameState);
     }

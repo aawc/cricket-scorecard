@@ -1,4 +1,3 @@
-// app.js (Entry Point)
 import { initUI } from './ui.js';
 
 // Initialize the application
@@ -8,7 +7,7 @@ initUI();
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker registered successfully'))
-            .catch(err => console.error('Service Worker registration failed:', err));
+            .then((reg: ServiceWorkerRegistration) => console.log('Service Worker registered successfully', reg.scope))
+            .catch((err: any) => console.error('Service Worker registration failed:', err));
     });
 }

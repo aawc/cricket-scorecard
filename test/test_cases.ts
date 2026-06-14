@@ -1,7 +1,29 @@
-const fs = require('fs');
-const path = require('path');
+// Mock DOM and modules are loaded by test.ts runner
+declare var gameState: any;
+declare var elements: any;
+declare var global: any;
+declare function setGameState(state: any): void;
+declare function updateUI(): void;
+declare function addRuns(runs: number): void;
+declare function addLegBye(): void;
+declare function addWicket(): void;
+declare function finalizeDelivery(type: string, extraRuns: number, accrueTo: string): void;
+declare function triggerExtraRunsModal(type: string): void;
+declare function triggerRunOutModal(): void;
+declare function processRunOut(isStriker: boolean): void;
+declare function handleBatsmanChange(slot: number, name: string): void;
+declare function handleBowlerChange(name: string): void;
+declare function resetMatch(): void;
+declare function startMatch(): void;
+declare function endInnings(): void;
+declare function minifyState(state: any): any;
+declare function unminifyState(min: any): any;
+declare function healInningsOvers(inn: any): void;
+declare function generateSummaryView(): void;
+declare function loadFromLocalStorage(): void;
 
-// Mock DOM and modules are loaded by test.js runner
+const doc = document as any;
+
 console.log("Running tests...");
 
 // Helper to reset state for testing
@@ -549,7 +571,7 @@ const badState = {
     }
 };
 
-global.localStorage.getItem = (key) => {
+global.localStorage.getItem = (key: any) => {
     if (key === 'cricketScorecardState') {
         return JSON.stringify(badState);
     }
@@ -568,7 +590,7 @@ if (gameState.match.team2.innings[0].score !== 11) {
 }
 
 // Restore localStorage mock
-global.localStorage.getItem = (key) => null;
+global.localStorage.getItem = (key: any) => null;
 
 // Test 23: Match ends in a Tie at max overs limit
 resetTestState();
@@ -632,7 +654,7 @@ gameState.match.liveInnings.score = 26;
 gameState.match.liveInnings.balls = 11;
 
 const badStateString = JSON.stringify(gameState);
-global.localStorage.getItem = (key) => {
+global.localStorage.getItem = (key: any) => {
     if (key === 'cricketScorecardState') {
         return badStateString;
     }
@@ -662,7 +684,7 @@ if (gameState.match.team2.innings.length !== 1) {
     process.exit(1);
 }
 
-global.localStorage.getItem = (key) => null;
+global.localStorage.getItem = (key: any) => null;
 
 // Test 26: Healing of bloated overLog on load
 resetTestState();
@@ -676,7 +698,7 @@ gameState.match.liveInnings.currentBowler = "B1";
 gameState.match.liveInnings.bowlers = { "B1": { runs: 32, balls: 13, wickets: 0 } };
 
 const corruptStateString = JSON.stringify(gameState);
-global.localStorage.getItem = (key) => {
+global.localStorage.getItem = (key: any) => {
     if (key === 'cricketScorecardState') {
         return corruptStateString;
     }
@@ -707,7 +729,7 @@ if (live.balls !== 13) {
     process.exit(1);
 }
 
-global.localStorage.getItem = (key) => null;
+global.localStorage.getItem = (key: any) => null;
 
 // Test 27: startMatch validation failure (not enough players)
 resetTestState();
@@ -715,16 +737,16 @@ gameState.matchStarted = false;
 gameState.phase = 'SETUP';
 
 // Mock input values
-document.getElementById('overs-per-innings').value = "5";
-document.getElementById('max-overs-per-bowler').value = "2"; // 5 overs / 2 = 3 bowlers needed
+doc.getElementById('overs-per-innings').value = "5";
+doc.getElementById('max-overs-per-bowler').value = "2"; // 5 overs / 2 = 3 bowlers needed
 
 // Mock empty rosters (0 players)
-document.getElementById('team1-roster-list').children = [];
-document.getElementById('team2-roster-list').children = [];
+doc.getElementById('team1-roster-list').children = [];
+doc.getElementById('team2-roster-list').children = [];
 
 let alertCalled = false;
 let alertMsg = "";
-global.alert = (msg) => {
+global.alert = (msg: any) => {
     alertCalled = true;
     alertMsg = msg;
 };
@@ -746,18 +768,18 @@ gameState.matchStarted = false;
 gameState.phase = 'SETUP';
 
 // Mock input values
-document.getElementById('overs-per-innings').value = "2";
-document.getElementById('max-overs-per-bowler').value = "2"; // 1 bowler needed
-document.getElementById('allow-single-batsman').checked = true; // 1 batsman needed
+doc.getElementById('overs-per-innings').value = "2";
+doc.getElementById('max-overs-per-bowler').value = "2"; // 1 bowler needed
+doc.getElementById('allow-single-batsman').checked = true; // 1 batsman needed
 
 // Mock rosters (1 player each)
-const p1 = { querySelector: (sel) => ({ textContent: "T1P1" }), dataset: {} };
-const p2 = { querySelector: (sel) => ({ textContent: "T2P1" }), dataset: {} };
-document.getElementById('team1-roster-list').children = [p1];
-document.getElementById('team2-roster-list').children = [p2];
+const p1 = { querySelector: (sel: any) => ({ textContent: "T1P1" }), dataset: {} };
+const p2 = { querySelector: (sel: any) => ({ textContent: "T2P1" }), dataset: {} };
+doc.getElementById('team1-roster-list').children = [p1];
+doc.getElementById('team2-roster-list').children = [p2];
 
 alertCalled = false;
-global.alert = (msg) => { alertCalled = true; };
+global.alert = (msg: any) => { alertCalled = true; };
 
 startMatch();
 
@@ -785,7 +807,7 @@ gameState.match.team2.players = ["T2P1", "T2P2"];
 gameState.settings.oversPerInnings = 5;
 
 let lsRemoved = false;
-global.localStorage.removeItem = (key) => {
+global.localStorage.removeItem = (key: any) => {
     if (key === 'cricketScorecardState') {
         lsRemoved = true;
     }
@@ -828,7 +850,7 @@ gameState.match.liveInnings.bowlers = { "B1": { runs: 0, balls: 0, wickets: 0 } 
 let consoleErrorCalled = false;
 let consoleErrorMsg = "";
 const originalConsoleError = console.error;
-console.error = (msg) => {
+console.error = (msg: any) => {
     consoleErrorCalled = true;
     consoleErrorMsg = msg;
 };
@@ -846,7 +868,7 @@ if (!consoleErrorCalled || !consoleErrorMsg.includes("Leg byes are disabled")) {
     process.exit(1);
 }
 
-global.localStorage.getItem = (key) => null;
+global.localStorage.getItem = (key: any) => null;
 
 // Test 31: Permalink State Loader phase and history reconstruction
 resetTestState();
@@ -888,7 +910,7 @@ for (let i = 0; i < 6; i++) addRuns(1);
 handleBowlerChange("B2");
 for (let i = 0; i < 6; i++) addRuns(2);
 
-const completedOversSection = document.getElementById('completed-overs-section');
+const completedOversSection = doc.getElementById('completed-overs-section');
 const children = completedOversSection.appendedChildren;
 
 if (children.length !== 3) {
@@ -912,8 +934,8 @@ if (!secondOverItemHeader.innerHTML.includes("Over 1") || !secondOverItemHeader.
 // Test 33: Compact stats layout for mobile view (Runs (Balls) & Wkts/Runs (Overs.Balls))
 resetTestState();
 
-const bat1StatsInit = document.getElementById('batsman1-stats').textContent;
-const bowlerStatsInit = document.getElementById('bowler-stats').textContent;
+const bat1StatsInit = doc.getElementById('batsman1-stats').textContent;
+const bowlerStatsInit = doc.getElementById('bowler-stats').textContent;
 
 if (bat1StatsInit !== '0 (0)') {
     console.error(`Test 33 Failed: Expected initial batsman 1 stats to be '0 (0)', got: '${bat1StatsInit}'`);
@@ -927,15 +949,15 @@ if (bowlerStatsInit !== '0/0 (0.0)') {
 addRuns(1);
 addRuns(2);
 
-const bat1StatsAfter = document.getElementById('batsman1-stats').textContent;
-const bowlerStatsAfter = document.getElementById('bowler-stats').textContent;
+const bat1StatsAfter = doc.getElementById('batsman1-stats').textContent;
+const bowlerStatsAfter = doc.getElementById('bowler-stats').textContent;
 
 if (bat1StatsAfter !== '1 (1)') {
     console.error(`Test 33 Failed: Expected batsman 1 stats to be '1 (1)', got: '${bat1StatsAfter}'`);
     process.exit(1);
 }
 
-const bat2StatsAfter = document.getElementById('batsman2-stats').textContent;
+const bat2StatsAfter = doc.getElementById('batsman2-stats').textContent;
 if (bat2StatsAfter !== '2 (1)') {
     console.error(`Test 33 Failed: Expected batsman 2 stats to be '2 (1)', got: '${bat2StatsAfter}'`);
     process.exit(1);
@@ -949,8 +971,8 @@ if (bowlerStatsAfter !== '0/3 (0.2)') {
 // Test 34: Active striker container background green highlight
 resetTestState();
 
-const b1Container = document.getElementById('batsman1-container');
-const b2Container = document.getElementById('batsman2-container');
+const b1Container = doc.getElementById('batsman1-container');
+const b2Container = doc.getElementById('batsman2-container');
 
 if (!b1Container.classList.contains('active')) {
     console.error("Test 34 Failed: Expected batsman 1 container to have 'active' class initially");

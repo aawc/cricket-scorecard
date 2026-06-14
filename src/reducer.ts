@@ -1,6 +1,6 @@
-// src/reducer.js
+import { GameState, Action, LiveInnings, Team, MatchPhase, BowlerStats, BatsmanStats } from './types.js';
 
-const PHASE_ACTIONS = {
+const PHASE_ACTIONS: Record<MatchPhase, string[]> = {
     'SETUP': ['START_MATCH'],
     'TOSS': ['CHOOSE_TOSS_BATTING', 'RESET_MATCH'],
     'PLAYING_INNINGS': ['ADD_RUNS', 'ADD_LEG_BYE', 'ADD_WICKET', 'FINALIZE_DELIVERY', 'CHANGE_BATSMAN', 'CHANGE_BOWLER', 'UNDO', 'FORCE_END_INNINGS', 'RESET_MATCH'],
@@ -8,36 +8,30 @@ const PHASE_ACTIONS = {
     'MATCH_OVER': ['RESET_MATCH', 'UNDO']
 };
 
-function isValidActionForPhase(phase, actionType) {
+function isValidActionForPhase(phase: MatchPhase, actionType: string): boolean {
     const allowed = PHASE_ACTIONS[phase || 'SETUP'];
     return allowed ? allowed.includes(actionType) : false;
 }
 
-export function reducer(state, action) {
-    // Determine active phase (default to SETUP)
+export function reducer(state: GameState, action: Action): GameState {
     const currentPhase = state.phase || 'SETUP';
 
-    // 1. Enforce phase validation
     if (!isValidActionForPhase(currentPhase, action.type)) {
         console.warn(`Action ${action.type} is not valid in phase ${currentPhase}`);
         return state;
     }
 
-    // 2. Clone state deep to maintain purity
-    const nextState = JSON.parse(JSON.stringify(state));
-    // Clear transient events for this cycle
+    const nextState = JSON.parse(JSON.stringify(state)) as GameState;
     nextState.uiEvents = [];
 
     switch (action.type) {
         case 'START_MATCH': {
             const { settings, team1Players, team2Players } = action.payload;
             
-            // Set settings
             nextState.settings = { ...nextState.settings, ...settings };
             nextState.match.team1.players = team1Players;
             nextState.match.team2.players = team2Players;
 
-            // Transition
             nextState.phase = 'TOSS';
             nextState.matchStarted = true;
             break;
@@ -47,7 +41,6 @@ export function reducer(state, action) {
             const { battingTeamNum } = action.payload;
             nextState.match.currentBattingTeam = battingTeamNum;
             
-            // Reset live innings
             nextState.match.liveInnings = {
                 score: 0,
                 wickets: 0,
@@ -69,6 +62,7 @@ export function reducer(state, action) {
             nextState.phase = 'PLAYING_INNINGS';
             break;
         }
+        
         case 'FORCE_END_INNINGS': {
             const match = nextState.match;
             archiveLiveInnings(match);
@@ -83,13 +77,17 @@ export function reducer(state, action) {
             live.score += runs;
             live.balls++;
 
-            const bowler = live.bowlers[live.currentBowler];
-            if (bowler) {
-                bowler.balls++;
-                bowler.runs += runs;
+            if (live.currentBowler) {
+                const bowler = live.bowlers[live.currentBowler];
+                if (bowler) {
+                    bowler.balls++;
+                    bowler.runs += runs;
+                }
             }
 
-            const activeBatsman = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+            const activeBatsman = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active) 
+                ? live.currentBatsman1 
+                : (live.currentBatsman2 || '');
             const activeB = live.batsmen[activeBatsman];
             if (activeB) {
                 activeB.runs += runs;
@@ -102,8 +100,7 @@ export function reducer(state, action) {
                 rotateStrike(live);
             }
 
-            // Runs checks
-            const transitionOccurred = checkMatchOver(nextState) || checkOverComplete(nextState);
+            checkMatchOver(nextState) || checkOverComplete(nextState);
             break;
         }
 
@@ -117,19 +114,23 @@ export function reducer(state, action) {
             live.extras.legbyes += 1;
             live.balls++;
 
-            const bowler = live.bowlers[live.currentBowler];
-            if (bowler) {
-                bowler.balls++;
+            if (live.currentBowler) {
+                const bowler = live.bowlers[live.currentBowler];
+                if (bowler) {
+                    bowler.balls++;
+                }
             }
             live.overLog.push('lb1');
 
-            const transitionOccurred = checkMatchOver(nextState) || checkOverComplete(nextState);
+            checkMatchOver(nextState) || checkOverComplete(nextState);
             break;
         }
 
         case 'ADD_WICKET': {
             const live = nextState.match.liveInnings;
-            const activeBatsmanName = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+            const activeBatsmanName = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
+                ? live.currentBatsman1
+                : (live.currentBatsman2 || '');
             const activeB = live.batsmen[activeBatsmanName];
             if (activeB) {
                 activeB.balls++;
@@ -138,10 +139,12 @@ export function reducer(state, action) {
             live.wickets++;
             live.balls++;
 
-            const bowler = live.bowlers[live.currentBowler];
-            if (bowler) {
-                bowler.balls++;
-                bowler.wickets++;
+            if (live.currentBowler) {
+                const bowler = live.bowlers[live.currentBowler];
+                if (bowler) {
+                    bowler.balls++;
+                    bowler.wickets++;
+                }
             }
             live.overLog.push('W');
 
@@ -154,7 +157,6 @@ export function reducer(state, action) {
                 break;
             }
 
-            // Dismiss active batsman
             live.outBatsmen.push(activeBatsmanName);
             if (live.currentBatsman1 === activeBatsmanName) {
                 live.currentBatsman1 = "";
@@ -163,17 +165,18 @@ export function reducer(state, action) {
             }
 
             enforceSingleBatsmanRule(nextState, battingTeam, totalPlayers);
-
-            const transitionOccurred = checkMatchOver(nextState) || checkOverComplete(nextState);
+            checkMatchOver(nextState) || checkOverComplete(nextState);
             break;
         }
 
         case 'FINALIZE_DELIVERY': {
             const { type, extraRuns, accrueTo, pendingRunOutStriker } = action.payload;
             const live = nextState.match.liveInnings;
-            const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+            const striker = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
+                ? live.currentBatsman1
+                : (live.currentBatsman2 || '');
             const activeB = live.batsmen[striker];
-            const bowler = live.bowlers[live.currentBowler];
+            const bowler = live.currentBowler ? live.bowlers[live.currentBowler] : null;
 
             if (type === 'wide') {
                 const totalRuns = nextState.settings.widePenalty + extraRuns;
@@ -210,8 +213,8 @@ export function reducer(state, action) {
                     else live.extras.byes += extraRuns;
                 }
 
-                executeRunOutWicket(nextState, pendingRunOutStriker, extraRuns, accrueTo);
-                break; // executeRunOutWicket handles over/match transitions
+                executeRunOutWicket(nextState, !!pendingRunOutStriker, extraRuns, accrueTo);
+                break;
             } else if (type === 'bye') {
                 const totalByes = 1 + extraRuns;
                 live.score += totalByes;
@@ -220,10 +223,7 @@ export function reducer(state, action) {
                 if (bowler) bowler.balls++;
                 if (activeB) activeB.balls++;
                 live.overLog.push(`${totalByes}b`);
-
-                if (checkOverComplete(nextState)) {
-                     // Over check complete
-                }
+                checkOverComplete(nextState);
             }
 
             let physicalRuns = extraRuns;
@@ -234,7 +234,7 @@ export function reducer(state, action) {
                 rotateStrike(live);
             }
 
-            const transitionOccurred = checkMatchOver(nextState);
+            checkMatchOver(nextState);
             break;
         }
 
@@ -325,7 +325,6 @@ export function reducer(state, action) {
         }
     }
 
-    // Auto-select eligible players in state before returning, only in PLAYING phase
     if (nextState.phase === 'PLAYING_INNINGS') {
         autoSelectEligiblePlayers(nextState);
     }
@@ -333,33 +332,31 @@ export function reducer(state, action) {
     return nextState;
 }
 
-// Internal Pure Helper functions
-
-function rotateStrike(live) {
+function rotateStrike(live: LiveInnings): void {
     if (live.currentBatsman1 && live.currentBatsman2 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman2]) {
         live.batsmen[live.currentBatsman1].active = !live.batsmen[live.currentBatsman1].active;
         live.batsmen[live.currentBatsman2].active = !live.batsmen[live.currentBatsman2].active;
     }
 }
 
-function initBatsmanStats(live, name, active) {
+function initBatsmanStats(live: LiveInnings, name: string, active: boolean): void {
     if (name && !live.batsmen[name]) {
         live.batsmen[name] = { runs: 0, balls: 0, active: active };
     }
 }
 
-function initBowlerStats(live, name) {
+function initBowlerStats(live: LiveInnings, name: string): void {
     if (name && !live.bowlers[name]) {
         live.bowlers[name] = { runs: 0, balls: 0, wickets: 0, wides: 0, noballs: 0 };
     }
 }
 
-function archiveLiveInnings(match) {
+function archiveLiveInnings(match: any): void {
     const live = match.liveInnings;
     const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
     if (live.overLog.length > 0) {
         live.overs.push({
-            bowler: live.currentBowler,
+            bowler: live.currentBowler || "Unknown",
             balls: [...live.overLog]
         });
         live.overLog = [];
@@ -367,20 +364,19 @@ function archiveLiveInnings(match) {
     battingTeam.innings.push(JSON.parse(JSON.stringify(live)));
 }
 
-function checkOverComplete(nextState) {
+function checkOverComplete(nextState: GameState): boolean {
     const live = nextState.match.liveInnings;
     if (live.balls % 6 === 0 && live.balls > 0) {
         rotateStrike(live);
         
         live.overs.push({
-            bowler: live.currentBowler,
+            bowler: live.currentBowler || "Unknown",
             balls: [...live.overLog]
         });
         live.overLog = [];
 
         const maxBalls = nextState.settings.oversPerInnings * 6;
         if (live.balls >= maxBalls && nextState.match.currentInnings === 1) {
-            // First innings complete
             archiveLiveInnings(nextState.match);
             nextState.match.target = live.score + 1;
             nextState.phase = 'INNINGS_BREAK';
@@ -397,18 +393,18 @@ function checkOverComplete(nextState) {
         }
 
         live.previousBowler = live.currentBowler;
-        live.currentBowler = ""; // Force selection
+        live.currentBowler = "";
     }
     return false;
 }
 
-function checkMatchOver(nextState) {
+function checkMatchOver(nextState: GameState): boolean {
     const live = nextState.match.liveInnings;
     const settings = nextState.settings;
     const match = nextState.match;
 
     if (settings.totalInnings === 1 && match.currentInnings === 2) {
-        const target = match.target;
+        const target = match.target!;
         const maxBalls = settings.oversPerInnings * 6;
         const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
         const totalPlayers = battingTeam.players.length;
@@ -452,7 +448,7 @@ function checkMatchOver(nextState) {
     return false;
 }
 
-function handleAllOut(nextState) {
+function handleAllOut(nextState: GameState): void {
     const match = nextState.match;
     archiveLiveInnings(match);
 
@@ -468,7 +464,6 @@ function handleAllOut(nextState) {
             }
         });
     } else {
-        // Second innings all out -> Match Over
         const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
         match.matchOver = true;
         nextState.phase = 'MATCH_OVER';
@@ -483,7 +478,7 @@ function handleAllOut(nextState) {
     }
 }
 
-function enforceSingleBatsmanRule(nextState, battingTeam, totalPlayers) {
+function enforceSingleBatsmanRule(nextState: GameState, battingTeam: Team, totalPlayers: number): void {
     const live = nextState.match.liveInnings;
     if (nextState.settings.allowSingleBatsman && live.wickets === totalPlayers - 1) {
         if (live.currentBatsman2) {
@@ -496,9 +491,11 @@ function enforceSingleBatsmanRule(nextState, battingTeam, totalPlayers) {
     }
 }
 
-function executeRunOutWicket(nextState, isStriker, extraRuns, accrueTo) {
+function executeRunOutWicket(nextState: GameState, isStriker: boolean, extraRuns: number, accrueTo: string): void {
     const live = nextState.match.liveInnings;
-    const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+    const striker = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
+        ? live.currentBatsman1
+        : (live.currentBatsman2 || '');
     const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
     const outBatsmanName = isStriker ? striker : nonStriker;
 
@@ -515,7 +512,8 @@ function executeRunOutWicket(nextState, isStriker, extraRuns, accrueTo) {
     live.wickets++;
     live.balls++;
     if (live.currentBowler && live.bowlers[live.currentBowler]) {
-        live.bowlers[live.currentBowler].balls++;
+        const bowler = live.bowlers[live.currentBowler];
+        if (bowler) bowler.balls++;
     }
 
     let logStr = 'W-RO';
@@ -541,11 +539,10 @@ function executeRunOutWicket(nextState, isStriker, extraRuns, accrueTo) {
     }
 
     enforceSingleBatsmanRule(nextState, battingTeam, totalPlayers);
-
-    const transitionOccurred = checkMatchOver(nextState) || checkOverComplete(nextState);
+    checkMatchOver(nextState) || checkOverComplete(nextState);
 }
 
-function autoSelectEligiblePlayers(nextState) {
+function autoSelectEligiblePlayers(nextState: GameState): void {
     const live = nextState.match.liveInnings;
     if (!live) return;
 

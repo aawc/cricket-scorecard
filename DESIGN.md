@@ -3,20 +3,23 @@
 ## 1. Overview
 The Cricket Scorecard PWA is a standalone, mobile-optimized Progressive Web App designed to track scores offline during a cricket match. It supports standard cricket scoring rules with custom extensions (like single batsman play) and features a clean, screenshot-friendly "Full Scorecard" view for sharing match results.
 
-## 2. Architecture & Tech Stack
-The application is built with a minimalist, modular ES6 approach:
-- **Frontend**: Vanilla HTML5, CSS3, and JavaScript (ES6 Modules).
-- **Modular Directory Structure**:
-  - `src/app.js`: Main PWA entry point.
-  - `src/state.js`: Central game state store coordinator and history wrapper.
-  - `src/storage.js`: Serialization, minification, and self-healing loaders.
-  - `src/reducer.js`: Centralized game flow reducer managing state transitions, scoring rules, strike rotations, and validation.
-  - `src/ui.js`: DOM event handling, alert modal orchestration, and UI rendering.
+## 2. Architecture, TypeScript Target & Tech Stack
+
+The application is structured as a TypeScript Progressive Web App, utilizing Vite for bundling and asset pipelines:
+- **Frontend**: TypeScript (transpiled to standard modern ES2022 JavaScript).
+- **Build Toolchain (Vite)**: Dev server with fast HMR; production builds compile files, minify scripts, and generate outputs inside `dist/`.
+- **Source Directory Structure**:
+  - `src/types.ts`: Central TypeScript interface models and action type definitions.
+  - `src/app.ts`: Main PWA entry point, handles service worker lifecycle and root event routing.
+  - `src/state.ts`: Central game state store coordinator and undo history wrapper.
+  - `src/storage.ts`: LZString state compression/decompression and storage minification logic.
+  - `src/reducer.ts`: Pure reducer state machine managing match state calculations, strike rotations, and validation.
+  - `src/ui.ts`: Cached DOM selectors, event listeners, and UI rendering bindings.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
-- **PWA Capabilities**: Service Worker (`sw.js`) caching all source files under `src/` for offline capability; Web App Manifest (`manifest.json`) for installation.
+- **PWA Capabilities**: Service Worker (`sw.js`) compiled into `dist/` root, caching static assets for offline capability; Web App Manifest (`manifest.json`) for installation.
 - **State Persistence**: `localStorage` to save match state across reloads.
 - **State Sharing**: URL-based sharing using `LZString` compression for compact permalinks.
-- **Testing**: Node.js test runner (`test/test.js`) dynamically loading modules in a mocked DOM environment to validate core scoring logic.
+- **Testing**: Node.js test runner using `ts-node` to run TypeScript assertions (`test/test_cases.ts`) in a mock DOM environment.
 
 ---
 
@@ -209,9 +212,9 @@ Asynchronous side-effects (like Bootstrap alerts and modals) are managed by appe
 
 ## 6. Testing Strategy
 
-The test suite runs in Node.js and validates the modular logic without a real browser environment.
--   **Runner (`test/test.js`)**: Mocks DOM elements in the global scope, dynamically imports the ES6 modules from `src/`, maps their exports to global bindings for backward compatibility, and runs the test suite.
--   **Test Cases (`test/test_cases.js`)**: Contains 30 unit tests verifying:
+The test suite runs in Node.js using `ts-node` to execute TypeScript assertions directly without requiring a compilation step.
+-   **Runner (`test/test.ts`)**: Mocks browser DOM APIs in the global Node scope, uses ESM ts-node loader to dynamically import the TypeScript source modules from `src/`, binds modules to global variables for test compatibility, and executes the suite.
+-   **Test Cases (`test/test_cases.ts`)**: Written in TypeScript with type definitions, containing 34 unit tests verifying:
     *   Runs accumulation and strike rotation.
     *   Extras calculations (Wides, No Balls, Byes) and run-out logic.
     *   Innings completion and target calculation.
@@ -242,6 +245,12 @@ To track history and progress, the following major refactorings have been succes
     *   Replaced disjointed boolean checks (`matchStarted`, `matchOver`, etc.) with a mathematically strict game flow state machine inside `src/reducer.js`.
     *   Decoupled async side-effects (alerts/modals) using a state-driven `uiEvents` queue, making the scoring engine 100% pure and unit-testable synchronously.
 
+3.  **TypeScript Migration (Type Safety & Tooling)**:
+    *   Re-wrote the entire application code in TypeScript with strict interface declarations (`src/types.ts`).
+    *   Integrated Vite bundler for hot-reloading development and minified production builds under `dist/`.
+    *   Configured Node.js unit tests to execute directly on TypeScript modules via `ts-node/esm` loaders.
+    *   Implemented a post-build asset crawler to dynamically inject hashed production bundles into the PWA Service Worker offline cache.
+
 ---
 
 ## 9. Future Architectural Roadmap
@@ -252,6 +261,21 @@ To transition this project from a prototype implementation to a professional, in
     *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`. This is error-prone and can lead to desynchronization between model and view.
     *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Mithril) or a simple template-rendering engine that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
-2.  **TypeScript Migration (Type Safety & Tooling)**:
-    *   The Javascript engine is untyped, risking runtime type errors (e.g. `NaN` calculations or property lookup crashes on undefined entities).
-    *   **Goal**: Re-write the application in TypeScript. Setup a local builder toolchain (like Vite or esbuild) to compile TS to static JS. Deploy to GitHub Pages automatically via GitHub Actions pipelines on push.
+2.  **Remote Storage Sync (Cloud Persistence)**:
+    *   Currently, the application relies strictly on local browser `localStorage` and permalink sharing. If the user clears browser data, match history is lost.
+    *   **Goal**: Introduce an optional remote storage adapter (e.g. Firebase, Supabase, or a lightweight custom REST API). This will allow users to securely sync match data, maintain a persistent match history dashboard across devices, and share live matches with real-time updates (via WebSockets or Server-Sent Events) instead of static permalinks.
+
+---
+
+## 10. TypeScript Types & Build Toolchain
+
+### 1. Build Pipeline (Vite)
+Vite is used to orchestrate development and production bundling. During local development (`npm run dev`), Vite hosts a hot-reloading development server that compiles TypeScript on-the-fly. For deployment (`npm run build`), Vite runs `tsc` for type-checking and compiles/bundles the code into the `dist/` folder.
+
+### 2. Main Data Interfaces (`src/types.ts`)
+The application state and action tree are governed by strict contracts:
+- `BatsmanStats`: Tracks runs, balls faced, and active striker flag.
+- `BowlerStats`: Tracks runs, balls bowled, wickets, wides, and noballs.
+- `LiveInnings`: Holds score, wickets, balls, extras, batsmen/bowler records, over log, and completed overs.
+- `GameState`: Houses settings, current innings, team profiles, and historical states.
+- `Action`: Discriminated union of dispatchable store actions (e.g. `ADD_RUNS`, `ADD_WICKET`, `UNDO`).
