@@ -83,9 +83,9 @@ global.document = {
     },
     body: {
         classList: {
-            add: function(c) { this.classes.add(c); },
-            remove: function(c) { this.classes.delete(c); },
-            contains: function(c) { return this.classes.has(c); }
+            add: function(c) { global.document.body.classes.add(c); },
+            remove: function(c) { global.document.body.classes.delete(c); },
+            contains: function(c) { return global.document.body.classes.has(c); }
         },
         classes: new Set()
     }
@@ -430,5 +430,65 @@ if (gameState.match.liveInnings.currentBatsman1 !== "P2") {
     console.error(`Test 15 Failed: Lone survivor P2 should be moved to striker slot, got ${gameState.match.liveInnings.currentBatsman1}`);
     process.exit(1);
 }
+
+// Test 16: Archiving Innings 2 on match win (chasing target met)
+resetTestState();
+gameState.match.currentInnings = 2;
+gameState.match.currentBattingTeam = 2; // Team 2 is chasing
+gameState.match.target = 10;
+gameState.match.liveInnings.score = 9;
+gameState.match.liveInnings.balls = 5;
+// Bowl 1 run to reach target (9 + 1 = 10)
+addRuns(1);
+
+if (!gameState.match.matchOver) {
+    console.error("Test 16 Failed: Match should be marked over");
+    process.exit(1);
+}
+if (gameState.match.team2.innings.length !== 1) {
+    console.error(`Test 16 Failed: Innings 2 should be archived, got history length ${gameState.match.team2.innings.length}`);
+    process.exit(1);
+}
+if (gameState.match.team2.innings[0].score !== 10) {
+    console.error(`Test 16 Failed: Archived score should be 10, got ${gameState.match.team2.innings[0].score}`);
+    process.exit(1);
+}
+
+// Test 17: Migration of unarchived Innings 2 on load
+resetTestState();
+const badState = {
+    matchStarted: true,
+    settings: { totalInnings: 1, theme: "light" },
+    match: {
+        currentInnings: 2,
+        currentBattingTeam: 2,
+        team1: { name: "Team 1", players: ["P1", "P2"], innings: [{ score: 10, balls: 6, batsmen: {}, bowlers: {}, extras: {wides:0,noballs:0,byes:0,legbyes:0}, overs:[], overLog:[] }] },
+        team2: { name: "Team 2", players: ["P3", "P4"], innings: [] },
+        liveInnings: { score: 11, balls: 6, batsmen: {}, bowlers: {}, extras: {wides:0,noballs:0,byes:0,legbyes:0}, overs:[], overLog:[] },
+        target: 11,
+        matchOver: true
+    }
+};
+
+global.localStorage.getItem = (key) => {
+    if (key === 'cricketScorecardState') {
+        return JSON.stringify(badState);
+    }
+    return null;
+};
+
+loadFromLocalStorage();
+
+if (gameState.match.team2.innings.length !== 1) {
+    console.error(`Test 17 Failed: Innings 2 should have been migrated/archived on load, got length ${gameState.match.team2.innings.length}`);
+    process.exit(1);
+}
+if (gameState.match.team2.innings[0].score !== 11) {
+    console.error(`Test 17 Failed: Migrated Innings 2 score should be 11, got ${gameState.match.team2.innings[0].score}`);
+    process.exit(1);
+}
+
+// Restore localStorage mock
+global.localStorage.getItem = (key) => null;
 
 console.log("All tests passed!");

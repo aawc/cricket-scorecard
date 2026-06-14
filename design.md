@@ -138,6 +138,7 @@ flowchart TD
     *   Chasing team score >= Target $\rightarrow$ Batting team wins.
     *   Chasing team wickets >= Max Wickets $\rightarrow$ Bowling team wins.
     *   Chasing team balls >= Max Balls $\rightarrow$ Bowling team wins (or Tie if scores are equal).
+    *   *Upon match end, the final live innings is archived into the team's history before disabling controls.*
 
 ### 4.4. State Persistence & URL Sharing
 -   **Local Storage**: Every action (runs, wickets, undo, reset) calls `saveToLocalStorage()` which serializes `gameState` to JSON.

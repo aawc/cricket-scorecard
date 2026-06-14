@@ -416,6 +416,7 @@ function loadFromLocalStorage() {
     const urlStateCompressed = urlParams.get('s');
     const urlStateLegacy = urlParams.get('state');
     const flipContainer = document.querySelector('.flip-container');
+    let loaded = false;
 
     if (urlStateCompressed && typeof LZString !== 'undefined') {
         try {
@@ -425,16 +426,8 @@ function loadFromLocalStorage() {
             gameState.settings = fullState.settings;
             gameState.match = fullState.match;
             gameState.matchStarted = true;
-
             window.history.replaceState({}, '', window.location.pathname);
-            
-            settingsSection.classList.add('hidden');
-            if (flipContainer) flipContainer.classList.remove('hidden');
-            
-            if (gameState.settings.theme) {
-                setTheme(gameState.settings.theme);
-            }
-            return;
+            loaded = true;
         } catch (e) {
             console.error("Failed to parse compressed state from URL", e);
             alert("Failed to load match from compressed link.");
@@ -445,33 +438,45 @@ function loadFromLocalStorage() {
             gameState.settings = decodedState.settings;
             gameState.match = decodedState.match;
             gameState.matchStarted = true;
-            
             window.history.replaceState({}, '', window.location.pathname);
-            
-            settingsSection.classList.add('hidden');
-            if (flipContainer) flipContainer.classList.remove('hidden');
-            
-            if (gameState.settings.theme) {
-                setTheme(gameState.settings.theme);
-            }
-            return;
+            loaded = true;
         } catch (e) {
             console.error("Failed to parse legacy state from URL", e);
             alert("Failed to load match from link.");
         }
     }
 
-    const savedState = localStorage.getItem('cricketScorecardState');
-    if (savedState) {
-        gameState = JSON.parse(savedState);
+    if (!loaded) {
+        const savedState = localStorage.getItem('cricketScorecardState');
+        if (savedState) {
+            gameState = JSON.parse(savedState);
+            loaded = true;
+        }
+    }
+
+    if (loaded) {
         if (gameState.matchStarted) {
             settingsSection.classList.add('hidden');
             if (flipContainer) flipContainer.classList.remove('hidden');
+            
+            // Migration fix: Archive live innings if match is over but it wasn't archived
+            if (gameState.match && gameState.match.matchOver) {
+                const match = gameState.match;
+                const live = match.liveInnings;
+                if (live && live.balls > 0) {
+                    const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
+                    const expectedInningsCount = Math.ceil(match.currentInnings / 2);
+                    if (battingTeam && battingTeam.innings.length < expectedInningsCount) {
+                        console.log("Migration: Archiving live innings on load");
+                        archiveLiveInnings();
+                    }
+                }
+            }
         } else {
             settingsSection.classList.remove('hidden');
             if (flipContainer) flipContainer.classList.add('hidden');
         }
-        if (gameState.settings.theme) {
+        if (gameState.settings && gameState.settings.theme) {
             setTheme(gameState.settings.theme);
         }
     } else {
@@ -1026,10 +1031,12 @@ function checkMatchOver() {
 
         if (live.score >= target) {
             alert("Match Over! " + battingTeam.name + " wins!");
+            archiveLiveInnings();
             match.matchOver = true;
             toggleScreenshotMode(); // Auto flip to summary
         } else if (live.wickets >= maxWickets) {
             alert("Match Over! Defending team wins!");
+            archiveLiveInnings();
             match.matchOver = true;
             toggleScreenshotMode();
         } else if (live.balls >= maxBalls) {
@@ -1038,6 +1045,7 @@ function checkMatchOver() {
              } else {
                  alert("Match Over! Defending team wins!");
              }
+             archiveLiveInnings();
              match.matchOver = true;
              toggleScreenshotMode();
         }
@@ -1296,11 +1304,15 @@ function executeRunOutWicket(isStriker, extraRuns, accrueTo) {
     updateUI();
 }
 
-function endInnings() {
+function archiveLiveInnings() {
     const live = gameState.match.liveInnings;
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
-    
     battingTeam.innings.push(JSON.parse(JSON.stringify(live)));
+}
+
+function endInnings() {
+    archiveLiveInnings();
+    const live = gameState.match.liveInnings;
     
     if (gameState.settings.totalInnings === 1 && gameState.match.currentInnings === 1) {
         gameState.match.target = live.score + 1;
