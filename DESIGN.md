@@ -4,13 +4,19 @@
 The Cricket Scorecard PWA is a standalone, mobile-optimized Progressive Web App designed to track scores offline during a cricket match. It supports standard cricket scoring rules with custom extensions (like single batsman play) and features a clean, screenshot-friendly "Full Scorecard" view for sharing match results.
 
 ## 2. Architecture & Tech Stack
-The application is built with a minimalist approach to ensure ease of deployment (GitHub Pages) and offline capability:
-- **Frontend**: Vanilla HTML5, CSS3, and JavaScript (ES6+).
+The application is built with a minimalist, modular ES6 approach:
+- **Frontend**: Vanilla HTML5, CSS3, and JavaScript (ES6 Modules).
+- **Modular Directory Structure**:
+  - `src/app.js`: Main PWA entry point.
+  - `src/state.js`: Central game state management and history functions.
+  - `src/storage.js`: Serialization, minification, and self-healing loaders.
+  - `src/scoring.js`: Pure Javascript rules engine for cricket scoring logic.
+  - `src/ui.js`: DOM event handling, alert modal orchestration, and UI rendering.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
-- **PWA Capabilities**: Service Worker (`sw.js`) for caching assets and offline access; Web App Manifest (`manifest.json`) for installability.
+- **PWA Capabilities**: Service Worker (`sw.js`) caching all source files under `src/` for offline capability; Web App Manifest (`manifest.json`) for installation.
 - **State Persistence**: `localStorage` to save match state across reloads.
 - **State Sharing**: URL-based sharing using `LZString` compression for compact permalinks.
-- **Testing**: Node.js test script (`test.js`) using a mocked DOM environment to validate core scoring logic.
+- **Testing**: Node.js test runner (`test/test.js`) dynamically loading modules in a mocked DOM environment to validate core scoring logic.
 
 ---
 
@@ -166,10 +172,9 @@ flowchart TD
 
 ## 6. Testing Strategy
 
-The `test.js` file runs in Node.js and tests the core scoring logic without a real browser environment.
--   **DOM Mocking**: Since `app.js` interacts heavily with the DOM, `test.js` mocks `document.getElementById`, `document.querySelector`, and various element properties (like `value`, `textContent`, `classList`) in the global scope.
--   **Code Injection**: `test.js` reads `app.js`, replaces `let gameState =` with `global.gameState =` to make the state inspectable, and runs `eval()` on the modified code.
--   **Unit Tests**: Includes 18 distinct test cases verifying:
+The test suite runs in Node.js and validates the modular logic without a real browser environment.
+-   **Runner (`test/test.js`)**: Mocks DOM elements in the global scope, dynamically imports the ES6 modules from `src/`, maps their exports to global bindings for backward compatibility, and runs the test suite.
+-   **Test Cases (`test/test_cases.js`)**: Contains 30 unit tests verifying:
     *   Runs accumulation and strike rotation.
     *   Extras calculations (Wides, No Balls, Byes) and run-out logic.
     *   Innings completion and target calculation.
@@ -192,14 +197,9 @@ The `test.js` file runs in Node.js and tests the core scoring logic without a re
 
 To transition this project from a prototype implementation to a professional, industry-standard codebase, we have planned the following structural improvements:
 
-1.  **Modular Architecture (Code Organization)**:
-    *   Currently, all logic is consolidated within a monolithic 1700+ line `app.js` file.
-    *   **Goal**: Deconstruct `app.js` into distinct ES6 modules to decouple concerns.
-    *   *Proposed Structure*:
-        *   `state.js`: Global state management and storage (load/save) logic.
-        *   `scoring.js`: Pure JavaScript scoring rules, calculations, and state changes (decoupled from the DOM).
-        *   `ui.js`: DOM selectors, rendering updates, and visual components.
-        *   `sharing.js`: LZString minification, URL parsing, and copy-to-clipboard functionalities.
+1.  **Modular Architecture (Code Organization)** - [COMPLETED]:
+    *   Deconstructed monolithic `app.js` into distinct ES6 modules (`src/app.js`, `src/state.js`, `src/storage.js`, `src/scoring.js`, `src/ui.js`) to separate concerns and improve maintainability.
+    *   Cleaned up test suite by separating the runner mock framework (`test/test.js`) from test cases (`test/test_cases.js`).
 
 2.  **Reactive Rendering (UI Architecture)**:
     *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`. This is error-prone and can lead to desynchronization between model and view.
