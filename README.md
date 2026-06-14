@@ -58,7 +58,108 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 ## Features (Planned / Future Architecture)
 
 - **Reactive UI Rendering**: Migrate from manual DOM updates in `updateUI()` to a lightweight component/reactive rendering approach (e.g. Preact, Lit, or Mithril).
-- **TypeScript Migration**: Convert the codebase to TypeScript for compile-time type safety. Set up a build step (using Vite or esbuild) and deploy automatically using GitHub Actions.
+
+## Local Development
+
+To run the application and execute tests locally:
+
+### 1. Standard Node.js Workflow (If `npm` is allowed and installed)
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+2. **Start Development Server**:
+   ```bash
+   npm run dev
+   ```
+   Open `http://localhost:5173` in your browser.
+3. **Execute Automated Unit Tests**:
+   ```bash
+   npm test
+   ```
+4. **Compile Production Build**:
+   ```bash
+   npm run build
+   ```
+   The compiled assets will be created in the `dist/` directory.
+5. **Preview Production Build**:
+   ```bash
+   npm run preview
+   ```
+
+### 2. Zero-Installation Workflow (If global `npm` is not allowed or installed)
+If you do not have `npm` installed globally, or are in a sandboxed environment where package managers are restricted, you can run a completely isolated local Node.js environment:
+
+1. **Download Node.js Portable Binary**:
+   Download the Node.js tarball directly (e.g. Linux x64):
+   ```bash
+   wget https://nodejs.org/dist/v20.11.0/node-v20.11.0-linux-x64.tar.xz -O node-dist.tar.xz
+   ```
+2. **Extract locally in the workspace**:
+   ```bash
+   mkdir -p node-env && tar -xf node-dist.tar.xz -C node-env && rm node-dist.tar.xz
+   ```
+3. **Run Package Installation using local npm**:
+   Bypass custom proxies and fetch dependencies directly from the official registry:
+   ```bash
+   ./node-env/node-v20.11.0-linux-x64/bin/npm install --registry=https://registry.npmjs.org/
+   ```
+4. **Run Dev/Test scripts using local binaries**:
+   *   **Start dev server**: `./node-env/node-v20.11.0-linux-x64/bin/npm run dev`
+   *   **Execute tests**: `./node-env/node-v20.11.0-linux-x64/bin/npm test`
+   *   **Build project**: `./node-env/node-v20.11.0-linux-x64/bin/npm run build`
+
+## Deployment to GitHub Pages
+
+Because the project utilizes Vite, the production output in the `dist/` folder is deployed:
+
+### Option A: GitHub Actions (Recommended)
+You can configure a GitHub Actions workflow to automatically build and deploy the project on every push to `main`. Create a `.github/workflows/deploy.yml` with:
+```yaml
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [ main ]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: './dist'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+```
+
+### Option B: Manual Deploy via NPM script
+You can use the `gh-pages` CLI package to push the build directory to the `gh-pages` branch:
+```bash
+npx gh-pages -d dist
+```
 
 ## Documentation Structure
 
@@ -74,9 +175,10 @@ The repository maintains several core documentation files to manage the AI-assis
 
 ## Tech Stack
 
-- Vanilla HTML, CSS, and JavaScript (ES6 Modules, no build step).
-- Bootstrap 5 (via CDN).
-- Node.js (for running tests).
+- **Frontend**: TypeScript, Vanilla HTML5 & CSS3.
+- **Build Toolchain**: Vite (for local development and bundling).
+- **Libraries**: Bootstrap 5 (CDN), SortableJS (CDN), LZString (CDN).
+- **Testing**: Node.js test runner with `ts-node/esm` loaders.
 
 ## License
 

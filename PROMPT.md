@@ -40,14 +40,14 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Second Innings Stats**: During the second innings, show the target, the current run rate, and the target run rate.
 
 ### 2. Technical Specifications
-- **Hosting**: Static website to be hosted on GitHub Pages.
-- **Tech Stack**: Vanilla HTML, CSS, and JavaScript (ES6 Modules). The codebase is divided into cohesive modules (`src/app.js`, `src/state.js`, `src/storage.js`, `src/reducer.js`, `src/ui.js`). Do not use any JS build steps (Webpack, Vite, etc.) to keep it simple and directly hostable. Use Bootstrap 5 via CDN for styling.
-- **State Management**: Governed by a centralized reducer state machine in `src/reducer.js` which manages match phases (`SETUP`, `TOSS`, `PLAYING_INNINGS`, `INNINGS_BREAK`, `MATCH_OVER`) and dispatches synchronous actions. Asynchronous side-effects (alerts/modals) are queued in `gameState.uiEvents` and processed by the UI orchestrator.
+- **Hosting**: Static website compiled via Vite into `dist/` and hosted on GitHub Pages (via custom Actions workflow or manual commit pushing).
+- **Tech Stack**: TypeScript (transpiled to standard modern ES2022 JavaScript). Source modules live under `src/` (`app.ts`, `state.ts`, `storage.ts`, `reducer.ts`, `ui.ts`, `types.ts`). Uses Vite for local development, hot module reloading, and production bundling. Bootstrap 5 via CDN for styling.
+- **State Management**: Governed by a centralized reducer state machine in `src/reducer.ts` which manages match phases (`SETUP`, `TOSS`, `PLAYING_INNINGS`, `INNINGS_BREAK`, `MATCH_OVER`) and dispatches synchronous actions. Asynchronous side-effects (alerts/modals) are queued in `gameState.uiEvents` and processed by the UI orchestrator.
 - **Themes**: Support a few different themes (e.g., Light, Dark, Cricket Green).
-- **Offline Support**: Implement a Service Worker and Web App Manifest to allow the app to be installed and used offline as a PWA.
+- **Offline Support**: PWA manifest (`public/manifest.json`) and service worker template (`public/sw.js`). A post-build crawler (`scripts/build-sw.js`) automatically finds and injects hashed production assets into the service worker pre-cache, making the app fully installable and working offline.
 - **State Persistence**: Use `localStorage` to persist the game state so that progress is not lost on page reload or if the app is closed.
 - **License**: The project should be licensed under the MIT License.
-- **Testing**: Add tests to make sure the functionality so far does not regress. Include documentation about how to run tests. Run all relevant tests on each edit. Add tests for CRR/RRR display and innings end on max overs.
+- **Testing**: Node.js test runner using `ts-node/esm` to run unit assertions (`test/test_cases.ts`) directly without a preliminary build step.
 
 ### 3. UI/UX
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
@@ -66,6 +66,6 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - All files related to this project, such as `task.md`, must always be created in the current directory.
 - Always use a new git branch for new bug fixes or features.
 - Always update the footer in `index.html` with the version number (in the format `vYYYYMMDD-NNN`, e.g., `v20260614-001`, where `YYYYMMDD` is the current date and `NNN` is a 3-digit sequence starting at `001` each day, incremented by 1 for each subsequent update), deployment date, and deployment time on each update (restricted to code changes as per above requirement).
-- Always update the cache version name in `sw.js` (e.g. `cricket-scorecard-vYYYYMMDD-NNN`) to match the new version.
-- Always write automated unit test assertions in `test/test_cases.js` for all new features and bug fixes to prevent regressions.
-- Always run automated unit tests (`node test/test.js`) on each edit without requesting confirmation from the user.
+- Always update the cache version name in `public/sw.js` (e.g. `cricket-scorecard-vYYYYMMDD-NNN`) to match the new version.
+- Always write automated unit test assertions in `test/test_cases.ts` for all new features and bug fixes to prevent regressions.
+- Always run automated unit tests (`npm test`) on each edit without requesting confirmation from the user.
