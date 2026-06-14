@@ -8,9 +8,9 @@ The application is built with a minimalist, modular ES6 approach:
 - **Frontend**: Vanilla HTML5, CSS3, and JavaScript (ES6 Modules).
 - **Modular Directory Structure**:
   - `src/app.js`: Main PWA entry point.
-  - `src/state.js`: Central game state management and history functions.
+  - `src/state.js`: Central game state store coordinator and history wrapper.
   - `src/storage.js`: Serialization, minification, and self-healing loaders.
-  - `src/scoring.js`: Pure Javascript rules engine for cricket scoring logic.
+  - `src/reducer.js`: Centralized game flow reducer managing state transitions, scoring rules, strike rotations, and validation.
   - `src/ui.js`: DOM event handling, alert modal orchestration, and UI rendering.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
 - **PWA Capabilities**: Service Worker (`sw.js`) caching all source files under `src/` for offline capability; Web App Manifest (`manifest.json`) for installation.

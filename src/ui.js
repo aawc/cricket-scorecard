@@ -1,5 +1,5 @@
 // ui.js
-import { gameState, dispatch } from './state.js';
+import { gameState, dispatch, setGameState } from './state.js';
 import { saveState, clearState, loadState, generatePermalink } from './storage.js';
 
 // DOM Elements

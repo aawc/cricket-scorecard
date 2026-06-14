@@ -1,12 +1,11 @@
-# Task List - Store Ball-by-Ball Over Details (U1 & U2)
+# Task List - Fix Permalink Loading and setGameState Reference Error
 
-- [x] Add `overs` array to `liveInnings` initialization and `resetMatch()` in `app.js`
-- [x] Save completed overs in `checkOverComplete()` in `app.js`
-- [x] Save incomplete final over in `endInnings()` in `app.js`
-- [x] Update `minifyState()` and `unminifyState()` in `app.js` to support `overs`
-- [x] Add unit Test 16, 17, and 18 in `test.js` and verify they pass (`node test.js`)
-- [x] Implement UX Option U1 (Collapsible Over History) in `index.html`, `style.css`, and `app.js`
-- [x] Implement UX Option U2 (Over Log Table in Full Scorecard) in `index.html` and `app.js`
-- [x] Update `PROMPT.md` and `README.md` to document the new feature
-- [x] Manually verify U1, U2, and Permalink sharing functionality in browser
+- [x] Decode user state from bug report permalink URL
+- [x] Write scratch script to reproduce batsman auto-selection bug
+- [x] Fix phase and history reconstruction in `unminifyState` in `src/storage.js`
+- [x] Add Test 31 in `test/test_cases.js` for permalink loading
+- [x] Expose `setGameState` globally in tests
+- [x] Fix browser `ReferenceError: setGameState is not defined` in `src/ui.js` by importing it
+- [x] Bump daily version to `v20260614-007` in `index.html` and `sw.js`
+- [x] Update documentation (`README.md`, `PROMPT.md`, `DESIGN.md`)
 - [ ] Propose commit message, get approval, and commit
