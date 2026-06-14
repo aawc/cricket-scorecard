@@ -64,6 +64,7 @@ The repository maintains several core documentation files to manage the AI-assis
 | **`implementation_plan.md`** | Planning | User & AI | *How are we going to build this feature technically?* |
 | **`task.md`** | Execution | AI (Progress Tracking) | *What exact step are we working on right now?* |
 | **`walkthrough.md`** | Verification | User | *What exactly did we build and how was it tested?* |
+| **`design.md`** | Design | Future AI / Developers | *What is the current system architecture, data structures, and control flow?* |
 | **`PROMPT.md`** | Project Lifecycle | Future AI / Developers | *What is this entire application and all of its rules?* |
 
 ## Tech Stack

@@ -59,6 +59,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
 - Keep `README.md` updated with project status and features.
+- Keep `design.md` updated with the current implementation details (data structures, control flow, decisions) as the codebase evolves.
 - Keep `SECURITY.md` updated with project security policies and reporting guidelines as architectural or dependency changes occur.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
