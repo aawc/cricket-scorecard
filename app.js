@@ -431,6 +431,37 @@ function unminifyState(min) {
     };
 }
 
+function healInningsOvers(innings) {
+    if (!innings) return;
+    if (!innings.overs) innings.overs = [];
+    if (!innings.overLog) innings.overLog = [];
+    
+    let currentOverBalls = [];
+    let legalCount = 0;
+    const completedOvers = [];
+    
+    for (const ball of innings.overLog) {
+        currentOverBalls.push(ball);
+        if (!ball.startsWith('wd') && !ball.startsWith('nb')) {
+            legalCount++;
+        }
+        
+        if (legalCount === 6) {
+            completedOvers.push({
+                bowler: innings.currentBowler || "Unknown",
+                balls: [...currentOverBalls]
+            });
+            currentOverBalls = [];
+            legalCount = 0;
+        }
+    }
+    
+    if (completedOvers.length > 0) {
+        innings.overs = [...innings.overs, ...completedOvers];
+        innings.overLog = currentOverBalls;
+    }
+}
+
 // Load from LocalStorage or URL
 function loadFromLocalStorage() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -476,20 +507,16 @@ function loadFromLocalStorage() {
     }
 
     if (loaded) {
-        // Ensure overs array exists in all innings states (migration for old states)
+        // Ensure overs array exists and heal any bloated overLogs (migration for old/corrupt states)
         if (gameState.match) {
-            if (gameState.match.liveInnings && !gameState.match.liveInnings.overs) {
-                gameState.match.liveInnings.overs = [];
+            if (gameState.match.liveInnings) {
+                healInningsOvers(gameState.match.liveInnings);
             }
             if (gameState.match.team1 && gameState.match.team1.innings) {
-                gameState.match.team1.innings.forEach(inn => {
-                    if (!inn.overs) inn.overs = [];
-                });
+                gameState.match.team1.innings.forEach(healInningsOvers);
             }
             if (gameState.match.team2 && gameState.match.team2.innings) {
-                gameState.match.team2.innings.forEach(inn => {
-                    if (!inn.overs) inn.overs = [];
-                });
+                gameState.match.team2.innings.forEach(healInningsOvers);
             }
         }
 

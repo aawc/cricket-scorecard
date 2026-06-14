@@ -772,4 +772,49 @@ if (gameState.match.team2.innings.length !== 1) {
 
 global.localStorage.getItem = (key) => null;
 
+// Test 26: Healing of bloated overLog on load
+resetTestState();
+gameState.match.currentInnings = 2;
+gameState.match.currentBattingTeam = 2;
+gameState.match.target = 30;
+gameState.match.liveInnings.overs = [];
+gameState.match.liveInnings.overLog = ["4", "4", "4", "4", "4", "1", "1", "1", "1", "1", "1", "3", "3"];
+gameState.match.liveInnings.balls = 13;
+gameState.match.liveInnings.currentBowler = "B1";
+gameState.match.liveInnings.bowlers = { "B1": { runs: 32, balls: 13, wickets: 0 } };
+
+const corruptStateString = JSON.stringify(gameState);
+global.localStorage.getItem = (key) => {
+    if (key === 'cricketScorecardState') {
+        return corruptStateString;
+    }
+    return null;
+};
+
+loadFromLocalStorage();
+
+const live = gameState.match.liveInnings;
+if (live.overs.length !== 2) {
+    console.error(`Test 26 Failed: Expected 2 completed overs after healing, got ${live.overs.length}`);
+    process.exit(1);
+}
+if (live.overs[0].bowler !== "B1" || JSON.stringify(live.overs[0].balls) !== JSON.stringify(["4", "4", "4", "4", "4", "1"])) {
+    console.error("Test 26 Failed: Over 1 not healed correctly", live.overs[0]);
+    process.exit(1);
+}
+if (live.overs[1].bowler !== "B1" || JSON.stringify(live.overs[1].balls) !== JSON.stringify(["1", "1", "1", "1", "1", "3"])) {
+    console.error("Test 26 Failed: Over 2 not healed correctly", live.overs[1]);
+    process.exit(1);
+}
+if (JSON.stringify(live.overLog) !== JSON.stringify(["3"])) {
+    console.error(`Test 26 Failed: Expected remaining overLog to be ["3"], got ${JSON.stringify(live.overLog)}`);
+    process.exit(1);
+}
+if (live.balls !== 13) {
+    console.error(`Test 26 Failed: Expected balls to remain 13, got ${live.balls}`);
+    process.exit(1);
+}
+
+global.localStorage.getItem = (key) => null;
+
 console.log("All tests passed!");
