@@ -11,12 +11,17 @@
 }
 
 .ball-log {
-    background-color: #e9ecef;
-    color: #495057;
     padding: 0.25rem 0.5rem;
     border-radius: 4px;
     font-size: 0.9rem;
     font-weight: bold;
+    display: inline-block;
+}
+
+.ball-log.normal {
+    background-color: #f8f9fa;
+    color: #212529;
+    border: 1px solid #dee2e6;
 }
 
 .ball-log.wicket {

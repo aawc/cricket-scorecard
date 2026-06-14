@@ -703,7 +703,7 @@ export function updateUI() {
             } else if (b.startsWith('wd') || b.startsWith('nb') || b.includes('lb') || b.includes('b')) {
                 span.classList.add('extra');
             } else {
-                span.classList.add('bg-secondary');
+                span.classList.add('normal');
             }
             span.textContent = b;
             overLogDisplay.appendChild(span);
@@ -734,57 +734,64 @@ export function updateUI() {
     }
 
     // Render Completed Overs Collapsible List (U1)
-    const completedOversList = document.getElementById('completed-overs-list');
-    if (completedOversList) {
-        completedOversList.innerHTML = '';
+    const completedOversSection = document.getElementById('completed-overs-section');
+    if (completedOversSection) {
+        completedOversSection.innerHTML = '';
         
         const oversData = live.overs || [];
-        oversData.forEach((over, idx) => {
-            const isExpanded = expandedOvers.includes(idx);
+        if (oversData.length > 0) {
+            const heading = document.createElement('h3');
+            heading.classList.add('h6', 'text-muted', 'mb-2');
+            heading.textContent = 'Completed Overs';
+            completedOversSection.appendChild(heading);
             
-            const itemDiv = document.createElement('div');
-            itemDiv.classList.add('completed-over-item');
-            
-            // Calculate over summary
-            let overRuns = 0;
-            let overWickets = 0;
-            over.balls.forEach(b => {
-                const parsed = parseBallLog(b);
-                overRuns += parsed.runs;
-                overWickets += parsed.wicket;
-            });
-            
-            const headerDiv = document.createElement('div');
-            headerDiv.classList.add('completed-over-header');
-            headerDiv.dataset.index = idx;
-            headerDiv.innerHTML = `
-                <span>Over ${idx + 1}: ${over.bowler}</span>
-                <span>Runs: ${overRuns} | Wkts: ${overWickets} <span class="arrow">${isExpanded ? '▲' : '▼'}</span></span>
-            `;
-            itemDiv.appendChild(headerDiv);
-            
-            if (isExpanded) {
-                const ballsDiv = document.createElement('div');
-                ballsDiv.classList.add('completed-over-balls');
+            oversData.forEach((over, idx) => {
+                const isExpanded = expandedOvers.includes(idx);
                 
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('completed-over-item');
+                
+                // Calculate over summary
+                let overRuns = 0;
+                let overWickets = 0;
                 over.balls.forEach(b => {
-                    const span = document.createElement('span');
-                    span.classList.add('badge', 'me-1', 'ball-log');
-                    if (b.includes('W')) {
-                        span.classList.add('wicket');
-                    } else if (b.startsWith('wd') || b.startsWith('nb') || b.includes('lb') || b.includes('b')) {
-                        span.classList.add('extra');
-                    } else {
-                        span.classList.add('bg-secondary');
-                    }
-                    span.textContent = b;
-                    ballsDiv.appendChild(span);
+                    const parsed = parseBallLog(b);
+                    overRuns += parsed.runs;
+                    overWickets += parsed.wicket;
                 });
-                itemDiv.appendChild(ballsDiv);
-            }
-            
-            completedOversList.appendChild(itemDiv);
-        });
+                
+                const headerDiv = document.createElement('div');
+                headerDiv.classList.add('completed-over-header');
+                headerDiv.dataset.index = idx;
+                headerDiv.innerHTML = `
+                    <span>Over ${idx + 1}: ${over.bowler}</span>
+                    <span>Runs: ${overRuns} | Wkts: ${overWickets} <span class="arrow">${isExpanded ? '▲' : '▼'}</span></span>
+                `;
+                itemDiv.appendChild(headerDiv);
+                
+                if (isExpanded) {
+                    const ballsDiv = document.createElement('div');
+                    ballsDiv.classList.add('completed-over-balls');
+                    
+                    over.balls.forEach(b => {
+                        const span = document.createElement('span');
+                        span.classList.add('badge', 'me-1', 'ball-log');
+                        if (b.includes('W')) {
+                            span.classList.add('wicket');
+                        } else if (b.startsWith('wd') || b.startsWith('nb') || b.includes('lb') || b.includes('b')) {
+                            span.classList.add('extra');
+                        } else {
+                            span.classList.add('normal');
+                        }
+                        span.textContent = b;
+                        ballsDiv.appendChild(span);
+                    });
+                    itemDiv.appendChild(ballsDiv);
+                }
+                
+                completedOversSection.appendChild(itemDiv);
+            });
+        }
     }
 
     if (tossTeam1Btn && tossTeam2Btn && battingTeam) {
