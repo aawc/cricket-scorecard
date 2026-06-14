@@ -53,9 +53,12 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Automated Tests: Node.js script for core logic.
 - Second Innings Stats: Show Target, CRR, RRR.
 
-## Features (Planned)
+## Features (Planned / Future Architecture)
 
-- None at this moment.
+- **Modular Architecture**: Split the monolithic `app.js` into separate ES6 modules (e.g. `state.js`, `scoring.js`, `ui.js`, `storage.js`) to improve maintainability and testability.
+- **Reactive UI Rendering**: Migrate from manual DOM updates in `updateUI()` to a lightweight component/reactive rendering approach (e.g. Preact, Lit, or Mithril).
+- **Formal State Machine**: Implement a strict state machine to govern match flow and settings validation, preventing illegal state transitions.
+- **TypeScript Migration**: Convert the codebase to TypeScript for compile-time type safety. Set up a build step (using Vite or esbuild) and deploy automatically using GitHub Actions.
 
 ## Documentation Structure
 

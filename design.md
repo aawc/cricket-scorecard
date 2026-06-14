@@ -185,3 +185,30 @@ The `test.js` file runs in Node.js and tests the core scoring logic without a re
 2.  **Hardcoded Penalties**: Wides and No Balls are hardcoded to a 1-run penalty.
 3.  **Manual DOM Updates**: Because the app uses Vanilla JS, state synchronization with the DOM is done manually in `updateUI()`. This can lead to bugs if a state change is not accompanied by a UI refresh.
 4.  **No True Database**: Relying solely on `localStorage` means clearing browser data deletes match history. Permalinks are the only way to backup matches.
+
+---
+
+## 8. Future Architectural Roadmap
+
+To transition this project from a prototype implementation to a professional, industry-standard codebase, we have planned the following structural improvements:
+
+1.  **Modular Architecture (Code Organization)**:
+    *   Currently, all logic is consolidated within a monolithic 1700+ line `app.js` file.
+    *   **Goal**: Deconstruct `app.js` into distinct ES6 modules to decouple concerns.
+    *   *Proposed Structure*:
+        *   `state.js`: Global state management and storage (load/save) logic.
+        *   `scoring.js`: Pure JavaScript scoring rules, calculations, and state changes (decoupled from the DOM).
+        *   `ui.js`: DOM selectors, rendering updates, and visual components.
+        *   `sharing.js`: LZString minification, URL parsing, and copy-to-clipboard functionalities.
+
+2.  **Reactive Rendering (UI Architecture)**:
+    *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`. This is error-prone and can lead to desynchronization between model and view.
+    *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Mithril) or a simple template-rendering engine that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
+
+3.  **Formal State Machine (Game Flow Control)**:
+    *   Match phase flow and boundary conditions are handled using various flags (`matchStarted`, `matchOver`, `currentInnings`).
+    *   **Goal**: Establish a mathematically strict state machine (or Reducer) to manage transitions between match setup, active innings, innings break, and match completion. This will prevent edge-case violations and simplify unit testing.
+
+4.  **TypeScript Migration (Type Safety & Tooling)**:
+    *   The Javascript engine is untyped, risking runtime type errors (e.g. `NaN` calculations or property lookup crashes on undefined entities).
+    *   **Goal**: Re-write the application in TypeScript. Setup a local builder toolchain (like Vite or esbuild) to compile TS to static JS. Deploy to GitHub Pages automatically via GitHub Actions pipelines on push.

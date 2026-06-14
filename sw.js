@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cricket-scorecard-v20260614-002';
+const CACHE_NAME = 'cricket-scorecard-v20260614-003';
 const ASSETS = [
     'index.html',
     'style.css',
@@ -11,6 +11,7 @@ const ASSETS = [
 
 // Install Service Worker
 self.addEventListener('install', event => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -28,7 +29,7 @@ self.addEventListener('activate', event => {
                 .filter(key => key !== CACHE_NAME)
                 .map(key => caches.delete(key))
             );
-        })
+        }).then(() => self.clients.claim())
     );
 });
 

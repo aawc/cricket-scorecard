@@ -102,6 +102,8 @@ const undoBtn = document.getElementById('undo-btn');
 let runoutModalInstance = null;
 let extraRunsModalInstance = null;
 let tossModalInstance = null;
+let alertModalInstance = null;
+let alertCallback = null;
 let currentDeliveryType = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
@@ -482,7 +484,7 @@ function loadFromLocalStorage() {
             loaded = true;
         } catch (e) {
             console.error("Failed to parse compressed state from URL", e);
-            alert("Failed to load match from compressed link.");
+            showAlert("Failed to load match from compressed link.", "Error");
         }
     } else if (urlStateLegacy) {
         try {
@@ -494,7 +496,7 @@ function loadFromLocalStorage() {
             loaded = true;
         } catch (e) {
             console.error("Failed to parse legacy state from URL", e);
-            alert("Failed to load match from link.");
+            showAlert("Failed to load match from link.", "Error");
         }
     }
 
@@ -575,10 +577,10 @@ function shareMatch() {
     }
     
     navigator.clipboard.writeText(url).then(() => {
-        alert("Permalink copied to clipboard!");
+        showAlert("Permalink copied to clipboard!", "Share Match");
     }).catch(err => {
         console.error('Failed to copy: ', err);
-        alert("Failed to copy link automatically. Setting URL in address bar instead.");
+        showAlert("Failed to copy link automatically. Setting URL in address bar instead.", "Share Match");
         window.history.pushState({}, '', url);
     });
 }
@@ -629,17 +631,17 @@ function startMatch() {
     const minBowlersNeeded = Math.ceil(totalOvers / maxOversPerBowler);
 
     if (gameState.match.team1.players.length < minBowlersNeeded) {
-        alert(`Team 1 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`);
+        showAlert(`Team 1 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`, "Validation Error");
         return;
     }
     if (gameState.match.team2.players.length < minBowlersNeeded) {
-        alert(`Team 2 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`);
+        showAlert(`Team 2 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`, "Validation Error");
         return;
     }
 
     const minBatsmenNeeded = gameState.settings.allowSingleBatsman ? 1 : 2;
     if (gameState.match.team1.players.length < minBatsmenNeeded || gameState.match.team2.players.length < minBatsmenNeeded) {
-        alert(`Each team needs at least ${minBatsmenNeeded} players to bat.`);
+        showAlert(`Each team needs at least ${minBatsmenNeeded} players to bat.`, "Validation Error");
         return;
     }
 
@@ -1184,8 +1186,12 @@ function addRuns(runs) {
     live.balls++;
     
     const bowler = live.bowlers[live.currentBowler];
-    bowler.balls++;
-    bowler.runs += runs;
+    if (bowler) {
+        bowler.balls++;
+        bowler.runs += runs;
+    } else {
+        console.error(`addRuns: Bowler "${live.currentBowler}" not found in bowlers stats.`);
+    }
 
     const activeBatsman = live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
     const activeB = live.batsmen[activeBatsman];
@@ -1221,8 +1227,9 @@ function checkOverComplete() {
         
         const maxBalls = gameState.settings.oversPerInnings * 6;
         if (live.balls >= maxBalls && gameState.match.currentInnings === 1) {
-            alert("Innings Over! Max overs reached.");
-            endInnings();
+            showAlert("Innings Over! Max overs reached.", "Innings End", () => {
+                endInnings();
+            });
             return;
         }
         
@@ -1244,24 +1251,31 @@ function checkMatchOver() {
         const maxWickets = settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
 
         if (live.score >= target) {
-            alert("Match Over! " + battingTeam.name + " wins!");
-            archiveLiveInnings();
-            match.matchOver = true;
-            toggleScreenshotMode(); // Auto flip to summary
+            showAlert("Match Over! " + battingTeam.name + " wins!", "Match Over", () => {
+                archiveLiveInnings();
+                match.matchOver = true;
+                toggleScreenshotMode();
+            });
         } else if (live.wickets >= maxWickets) {
-            alert("Match Over! Defending team wins!");
-            archiveLiveInnings();
-            match.matchOver = true;
-            toggleScreenshotMode();
+            showAlert("Match Over! Defending team wins!", "Match Over", () => {
+                archiveLiveInnings();
+                match.matchOver = true;
+                toggleScreenshotMode();
+            });
         } else if (live.balls >= maxBalls) {
              if (live.score === target - 1) {
-                 alert("Match Over! It's a Tie!");
+                 showAlert("Match Over! It's a Tie!", "Match Over", () => {
+                     archiveLiveInnings();
+                     match.matchOver = true;
+                     toggleScreenshotMode();
+                 });
              } else {
-                 alert("Match Over! Defending team wins!");
+                 showAlert("Match Over! Defending team wins!", "Match Over", () => {
+                     archiveLiveInnings();
+                     match.matchOver = true;
+                     toggleScreenshotMode();
+                 });
              }
-             archiveLiveInnings();
-             match.matchOver = true;
-             toggleScreenshotMode();
         }
     }
 }
@@ -1393,8 +1407,9 @@ function addWicket() {
     const maxWickets = gameState.settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
 
     if (live.wickets >= maxWickets && totalPlayers > 0) {
-        alert("Innings Over! All batsmen out.");
-        endInnings();
+        showAlert("Innings Over! All batsmen out.", "Innings End", () => {
+            endInnings();
+        });
         return;
     }
 
@@ -1421,6 +1436,36 @@ function addWicket() {
     checkMatchOver();
     saveToLocalStorage();
     updateUI();
+}
+
+function showAlert(message, title = "Alert", callback = null) {
+    const messageEl = document.getElementById('alert-message');
+    const labelEl = document.getElementById('alertDialogModalLabel');
+    
+    if (messageEl) messageEl.textContent = message;
+    if (labelEl) labelEl.textContent = title;
+    
+    alertCallback = callback;
+    
+    if (typeof bootstrap !== 'undefined') {
+        const modalEl = document.getElementById('alertDialogModal');
+        if (!alertModalInstance && modalEl) {
+            alertModalInstance = new bootstrap.Modal(modalEl);
+            
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                if (alertCallback) {
+                    const cb = alertCallback;
+                    alertCallback = null; // Prevent double trigger
+                    cb();
+                }
+            });
+        }
+        if (alertModalInstance) alertModalInstance.show();
+    } else {
+        // Fallback for Node.js test environment
+        alert(message);
+        if (callback) callback();
+    }
 }
 
 function triggerRunOutModal() {
@@ -1489,8 +1534,9 @@ function executeRunOutWicket(isStriker, extraRuns, accrueTo) {
     const maxWickets = gameState.settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
 
     if (live.wickets >= maxWickets && totalPlayers > 0) {
-        alert("Innings Over! All batsmen out.");
-        endInnings();
+        showAlert("Innings Over! All batsmen out.", "Innings End", () => {
+            endInnings();
+        });
         return;
     }
 
@@ -1536,49 +1582,65 @@ function endInnings() {
     archiveLiveInnings();
     const live = gameState.match.liveInnings;
     
+    const proceedEndInnings = () => {
+        gameState.match.currentBattingTeam = gameState.match.currentBattingTeam === 1 ? 2 : 1;
+        gameState.match.currentInnings++;
+        
+        if (gameState.match.currentInnings > gameState.settings.totalInnings * 2) {
+            showAlert("Match Over!", "Match Over", () => {
+                gameState.match.matchOver = true;
+                toggleScreenshotMode();
+                saveToLocalStorage();
+                updateUI();
+            });
+            return;
+        }
+        
+        gameState.match.liveInnings = {
+            score: 0,
+            wickets: 0,
+            balls: 0,
+            extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+            batsmen: {},
+            bowlers: {},
+            currentBatsman1: "",
+            currentBatsman2: "",
+            currentBowler: "",
+            previousBowler: null,
+            outBatsmen: [],
+            overs: [],
+            overLog: []
+        };
+        
+        saveToLocalStorage();
+        updateUI();
+    };
+
     if (gameState.settings.totalInnings === 1 && gameState.match.currentInnings === 1) {
         gameState.match.target = live.score + 1;
-        alert("Target set to: " + gameState.match.target);
+        showAlert("Target set to: " + gameState.match.target, "Innings End", proceedEndInnings);
+    } else {
+        proceedEndInnings();
     }
-
-    gameState.match.currentBattingTeam = gameState.match.currentBattingTeam === 1 ? 2 : 1;
-    gameState.match.currentInnings++;
-    
-    if (gameState.match.currentInnings > gameState.settings.totalInnings * 2) {
-        alert("Match Over!");
-        gameState.match.matchOver = true;
-        toggleScreenshotMode();
-        return;
-    }
-    
-    gameState.match.liveInnings = {
-        score: 0,
-        wickets: 0,
-        balls: 0,
-        extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
-        batsmen: {},
-        bowlers: {},
-        currentBatsman1: "",
-        currentBatsman2: "",
-        currentBowler: "",
-        previousBowler: null,
-        outBatsmen: [],
-        overs: [],
-        overLog: []
-    };
-    
-    saveToLocalStorage();
-    updateUI();
 }
 
 function addLegBye() {
     if (gameState.match.matchOver) return;
+    if (!gameState.settings.enableLegByes) {
+        console.error("addLegBye: Leg byes are disabled in settings.");
+        return;
+    }
     saveHistory();
     const live = gameState.match.liveInnings;
     live.score += 1;
     live.extras.legbyes += 1;
     live.balls++;
-    live.bowlers[live.currentBowler].balls++;
+    const bowler = live.bowlers[live.currentBowler];
+    if (bowler) {
+        bowler.balls++;
+    } else {
+        console.error(`addLegBye: Bowler "${live.currentBowler}" not found in bowlers stats.`);
+    }
     live.overLog.push('lb1');
     checkOverComplete();
     checkMatchOver();

@@ -36,7 +36,13 @@ global.document = {
                 appendChild: function(child) { this.appendedChildren.push(child); },
                 innerHTML: '',
                 querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} }, dataset: {} }),
-                querySelectorAll: () => [],
+                children: [],
+                querySelectorAll: function(selector) {
+                    if (selector === '.roster-item') {
+                        return this.children;
+                    }
+                    return [];
+                },
                 addEventListener: () => {},
                 dataset: {},
                 style: {},
@@ -164,9 +170,16 @@ function resetTestState() {
     gameState.matchStarted = true;
     gameState.history = [];
     
-    // Clear mocked elements
+    // Reset mocked elements instead of deleting them to preserve references in app.js
     for (const id in elements) {
-        delete elements[id];
+        elements[id].value = '';
+        elements[id].textContent = '';
+        elements[id].innerHTML = '';
+        if (elements[id].classes) elements[id].classes.clear();
+        elements[id].appendedChildren = [];
+        elements[id].children = [];
+        elements[id].checked = false;
+        elements[id].dataset = {};
     }
 }
 
@@ -812,6 +825,143 @@ if (JSON.stringify(live.overLog) !== JSON.stringify(["3"])) {
 }
 if (live.balls !== 13) {
     console.error(`Test 26 Failed: Expected balls to remain 13, got ${live.balls}`);
+    process.exit(1);
+}
+
+global.localStorage.getItem = (key) => null;
+
+// Test 27: startMatch validation failure (not enough players)
+resetTestState();
+gameState.matchStarted = false;
+
+// Mock input values
+document.getElementById('overs-per-innings').value = "5";
+document.getElementById('max-overs-per-bowler').value = "2"; // 5 overs / 2 = 3 bowlers needed
+
+// Mock empty rosters (0 players)
+document.getElementById('team1-roster-list').children = [];
+document.getElementById('team2-roster-list').children = [];
+
+let alertCalled = false;
+let alertMsg = "";
+global.alert = (msg) => {
+    alertCalled = true;
+    alertMsg = msg;
+};
+
+startMatch();
+
+if (gameState.matchStarted) {
+    console.error("Test 27 Failed: Match should not have started with empty rosters");
+    process.exit(1);
+}
+if (!alertCalled || !alertMsg.includes("needs at least 3 players to bowl")) {
+    console.error("Test 27 Failed: Roster validation alert not triggered correctly, got msg:", alertMsg);
+    process.exit(1);
+}
+
+// Test 28: startMatch validation success and match start
+resetTestState();
+gameState.matchStarted = false;
+
+// Mock input values
+document.getElementById('overs-per-innings').value = "2";
+document.getElementById('max-overs-per-bowler').value = "2"; // 1 bowler needed
+document.getElementById('allow-single-batsman').checked = true; // 1 batsman needed
+
+// Mock rosters (1 player each)
+const p1 = { querySelector: (sel) => ({ textContent: "T1P1" }), dataset: {} };
+const p2 = { querySelector: (sel) => ({ textContent: "T2P1" }), dataset: {} };
+document.getElementById('team1-roster-list').children = [p1];
+document.getElementById('team2-roster-list').children = [p2];
+
+alertCalled = false;
+global.alert = (msg) => { alertCalled = true; };
+
+startMatch();
+
+if (!gameState.matchStarted) {
+    console.error("Test 28 Failed: Match should have started with valid rosters");
+    process.exit(1);
+}
+if (alertCalled) {
+    console.error("Test 28 Failed: No alert should have been called for success path");
+    process.exit(1);
+}
+if (gameState.match.team1.players[0] !== "T1P1" || gameState.match.team2.players[0] !== "T2P1") {
+    console.error("Test 28 Failed: Players not copied correctly to match state", gameState.match.team1.players, gameState.match.team2.players);
+    process.exit(1);
+}
+
+// Test 29: resetMatch behavior
+resetTestState();
+gameState.matchStarted = true;
+gameState.match.currentInnings = 2;
+gameState.match.liveInnings.score = 25;
+gameState.match.liveInnings.wickets = 2;
+gameState.match.team1.players = ["T1P1", "T1P2"];
+gameState.match.team2.players = ["T2P1", "T2P2"];
+gameState.settings.oversPerInnings = 5;
+
+let lsRemoved = false;
+global.localStorage.removeItem = (key) => {
+    if (key === 'cricketScorecardState') {
+        lsRemoved = true;
+    }
+};
+
+resetMatch();
+
+if (gameState.matchStarted) {
+    console.error("Test 29 Failed: Match should be marked as not started after reset");
+    process.exit(1);
+}
+if (!lsRemoved) {
+    console.error("Test 29 Failed: LocalStorage state should have been removed");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.score !== 0 || gameState.match.liveInnings.wickets !== 0) {
+    console.error("Test 29 Failed: Match scores were not reset");
+    process.exit(1);
+}
+if (gameState.match.team1.players.length !== 2 || gameState.match.team2.players.length !== 2) {
+    console.error("Test 29 Failed: Roster players should have been preserved");
+    process.exit(1);
+}
+if (gameState.settings.oversPerInnings !== 5) {
+    console.error("Test 29 Failed: Settings should have been preserved");
+    process.exit(1);
+}
+
+global.localStorage.removeItem = () => {};
+
+// Test 30: Leg Byes toggle behavior
+resetTestState();
+gameState.settings.enableLegByes = false;
+gameState.match.currentInnings = 1;
+gameState.match.liveInnings.score = 0;
+gameState.match.liveInnings.balls = 0;
+gameState.match.liveInnings.currentBowler = "B1";
+gameState.match.liveInnings.bowlers = { "B1": { runs: 0, balls: 0, wickets: 0 } };
+
+let consoleErrorCalled = false;
+let consoleErrorMsg = "";
+const originalConsoleError = console.error;
+console.error = (msg) => {
+    consoleErrorCalled = true;
+    consoleErrorMsg = msg;
+};
+
+addLegBye();
+
+console.error = originalConsoleError;
+
+if (gameState.match.liveInnings.score !== 0 || gameState.match.liveInnings.extras.legbyes !== 0) {
+    console.error("Test 30 Failed: Leg bye was recorded even though disabled in settings");
+    process.exit(1);
+}
+if (!consoleErrorCalled || !consoleErrorMsg.includes("Leg byes are disabled")) {
+    console.error("Test 30 Failed: Expected error log not found, got:", consoleErrorMsg);
     process.exit(1);
 }
 
