@@ -27,6 +27,7 @@ let gameState = {
             currentBowler: "",
             previousBowler: null,
             outBatsmen: [],
+            overs: [],
             overLog: []
         },
         target: null,
@@ -105,6 +106,7 @@ let currentDeliveryType = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
 let activeBulkImportTeam = 1;
+let expandedOvers = []; // Tracks expanded over indices in U1 UI
 
 // Initialize
 function init() {
@@ -186,6 +188,23 @@ function setupEventListeners() {
     batsman1Select.addEventListener('change', (e) => handleBatsmanChange(1, e.target.value));
     batsman2Select.addEventListener('change', (e) => handleBatsmanChange(2, e.target.value));
     bowlerSelect.addEventListener('change', (e) => handleBowlerChange(e.target.value));
+
+    const completedOversSection = document.getElementById('completed-overs-section');
+    if (completedOversSection) {
+        completedOversSection.addEventListener('click', (e) => {
+            const header = e.target.closest('.completed-over-header');
+            if (header) {
+                const idx = parseInt(header.dataset.index);
+                const pos = expandedOvers.indexOf(idx);
+                if (pos === -1) {
+                    expandedOvers.push(idx);
+                } else {
+                    expandedOvers.splice(pos, 1);
+                }
+                updateUI(); // Re-render
+            }
+        });
+    }
 }
 
 // Roster Management Helpers
@@ -321,6 +340,7 @@ function minifyState(state) {
             cbo: inn.currentBowler || "",
             pbo: inn.previousBowler || null,
             ob: inn.outBatsmen || [],
+            ov: (inn.overs || []).map(o => ({ bo: o.bowler, bl: o.balls })),
             ol: inn.overLog || []
         };
     };
@@ -374,6 +394,7 @@ function unminifyState(min) {
             currentBowler: inn.cbo || "",
             previousBowler: inn.pbo || null,
             outBatsmen: inn.ob || [],
+            overs: (inn.ov || []).map(o => ({ bowler: o.bo, balls: o.bl })),
             overLog: inn.ol || []
         };
     };
@@ -608,6 +629,7 @@ function executeStartMatch(battingTeamNum) {
         currentBowler: "",
         previousBowler: null,
         outBatsmen: [],
+        overs: [],
         overLog: []
     };
 
@@ -697,73 +719,161 @@ function toggleScreenshotMode() {
     }
 }
 
-function generateSummaryView() {
-    const summariesDiv = document.getElementById('innings-summaries');
-    summariesDiv.innerHTML = '';
-
-    function renderInningsSummary(teamName, inningsData, inningsNumber) {
-        const inningsDiv = document.createElement('div');
-        inningsDiv.classList.add('innings-summary');
-        
-        const h3 = document.createElement('h3');
-        h3.textContent = `${teamName} - Innings ${inningsNumber}`;
-        inningsDiv.appendChild(h3);
-
-        const scoreP = document.createElement('p');
-        const overs = Math.floor(inningsData.balls / 6);
-        const balls = inningsData.balls % 6;
-        scoreP.innerHTML = `<strong>Score:</strong> ${inningsData.score}/${inningsData.wickets} (${overs}.${balls} ov)`;
-        inningsDiv.appendChild(scoreP);
-
-        const batsmenTable = document.createElement('table');
-        batsmenTable.classList.add('summary-table');
-        batsmenTable.innerHTML = `<thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr></thead>`;
-        const batsmenTbody = document.createElement('tbody');
-        for (const name in inningsData.batsmen) {
-            const b = inningsData.batsmen[name];
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td>${name}</td><td>${b.runs}</td><td>${b.balls}</td>`;
-            batsmenTbody.appendChild(tr);
-        }
-        batsmenTable.appendChild(batsmenTbody);
-        inningsDiv.appendChild(batsmenTable);
-
-        const bowlersTable = document.createElement('table');
-        bowlersTable.classList.add('summary-table');
-        bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th><th>Wides</th><th>No Balls</th></tr></thead>`;
-        const bowlersTbody = document.createElement('tbody');
-        for (const name in inningsData.bowlers) {
-            const b = inningsData.bowlers[name];
-            const tr = document.createElement('tr');
-            const bOvers = Math.floor(b.balls / 6);
-            const bBalls = b.balls % 6;
-            const bWides = b.wides || 0;
-            const bNoBalls = b.noballs || 0;
-            tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
-            bowlersTbody.appendChild(tr);
-        }
-        bowlersTable.appendChild(bowlersTbody);
-        inningsDiv.appendChild(bowlersTable);
-
-        const extrasP = document.createElement('p');
-        const ext = inningsData.extras;
-        const totalExtras = ext.wides + ext.noballs + ext.byes + ext.legbyes;
-        extrasP.innerHTML = `<strong>Extras:</strong> ${totalExtras} (W: ${ext.wides}, NB: ${ext.noballs}, B: ${ext.byes}, LB: ${ext.legbyes})`;
-        inningsDiv.appendChild(extrasP);
-
-        summariesDiv.appendChild(inningsDiv);
+// Helper to parse runs and wickets from a ball log string
+function parseBallLog(b) {
+    let runs = 0;
+    let wicket = 0;
+    
+    if (b.includes('W')) {
+        wicket = 1;
     }
+    
+    if (b.startsWith('wd')) {
+        const extra = b.includes('+') ? parseInt(b.split('+')[1]) : 0;
+        runs = gameState.settings.widePenalty + (isNaN(extra) ? 0 : extra);
+    } else if (b.startsWith('nb')) {
+        const extra = b.includes('+') ? parseInt(b.split('+')[1]) : 0;
+        runs = gameState.settings.noBallPenalty + (isNaN(extra) ? 0 : extra);
+    } else if (b.startsWith('lb')) {
+        runs = parseInt(b.replace('lb', ''));
+    } else if (b.includes('b') && !b.startsWith('n') && !b.startsWith('w')) {
+        const part = b.split('+')[0];
+        runs = parseInt(part.replace('b', ''));
+    } else if (b === 'W' || b === 'W-RO') {
+        runs = 0;
+    } else if (b.includes('+W-RO')) {
+        const part = b.split('+')[0];
+        if (part.endsWith('b')) {
+            runs = parseInt(part.replace('b', ''));
+        } else {
+            runs = parseInt(part);
+        }
+    } else {
+        runs = parseInt(b);
+    }
+    
+    return { runs, wicket };
+}
 
-    gameState.match.team1.innings.forEach((inn, index) => {
-        renderInningsSummary(gameState.match.team1.name, inn, index + 1);
-    });
-    gameState.match.team2.innings.forEach((inn, index) => {
-        renderInningsSummary(gameState.match.team2.name, inn, index + 1);
-    });
+function generateSummaryView() {
+    try {
+        const summariesDiv = document.getElementById('innings-summaries');
+        summariesDiv.innerHTML = '';
 
-    if (!gameState.match.matchOver) {
-        const currentTeamName = gameState.match.currentBattingTeam === 1 ? gameState.match.team1.name : gameState.match.team2.name;
-        renderInningsSummary(currentTeamName, gameState.match.liveInnings, gameState.match.currentInnings);
+        function renderInningsSummary(teamName, inningsData, inningsNumber) {
+            const inningsDiv = document.createElement('div');
+            inningsDiv.classList.add('innings-summary');
+            
+            const h3 = document.createElement('h3');
+            h3.textContent = `${teamName} - Innings ${inningsNumber}`;
+            inningsDiv.appendChild(h3);
+
+            const scoreP = document.createElement('p');
+            const overs = Math.floor(inningsData.balls / 6);
+            const balls = inningsData.balls % 6;
+            scoreP.innerHTML = `<strong>Score:</strong> ${inningsData.score}/${inningsData.wickets} (${overs}.${balls} ov)`;
+            inningsDiv.appendChild(scoreP);
+
+            const batsmenTable = document.createElement('table');
+            batsmenTable.classList.add('summary-table');
+            batsmenTable.innerHTML = `<thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr></thead>`;
+            const batsmenTbody = document.createElement('tbody');
+            for (const name in inningsData.batsmen) {
+                const b = inningsData.batsmen[name];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${name}</td><td>${b.runs}</td><td>${b.balls}</td>`;
+                batsmenTbody.appendChild(tr);
+            }
+            batsmenTable.appendChild(batsmenTbody);
+            inningsDiv.appendChild(batsmenTable);
+
+            const bowlersTable = document.createElement('table');
+            bowlersTable.classList.add('summary-table');
+            bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th><th>Wides</th><th>No Balls</th></tr></thead>`;
+            const bowlersTbody = document.createElement('tbody');
+            for (const name in inningsData.bowlers) {
+                const b = inningsData.bowlers[name];
+                const tr = document.createElement('tr');
+                const bOvers = Math.floor(b.balls / 6);
+                const bBalls = b.balls % 6;
+                const bWides = b.wides || 0;
+                const bNoBalls = b.noballs || 0;
+                tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
+                bowlersTbody.appendChild(tr);
+            }
+            bowlersTable.appendChild(bowlersTbody);
+            inningsDiv.appendChild(bowlersTable);
+
+            const extrasP = document.createElement('p');
+            const ext = inningsData.extras;
+            const totalExtras = ext.wides + ext.noballs + ext.byes + ext.legbyes;
+            extrasP.innerHTML = `<strong>Extras:</strong> ${totalExtras} (W: ${ext.wides}, NB: ${ext.noballs}, B: ${ext.byes}, LB: ${ext.legbyes})`;
+            inningsDiv.appendChild(extrasP);
+
+            // Over Log Table (U2)
+            let displayOvers = [...(inningsData.overs || [])];
+            if (inningsData === gameState.match.liveInnings && inningsData.overLog && inningsData.overLog.length > 0) {
+                displayOvers.push({
+                    bowler: inningsData.currentBowler || "TBD",
+                    balls: [...inningsData.overLog]
+                });
+            }
+
+            if (displayOvers.length > 0) {
+                const overLogHeading = document.createElement('h4');
+                overLogHeading.textContent = "Over Log";
+                overLogHeading.style.fontSize = "1rem";
+                overLogHeading.style.marginTop = "1rem";
+                overLogHeading.style.borderBottom = "1px solid #ddd";
+                overLogHeading.style.paddingBottom = "0.25rem";
+                inningsDiv.appendChild(overLogHeading);
+
+                const overLogTable = document.createElement('table');
+                overLogTable.classList.add('summary-table');
+                overLogTable.innerHTML = `<thead><tr><th>Over</th><th>Bowler</th><th>Runs</th><th>Wkts</th><th>Deliveries</th></tr></thead>`;
+                const overLogTbody = document.createElement('tbody');
+                
+                displayOvers.forEach((over, idx) => {
+                    let overRuns = 0;
+                    let overWickets = 0;
+                    over.balls.forEach(b => {
+                        const parsed = parseBallLog(b);
+                        overRuns += parsed.runs;
+                        overWickets += parsed.wicket;
+                    });
+                    
+                    const tr = document.createElement('tr');
+                    const isLive = (inningsData === gameState.match.liveInnings && idx === displayOvers.length - 1 && inningsData.overLog && inningsData.overLog.length > 0 && inningsData.balls % 6 !== 0);
+                    
+                    tr.innerHTML = `
+                        <td>${idx + 1}${isLive ? '*' : ''}</td>
+                        <td>${over.bowler}</td>
+                        <td>${overRuns}</td>
+                        <td>${overWickets}</td>
+                        <td>${over.balls.join(', ')}</td>
+                    `;
+                    overLogTbody.appendChild(tr);
+                });
+                overLogTable.appendChild(overLogTbody);
+                inningsDiv.appendChild(overLogTable);
+            }
+
+            summariesDiv.appendChild(inningsDiv);
+        }
+
+        gameState.match.team1.innings.forEach((inn, index) => {
+            renderInningsSummary(gameState.match.team1.name, inn, index + 1);
+        });
+        gameState.match.team2.innings.forEach((inn, index) => {
+            renderInningsSummary(gameState.match.team2.name, inn, index + 1);
+        });
+
+        if (!gameState.match.matchOver) {
+            const currentTeamName = gameState.match.currentBattingTeam === 1 ? gameState.match.team1.name : gameState.match.team2.name;
+            renderInningsSummary(currentTeamName, gameState.match.liveInnings, gameState.match.currentInnings);
+        }
+    } catch (e) {
+        console.error("CRITICAL ERROR in generateSummaryView:", e);
     }
 }
 
@@ -892,6 +1002,59 @@ function updateUI() {
         overLogDisplay.appendChild(ballSpan);
     });
 
+    // Render Completed Overs (U1)
+    const completedOversSection = document.getElementById('completed-overs-section');
+    if (completedOversSection) {
+        completedOversSection.innerHTML = '';
+        if (live.overs && live.overs.length > 0) {
+            const heading = document.createElement('h3');
+            heading.classList.add('h6', 'text-muted', 'mb-2');
+            heading.textContent = 'Completed Overs';
+            completedOversSection.appendChild(heading);
+
+            live.overs.forEach((over, idx) => {
+                const isExpanded = expandedOvers.includes(idx);
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('completed-over-item');
+                
+                let overRuns = 0;
+                let overWickets = 0;
+                over.balls.forEach(b => {
+                    const parsed = parseBallLog(b);
+                    overRuns += parsed.runs;
+                    overWickets += parsed.wicket;
+                });
+
+                itemDiv.innerHTML = `
+                    <div class="completed-over-header" data-index="${idx}">
+                        <span>Over ${idx + 1} (${over.bowler})</span>
+                        <span class="text-secondary small">
+                            ${overRuns} runs, ${overWickets} W
+                            <span class="ms-2">${isExpanded ? '▼' : '▶'}</span>
+                        </span>
+                    </div>
+                `;
+                
+                if (isExpanded) {
+                    const ballsDiv = document.createElement('div');
+                    ballsDiv.classList.add('completed-over-balls');
+                    over.balls.forEach(ball => {
+                        const ballSpan = document.createElement('span');
+                        ballSpan.classList.add('ball-log');
+                        if (ball.includes('W')) ballSpan.classList.add('wicket');
+                        if (ball.includes('wd') || ball.includes('nb') || ball.includes('b') || ball.includes('lb')) ballSpan.classList.add('extra');
+                        ballSpan.textContent = ball;
+                        ballsDiv.appendChild(ballSpan);
+                    });
+                    itemDiv.appendChild(ballsDiv);
+                }
+                
+                completedOversSection.appendChild(itemDiv);
+            });
+        }
+    }
+
     checkControlsState();
 }
 
@@ -1003,6 +1166,13 @@ function checkOverComplete() {
     const live = gameState.match.liveInnings;
     if (live.balls % 6 === 0 && live.balls > 0) {
         rotateStrike();
+        
+        // Save completed over
+        live.overs.push({
+            bowler: live.currentBowler,
+            balls: [...live.overLog]
+        });
+        
         live.overLog = []; // Clear for next over
         
         const maxBalls = gameState.settings.oversPerInnings * 6;
@@ -1307,6 +1477,14 @@ function executeRunOutWicket(isStriker, extraRuns, accrueTo) {
 function archiveLiveInnings() {
     const live = gameState.match.liveInnings;
     const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
+    // Save incomplete final over if there are balls in it
+    if (live.overLog.length > 0) {
+        live.overs.push({
+            bowler: live.currentBowler,
+            balls: [...live.overLog]
+        });
+        live.overLog = [];
+    }
     battingTeam.innings.push(JSON.parse(JSON.stringify(live)));
 }
 
@@ -1341,6 +1519,7 @@ function endInnings() {
         currentBowler: "",
         previousBowler: null,
         outBatsmen: [],
+        overs: [],
         overLog: []
     };
     
@@ -1392,12 +1571,14 @@ function resetMatch() {
             currentBowler: "",
             previousBowler: null,
             outBatsmen: [],
+            overs: [],
             overLog: []
         },
         target: null,
         matchOver: false
     };
     gameState.history = [];
+    expandedOvers = [];
     
     gameState.matchStarted = false;
     settingsSection.classList.remove('hidden');

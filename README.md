@@ -24,6 +24,8 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Toss & Lineup Setup: Start match prompt for toss selection (batting team choice), empty initial rosters that auto-retain upon reset.
 - Player Management: Interactive Drag & Drop lineup sorting, between-team transfers, bulk paste import modal, and shared player mirroring.
 - Over Log: Display details of previous balls in the current over.
+- Completed Overs History (U1): Interactive collapsible list of previous overs (runs, wickets, bowler, ball-by-ball log) on the main scoring screen.
+- Over Log Table (U2): Detailed table in Full Scorecard (Screenshot Mode) showing all overs (with bowler name, runs, wickets, and ball sequence) for both innings.
 - Selectable Active Players: Allow selecting current batsmen and bowler on the scorecard.
 - Strike Rotation: Automatic strike rotation on odd physical runs scored (including extras) and at the end of each over.
 - Dropdown Player Selection: Filtered for eligibility, with automatic selection when only one player is eligible, and strict dual-batsman enforcement (or lone striker transition).

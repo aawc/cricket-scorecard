@@ -10,12 +10,14 @@ global.document = {
             textContent: '',
             innerHTML: '',
             classes: new Set(),
-            appendChild: () => {},
+            appendedChildren: [],
+            appendChild: function(child) { this.appendedChildren.push(child); },
             remove: () => {},
             querySelector: () => ({ addEventListener: () => {}, textContent: '', remove: () => {}, classList: { add: () => {}, remove: () => {} } }),
             querySelectorAll: () => [],
             addEventListener: () => {},
-            dataset: {}
+            dataset: {},
+            style: {}
         };
         elem.classList = {
             add: function(c) { elem.classes.add(c); },
@@ -30,12 +32,14 @@ global.document = {
                 value: '',
                 textContent: '',
                 classes: new Set(),
-                appendChild: () => {},
+                appendedChildren: [],
+                appendChild: function(child) { this.appendedChildren.push(child); },
                 innerHTML: '',
                 querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} }, dataset: {} }),
                 querySelectorAll: () => [],
                 addEventListener: () => {},
                 dataset: {},
+                style: {},
                 parentElement: {
                     classList: {
                         add: () => {},
@@ -151,6 +155,7 @@ function resetTestState() {
             currentBowler: "B1",
             previousBowler: null,
             outBatsmen: [],
+            overs: [],
             overLog: []
         },
         target: null,
@@ -431,7 +436,189 @@ if (gameState.match.liveInnings.currentBatsman1 !== "P2") {
     process.exit(1);
 }
 
-// Test 16: Archiving Innings 2 on match win (chasing target met)
+
+// Test 16: Completed Over Storage
+resetTestState();
+for (let i = 0; i < 6; i++) {
+    addRuns(1);
+}
+if (gameState.match.liveInnings.overs.length !== 1) {
+    console.error(`Test 16 Failed: Expected 1 completed over, got ${gameState.match.liveInnings.overs.length}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.overs[0].bowler !== "B1") {
+    console.error(`Test 16 Failed: Expected bowler to be B1, got ${gameState.match.liveInnings.overs[0].bowler}`);
+    process.exit(1);
+}
+if (JSON.stringify(gameState.match.liveInnings.overs[0].balls) !== JSON.stringify(["1", "1", "1", "1", "1", "1"])) {
+    console.error(`Test 16 Failed: Incorrect over log saved: ${JSON.stringify(gameState.match.liveInnings.overs[0].balls)}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.overLog.length !== 0) {
+    console.error(`Test 16 Failed: overLog should be empty after over completion`);
+    process.exit(1);
+}
+
+// Test 17: Incomplete Over Storage on Innings End
+resetTestState();
+addRuns(1);
+addRuns(2);
+addRuns(0);
+endInnings();
+const archivedInnings = gameState.match.team1.innings[0];
+if (!archivedInnings) {
+    console.error("Test 17 Failed: Archived innings not found");
+    process.exit(1);
+}
+if (archivedInnings.overs.length !== 1) {
+    console.error(`Test 17 Failed: Expected 1 over in history, got ${archivedInnings.overs.length}`);
+    process.exit(1);
+}
+if (archivedInnings.overs[0].bowler !== "B1") {
+    console.error(`Test 17 Failed: Expected bowler B1, got ${archivedInnings.overs[0].bowler}`);
+    process.exit(1);
+}
+if (JSON.stringify(archivedInnings.overs[0].balls) !== JSON.stringify(["1", "2", "0"])) {
+    console.error(`Test 17 Failed: Incorrect incomplete over log saved: ${JSON.stringify(archivedInnings.overs[0].balls)}`);
+    process.exit(1);
+}
+
+// Test 18: Permalink Minification with Overs
+resetTestState();
+// Bowl 6 balls to complete over 1
+for (let i = 0; i < 6; i++) addRuns(1);
+// Change bowler to B2 and bowl 2 balls in over 2
+handleBowlerChange("B2");
+addRuns(4);
+addRuns(0);
+
+const minified = minifyState(gameState);
+const restored = unminifyState(minified);
+
+const restoredLive = restored.match.liveInnings;
+if (restoredLive.overs.length !== 1) {
+    console.error(`Test 18 Failed: Restored overs length should be 1, got ${restoredLive.overs.length}`);
+    process.exit(1);
+}
+if (restoredLive.overs[0].bowler !== "B1" || JSON.stringify(restoredLive.overs[0].balls) !== JSON.stringify(["1", "1", "1", "1", "1", "1"])) {
+    console.error("Test 18 Failed: Restored completed over mismatch");
+    process.exit(1);
+}
+if (restoredLive.currentBowler !== "B2") {
+    console.error(`Test 18 Failed: Restored current bowler should be B2, got ${restoredLive.currentBowler}`);
+    process.exit(1);
+}
+if (JSON.stringify(restoredLive.overLog) !== JSON.stringify(["4", "0"])) {
+    console.error("Test 18 Failed: Restored active overLog mismatch");
+    process.exit(1);
+}
+
+// Test 19: generateSummaryView rendering (smoke test)
+resetTestState();
+for (let i = 0; i < 6; i++) addRuns(1);
+try {
+    generateSummaryView();
+} catch (e) {
+    console.error("Test 19 Failed: generateSummaryView crashed", e);
+    process.exit(1);
+}
+
+// Test 20: Render user permalink state (smoke test)
+resetTestState();
+gameState.settings = {
+    totalInnings: 1,
+    oversPerInnings: 4,
+    maxOversPerBowler: 2,
+    widePenalty: 1,
+    noBallPenalty: 1,
+    allowSingleBatsman: true,
+    enableLegByes: false,
+    theme: "light"
+};
+gameState.match = {
+    currentInnings: 2,
+    currentBattingTeam: 2,
+    team1: {
+      name: "Team 1",
+      players: ["RS", "VK"],
+      innings: [
+        {
+          score: 35,
+          wickets: 0,
+          balls: 24,
+          extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+          batsmen: {
+            "VK": { runs: 19, balls: 13, active: false },
+            "RS": { runs: 16, balls: 11, active: true }
+          },
+          bowlers: {
+            "SS": { runs: 15, balls: 12, wickets: 0, wides: 0, noballs: 0 },
+            "PP": { runs: 20, balls: 12, wickets: 0, wides: 0, noballs: 0 }
+          },
+          currentBatsman1: "VK",
+          currentBatsman2: "RS",
+          currentBowler: "PP",
+          previousBowler: "SS",
+          outBatsmen: [],
+          overs: [
+            { bowler: "SS", balls: ["1", "1", "1", "1", "1", "1"] },
+            { bowler: "PP", balls: ["1", "1", "1", "1", "1", "1"] },
+            { bowler: "SS", balls: ["1", "1", "1", "2", "2", "2"] },
+            { bowler: "PP", balls: ["2", "2", "2", "2", "3", "3"] }
+          ],
+          overLog: []
+        }
+      ]
+    },
+    team2: {
+      name: "Team 2",
+      players: ["SS", "PP"],
+      innings: []
+    },
+    liveInnings: {
+      score: 8,
+      wickets: 0,
+      balls: 6,
+      extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+      batsmen: {
+        "PP": { runs: 8, balls: 6, active: false },
+        "SS": { runs: 0, balls: 0, active: true }
+      },
+      bowlers: {
+        "VK": { runs: 8, balls: 6, wickets: 0, wides: 0, noballs: 0 },
+        "RS": { runs: 0, balls: 0, wickets: 0, wides: 0, noballs: 0 }
+      },
+      currentBatsman1: "PP",
+      currentBatsman2: "SS",
+      currentBowler: "RS",
+      previousBowler: "VK",
+      outBatsmen: [],
+      overs: [
+        { bowler: "VK", balls: ["2", "2", "2", "2", "0", "0"] }
+      ],
+      overLog: []
+    },
+    target: 36,
+    matchOver: false
+};
+
+try {
+    generateSummaryView();
+    const summariesDiv = elements['innings-summaries'];
+    if (!summariesDiv) {
+        console.error("Test 20 Failed: summariesDiv not found");
+        process.exit(1);
+    }
+    if (summariesDiv.appendedChildren.length !== 2) {
+        console.error(`Test 20 Failed: Expected 2 innings summaries rendered, got ${summariesDiv.appendedChildren.length}`);
+        process.exit(1);
+    }
+} catch (e) {
+    console.error("Test 20 Failed: generateSummaryView crashed on user state", e);
+    process.exit(1);
+}
+
+// Test 21: Archiving Innings 2 on match win (chasing target met)
 resetTestState();
 gameState.match.currentInnings = 2;
 gameState.match.currentBattingTeam = 2; // Team 2 is chasing
@@ -442,19 +629,19 @@ gameState.match.liveInnings.balls = 5;
 addRuns(1);
 
 if (!gameState.match.matchOver) {
-    console.error("Test 16 Failed: Match should be marked over");
+    console.error("Test 21 Failed: Match should be marked over");
     process.exit(1);
 }
 if (gameState.match.team2.innings.length !== 1) {
-    console.error(`Test 16 Failed: Innings 2 should be archived, got history length ${gameState.match.team2.innings.length}`);
+    console.error(`Test 21 Failed: Innings 2 should be archived, got history length ${gameState.match.team2.innings.length}`);
     process.exit(1);
 }
 if (gameState.match.team2.innings[0].score !== 10) {
-    console.error(`Test 16 Failed: Archived score should be 10, got ${gameState.match.team2.innings[0].score}`);
+    console.error(`Test 21 Failed: Archived score should be 10, got ${gameState.match.team2.innings[0].score}`);
     process.exit(1);
 }
 
-// Test 17: Migration of unarchived Innings 2 on load
+// Test 22: Migration of unarchived Innings 2 on load
 resetTestState();
 const badState = {
     matchStarted: true,
@@ -480,11 +667,11 @@ global.localStorage.getItem = (key) => {
 loadFromLocalStorage();
 
 if (gameState.match.team2.innings.length !== 1) {
-    console.error(`Test 17 Failed: Innings 2 should have been migrated/archived on load, got length ${gameState.match.team2.innings.length}`);
+    console.error(`Test 22 Failed: Innings 2 should have been migrated/archived on load, got length ${gameState.match.team2.innings.length}`);
     process.exit(1);
 }
 if (gameState.match.team2.innings[0].score !== 11) {
-    console.error(`Test 17 Failed: Migrated Innings 2 score should be 11, got ${gameState.match.team2.innings[0].score}`);
+    console.error(`Test 22 Failed: Migrated Innings 2 score should be 11, got ${gameState.match.team2.innings[0].score}`);
     process.exit(1);
 }
 

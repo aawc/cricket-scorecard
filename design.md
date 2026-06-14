@@ -64,6 +64,7 @@ let gameState = {
             currentBowler: "",
             previousBowler: null,   // Used to prevent consecutive overs
             outBatsmen: [],         // List of dismissed batsmen
+            overs: [],              // Array of completed overs: { bowler: string, balls: string[] }
             overLog: []             // Sequence of events in current over (e.g., ["0", "wd", "W"])
         },
         target: null,               // Target score for 2nd innings
@@ -128,6 +129,7 @@ flowchart TD
 -   **Leg Byes**: 1 run. Counts as ball faced and bowler ball. Disabled if `enableLegByes` is false.
 -   **Wickets**: Standard dismissal. Increments batsman balls faced.
 -   **Run Outs**: Wicket + optional extra runs. Striker's balls faced is incremented regardless of who is run out.
+-   **Over Completion**: When 6 balls are bowled, the over is pushed to the `overs` array and `overLog` is cleared. If the innings ends mid-over (all out or target reached), the incomplete over is also saved to `overs` upon transition.
 
 ### 4.3. Innings & Match Transitions
 -   **End of Innings 1**: Triggered when all batsmen are out or max overs are bowled.
@@ -143,7 +145,7 @@ flowchart TD
 ### 4.4. State Persistence & URL Sharing
 -   **Local Storage**: Every action (runs, wickets, undo, reset) calls `saveToLocalStorage()` which serializes `gameState` to JSON.
 -   **Permalink Generation**:
-    *   To keep URLs short, `minifyState()` converts `gameState` keys to short aliases (e.g., `score` $\rightarrow$ `sc`, `liveInnings` $\rightarrow$ `li`).
+    *   To keep URLs short, `minifyState()` converts `gameState` keys to short aliases (e.g., `score` $\rightarrow$ `sc`, `liveInnings` $\rightarrow$ `li`, `overs` $\rightarrow$ `ov`, `bowler` $\rightarrow$ `bo`, `balls` $\rightarrow$ `bl`).
     *   The minified JSON is compressed using `LZString.compressToEncodedURIComponent`.
     *   The resulting string is appended to the URL as `?s=...` (e.g., `https://.../?s=EqCw...`).
     *   Legacy uncompressed `?state=...` links are still supported for backwards compatibility.
@@ -156,6 +158,9 @@ flowchart TD
 -   **Active Striker Indicator**: Instead of using an asterisk (`*`) which can look cluttered, the active batsman's dropdown container is highlighted with a distinct background color and border.
 -   **Controls Disabling**: All scoring controls are disabled if a batsman or bowler selection is pending, preventing invalid entries.
 -   **Screenshot View**: Rendered using standard HTML tables with a monospace font (`Courier New`/`monospace`) to ensure perfect alignment when users take screenshots on different mobile devices.
+-   **Over History (U1 & U2)**: 
+    *   **U1 (Main Screen)**: A collapsible list displays completed overs. Clicking an over expands it to show ball-by-ball details using event delegation to handle clicks efficiently.
+    *   **U2 (Scorecard)**: A monospace "Over Log" table renders all overs, including the active incomplete over (marked with `*` if in-progress), calculating totals dynamically using a parser helper.
 
 ---
 
@@ -164,11 +169,13 @@ flowchart TD
 The `test.js` file runs in Node.js and tests the core scoring logic without a real browser environment.
 -   **DOM Mocking**: Since `app.js` interacts heavily with the DOM, `test.js` mocks `document.getElementById`, `document.querySelector`, and various element properties (like `value`, `textContent`, `classList`) in the global scope.
 -   **Code Injection**: `test.js` reads `app.js`, replaces `let gameState =` with `global.gameState =` to make the state inspectable, and runs `eval()` on the modified code.
--   **Unit Tests**: Includes 15 distinct test cases verifying:
+-   **Unit Tests**: Includes 18 distinct test cases verifying:
     *   Runs accumulation and strike rotation.
     *   Extras calculations (Wides, No Balls, Byes) and run-out logic.
     *   Innings completion and target calculation.
     *   Auto-selection and lone-striker enforcement.
+    *   Completed over archiving and incomplete final over storage.
+    *   Minification/unminification of historical over data.
 
 ---
 
