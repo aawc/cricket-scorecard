@@ -10,6 +10,8 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 
 ## Features (Implemented)
 
+- Modular Architecture: Code deconstructed into clean ES6 modules (`src/` directory) separating state, rules calculation, persistence, and DOM rendering.
+- Formal State Machine: Centralized match phase flow (SETUP, TOSS, PLAYING_INNINGS, INNINGS_BREAK, MATCH_OVER) governed by a deterministic reducer inside `src/reducer.js`.
 - Score tracking: Complete ball-by-ball tallying (Runs, Wickets, Overs, Wides, No Balls, Byes, Leg Byes), with Byes counting towards batsman balls faced.
 - Configurable match parameters (Overs per innings, Bowler limits). Wide and No Ball penalties fixed at official 1 run.
 - Mobile-first design with large buttons.
@@ -55,9 +57,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 
 ## Features (Planned / Future Architecture)
 
-- **Modular Architecture**: Split the monolithic `app.js` into separate ES6 modules (e.g. `state.js`, `scoring.js`, `ui.js`, `storage.js`) to improve maintainability and testability.
 - **Reactive UI Rendering**: Migrate from manual DOM updates in `updateUI()` to a lightweight component/reactive rendering approach (e.g. Preact, Lit, or Mithril).
-- **Formal State Machine**: Implement a strict state machine to govern match flow and settings validation, preventing illegal state transitions.
 - **TypeScript Migration**: Convert the codebase to TypeScript for compile-time type safety. Set up a build step (using Vite or esbuild) and deploy automatically using GitHub Actions.
 
 ## Documentation Structure
@@ -69,12 +69,12 @@ The repository maintains several core documentation files to manage the AI-assis
 | **`implementation_plan.md`** | Planning | User & AI | *How are we going to build this feature technically?* |
 | **`task.md`** | Execution | AI (Progress Tracking) | *What exact step are we working on right now?* |
 | **`walkthrough.md`** | Verification | User | *What exactly did we build and how was it tested?* |
-| **`design.md`** | Design | Future AI / Developers | *What is the current system architecture, data structures, and control flow?* |
+| **`DESIGN.md`** | Design | Future AI / Developers | *What is the current system architecture, data structures, and control flow?* |
 | **`PROMPT.md`** | Project Lifecycle | Future AI / Developers | *What is this entire application and all of its rules?* |
 
 ## Tech Stack
 
-- Vanilla HTML, CSS, and JavaScript (no build step).
+- Vanilla HTML, CSS, and JavaScript (ES6 Modules, no build step).
 - Bootstrap 5 (via CDN).
 - Node.js (for running tests).
 

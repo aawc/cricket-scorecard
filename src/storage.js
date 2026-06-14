@@ -199,6 +199,7 @@ export function minifyState(state) {
     };
 
     return {
+        ph: state.phase,
         s: {
             opi: state.settings ? state.settings.oversPerInnings : 8,
             mob: state.settings ? state.settings.maxOversPerBowler : 2,
@@ -252,7 +253,14 @@ export function unminifyState(min) {
         };
     };
 
+    // Infer phase for backward compatibility with older links
+    const inferredPhase = min.m && min.m.mo === 1
+        ? 'MATCH_OVER'
+        : (min.m && min.m.tg !== null && min.m.ci === 1 ? 'INNINGS_BREAK' : 'PLAYING_INNINGS');
+
     return {
+        phase: min.ph || inferredPhase,
+        history: [],
         settings: {
             totalInnings: 1,
             oversPerInnings: min.s ? (min.s.opi || 8) : 8,

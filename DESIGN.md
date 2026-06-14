@@ -149,12 +149,18 @@ flowchart TD
     *   *Upon match end, the final live innings is archived into the team's history before disabling controls.*
 
 ### 4.4. State Persistence & URL Sharing
--   **Local Storage**: Every action (runs, wickets, undo, reset) calls `saveToLocalStorage()` which serializes `gameState` to JSON.
+-   **Local Storage**: Every action (runs, wickets, undo, reset) calls `saveToLocalStorage()` which serializes `gameState` to JSON directly, preserving all fields (including phase and history).
 -   **Permalink Generation**:
     *   To keep URLs short, `minifyState()` converts `gameState` keys to short aliases (e.g., `score` $\rightarrow$ `sc`, `liveInnings` $\rightarrow$ `li`, `overs` $\rightarrow$ `ov`, `bowler` $\rightarrow$ `bo`, `balls` $\rightarrow$ `bl`).
+    *   The active game phase is serialized under the key `ph` (e.g., `ph: state.phase`).
     *   The minified JSON is compressed using `LZString.compressToEncodedURIComponent`.
     *   The resulting string is appended to the URL as `?s=...` (e.g., `https://.../?s=EqCw...`).
     *   Legacy uncompressed `?state=...` links are still supported for backwards compatibility.
+-   **Permalink Decoding & Reconstruction**:
+    *   Upon loading a permalink, `unminifyState()` decompresses the JSON and remaps keys back to their original names.
+    *   To ensure the state machine stores remain fully operational:
+        *   The active `phase` is restored from `ph`. For legacy links that lack the `ph` key, the phase is dynamically inferred from match parameters (e.g., `matchOver === true` $\rightarrow$ `MATCH_OVER`; target set but Innings 2 not started $\rightarrow$ `INNINGS_BREAK`; else default to `PLAYING_INNINGS`).
+        *   The `history` stack is initialized to an empty array `[]` (undo history is not preserved across shares) to prevent dispatch action failures.
 
 ### 4.5. Game Flow State Machine
 To prevent edge-case violations and decouple the scoring engine from direct UI callbacks, the application game loop is managed by a centralized state machine (Reducer pattern). 

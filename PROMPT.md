@@ -41,7 +41,8 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 
 ### 2. Technical Specifications
 - **Hosting**: Static website to be hosted on GitHub Pages.
-- **Tech Stack**: Vanilla HTML, CSS, and JavaScript only. Use Bootstrap 5 via CDN for styling. Do not use any JS frameworks (React, Vue, etc.) or build steps (Webpack, Vite, etc.) to keep it simple and directly hostable.
+- **Tech Stack**: Vanilla HTML, CSS, and JavaScript (ES6 Modules). The codebase is divided into cohesive modules (`src/app.js`, `src/state.js`, `src/storage.js`, `src/reducer.js`, `src/ui.js`). Do not use any JS build steps (Webpack, Vite, etc.) to keep it simple and directly hostable. Use Bootstrap 5 via CDN for styling.
+- **State Management**: Governed by a centralized reducer state machine in `src/reducer.js` which manages match phases (`SETUP`, `TOSS`, `PLAYING_INNINGS`, `INNINGS_BREAK`, `MATCH_OVER`) and dispatches synchronous actions. Asynchronous side-effects (alerts/modals) are queued in `gameState.uiEvents` and processed by the UI orchestrator.
 - **Themes**: Support a few different themes (e.g., Light, Dark, Cricket Green).
 - **Offline Support**: Implement a Service Worker and Web App Manifest to allow the app to be installed and used offline as a PWA.
 - **State Persistence**: Use `localStorage` to persist the game state so that progress is not lost on page reload or if the app is closed.
@@ -59,11 +60,11 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 ## Standing Instructions for Development
 - Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
 - Keep `README.md` updated with project status and features.
-- Keep `design.md` updated with the current implementation details (data structures, control flow, decisions) as the codebase evolves.
+- Keep `DESIGN.md` updated with the current implementation details (data structures, control flow, decisions) as the codebase evolves.
 - Keep `SECURITY.md` updated with project security policies and reporting guidelines as architectural or dependency changes occur.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
 - Always use a new git branch for new bug fixes or features.
 - Always update the footer in `index.html` with the version number (in the format `vYYYYMMDD-NNN`, e.g., `v20260614-001`, where `YYYYMMDD` is the current date and `NNN` is a 3-digit sequence starting at `001` each day, incremented by 1 for each subsequent update), deployment date, and deployment time on each update (restricted to code changes as per above requirement).
 - Always update the cache version name in `sw.js` (e.g. `cricket-scorecard-vYYYYMMDD-NNN`) to match the new version.
-- Always run automated unit tests (`node test.js`) on each edit without requesting confirmation from the user.
+- Always run automated unit tests (`node test/test.js`) on each edit without requesting confirmation from the user.

@@ -847,4 +847,37 @@ if (!consoleErrorCalled || !consoleErrorMsg.includes("Leg byes are disabled")) {
 
 global.localStorage.getItem = (key) => null;
 
+// Test 31: Permalink State Loader phase and history reconstruction
+resetTestState();
+delete gameState.phase;
+delete gameState.history;
+
+const minState = minifyState(gameState);
+const loaded = unminifyState(minState);
+setGameState(loaded);
+
+if (gameState.phase !== 'PLAYING_INNINGS') {
+    console.error(`Test 31 Failed: Expected inferred phase to be PLAYING_INNINGS, got ${gameState.phase}`);
+    process.exit(1);
+}
+if (!Array.isArray(gameState.history)) {
+    console.error("Test 31 Failed: History array was not reconstructed");
+    process.exit(1);
+}
+
+gameState.match.liveInnings.currentBatsman1 = "";
+gameState.match.liveInnings.currentBatsman2 = "";
+gameState.match.liveInnings.batsmen = {};
+
+handleBatsmanChange(1, "P1");
+
+if (gameState.match.liveInnings.currentBatsman1 !== "P1") {
+    console.error("Test 31 Failed: Striker batsman 1 not updated");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.currentBatsman2 !== "P2") {
+    console.error("Test 31 Failed: Non-striker batsman 2 was not auto-selected");
+    process.exit(1);
+}
+
 console.log("All tests passed!");
