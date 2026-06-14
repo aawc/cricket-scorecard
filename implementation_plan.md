@@ -51,7 +51,7 @@ We will create a `package.json` with scripts to build, test, and run locally:
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vite": "^4.5.14",
+    "vite": "^8.0.16",
     "ts-node": "^10.9.1"
   }
 }
