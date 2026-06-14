@@ -41,7 +41,14 @@ global.document = {
                 classes: new Set(),
                 appendedChildren: [],
                 appendChild: function(child) { this.appendedChildren.push(child); },
-                innerHTML: '',
+                _innerHTML: '',
+                get innerHTML() { return this._innerHTML; },
+                set innerHTML(val) {
+                    this._innerHTML = val;
+                    if (val === '') {
+                        this.appendedChildren = [];
+                    }
+                },
                 querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} }, dataset: {} }),
                 children: [],
                 querySelectorAll: function(selector) {

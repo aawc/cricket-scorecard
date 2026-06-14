@@ -880,4 +880,32 @@ if (gameState.match.liveInnings.currentBatsman2 !== "P2") {
     process.exit(1);
 }
 
+// Test 32: Collapsible Completed Overs reverse rendering order (most recent first)
+resetTestState();
+
+for (let i = 0; i < 6; i++) addRuns(1);
+handleBowlerChange("B2");
+for (let i = 0; i < 6; i++) addRuns(2);
+
+const completedOversSection = document.getElementById('completed-overs-section');
+const children = completedOversSection.appendedChildren;
+
+if (children.length !== 3) {
+    console.error(`Test 32 Failed: Expected 3 child elements in section, got ${children.length}`);
+    process.exit(1);
+}
+
+const firstOverItemHeader = children[1].appendedChildren[0];
+const secondOverItemHeader = children[2].appendedChildren[0];
+
+if (!firstOverItemHeader.innerHTML.includes("Over 2") || !firstOverItemHeader.innerHTML.includes("B2")) {
+    console.error(`Test 32 Failed: Expected first item to be Over 2 by B2, got: ${firstOverItemHeader.innerHTML}`);
+    process.exit(1);
+}
+
+if (!secondOverItemHeader.innerHTML.includes("Over 1") || !secondOverItemHeader.innerHTML.includes("B1")) {
+    console.error(`Test 32 Failed: Expected second item to be Over 1 by B1, got: ${secondOverItemHeader.innerHTML}`);
+    process.exit(1);
+}
+
 console.log("All tests passed!");

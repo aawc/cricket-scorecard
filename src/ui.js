@@ -745,7 +745,8 @@ export function updateUI() {
             heading.textContent = 'Completed Overs';
             completedOversSection.appendChild(heading);
             
-            oversData.forEach((over, idx) => {
+            for (let idx = oversData.length - 1; idx >= 0; idx--) {
+                const over = oversData[idx];
                 const isExpanded = expandedOvers.includes(idx);
                 
                 const itemDiv = document.createElement('div');
@@ -790,7 +791,7 @@ export function updateUI() {
                 }
                 
                 completedOversSection.appendChild(itemDiv);
-            });
+            }
         }
     }
 
