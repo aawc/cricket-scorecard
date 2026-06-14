@@ -261,9 +261,10 @@ To transition this project from a prototype implementation to a professional, in
     *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`. This is error-prone and can lead to desynchronization between model and view.
     *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Mithril) or a simple template-rendering engine that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
-2.  **Remote Storage Sync (Cloud Persistence)**:
+2.  **Remote Storage Sync (Cloud Persistence)** - *Status: Active Exploration (Design Phase)*:
     *   Currently, the application relies strictly on local browser `localStorage` and permalink sharing. If the user clears browser data, match history is lost.
-    *   **Goal**: Introduce an optional remote storage adapter (e.g. Firebase, Supabase, or a lightweight custom REST API). This will allow users to securely sync match data, maintain a persistent match history dashboard across devices, and share live matches with real-time updates (via WebSockets or Server-Sent Events) instead of static permalinks.
+    *   **Goal**: Introduce an optional remote storage adapter (e.g. Google Sheets integration, collaborative GitHub Gists, or cloud backup drives) to sync match data and dashboard history cleanly without developer upkeep.
+    *   **Design Document**: See [cloud_persistence_design.md](file:///usr/local/google/home/vakh/.gemini/jetski/brain/11ea8280-a27c-4ae3-8051-4671be9b21ed/cloud_persistence_design.md) for comparative analysis of zero-cost serverless storage architectures.
 
 ---
 
