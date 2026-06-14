@@ -1,4 +1,6 @@
-// state.js
+// src/state.js
+import { reducer } from './reducer.js';
+import { saveState } from './storage.js';
 
 export let gameState = {
     settings: {
@@ -35,52 +37,36 @@ export let gameState = {
         matchOver: false
     },
     matchStarted: false,
+    phase: 'SETUP',
+    uiEvents: [],
     history: []
 };
 
 export function setGameState(newState) {
+    if (newState === gameState) return;
     for (const key in gameState) {
         delete gameState[key];
     }
     Object.assign(gameState, newState);
 }
 
-export function saveHistory() {
-    gameState.history.push(JSON.parse(JSON.stringify(gameState.match)));
+function saveHistory(state) {
+    const copy = JSON.parse(JSON.stringify(state));
+    delete copy.history;
+    state.history.push(copy);
 }
 
-export function undo() {
-    if (gameState.history.length > 0) {
-        gameState.match = gameState.history.pop();
-        return true;
+function isUndoableAction(actionType) {
+    const nonUndoable = ['START_MATCH', 'CHOOSE_TOSS_BATTING', 'RESET_MATCH', 'UNDO'];
+    return !nonUndoable.includes(actionType);
+}
+
+export function dispatch(action) {
+    if (isUndoableAction(action.type)) {
+        saveHistory(gameState);
     }
-    return false;
-}
 
-export function resetMatchState() {
-    gameState.match = {
-        currentInnings: 1,
-        currentBattingTeam: 1,
-        team1: { name: "Team 1", players: gameState.match.team1.players, innings: [] },
-        team2: { name: "Team 2", players: gameState.match.team2.players, innings: [] },
-        liveInnings: {
-            score: 0,
-            wickets: 0,
-            balls: 0,
-            extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
-            batsmen: {},
-            bowlers: {},
-            currentBatsman1: "",
-            currentBatsman2: "",
-            currentBowler: "",
-            previousBowler: null,
-            outBatsmen: [],
-            overs: [],
-            overLog: []
-        },
-        target: null,
-        matchOver: false
-    };
-    gameState.history = [];
-    gameState.matchStarted = false;
+    const nextState = reducer(gameState, action);
+    setGameState(nextState);
+    saveState(gameState);
 }

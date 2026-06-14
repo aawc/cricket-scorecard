@@ -1,11 +1,11 @@
-const CACHE_NAME = 'cricket-scorecard-v20260614-004';
+const CACHE_NAME = 'cricket-scorecard-v20260614-005';
 const ASSETS = [
     'index.html',
     'style.css',
     'src/app.js',
     'src/state.js',
     'src/storage.js',
-    'src/scoring.js',
+    'src/reducer.js',
     'src/ui.js',
     'manifest.json',
     'favicon.png',

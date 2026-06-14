@@ -1,7 +1,6 @@
 // ui.js
-import { gameState, saveHistory, undo, resetMatchState, setGameState } from './state.js';
+import { gameState, dispatch } from './state.js';
 import { saveState, clearState, loadState, generatePermalink } from './storage.js';
-import * as scoring from './scoring.js';
 
 // DOM Elements
 const settingsSection = document.getElementById('settings-section');
@@ -559,8 +558,6 @@ function populateDropdown(selectElement, playerList, selectedValue, promptText, 
 export function updateUI() {
     if (!gameState.match || !gameState.match.liveInnings) return;
     
-    scoring.autoSelectEligiblePlayers();
-    
     const live = gameState.match.liveInnings;
     
     if (scoreDisplay) scoreDisplay.textContent = `${live.score} - ${live.wickets}`;
@@ -794,6 +791,7 @@ export function updateUI() {
         tossTeam1Btn.textContent = `${gameState.match.team1.name || 'Team 1'} Batting`;
         tossTeam2Btn.textContent = `${gameState.match.team2.name || 'Team 2'} Batting`;
     }
+    handleUIEvents();
 }
 
 function checkControlsState() {
@@ -935,30 +933,30 @@ export function processRunOut(isStriker) {
 }
 
 export function handleBatsmanChange(batsmanNumber, newName) {
-    scoring.changeBatsman(batsmanNumber, newName);
-    saveState(gameState);
+    dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: batsmanNumber, name: newName } });
     updateUI();
 }
 
 export function handleBowlerChange(newName) {
-    scoring.changeBowler(newName);
-    saveState(gameState);
+    dispatch({ type: 'CHANGE_BOWLER', payload: { name: newName } });
     updateUI();
 }
 
 export function startMatch() {
-    gameState.settings.totalInnings = 1;
-    gameState.settings.oversPerInnings = parseInt(oversPerInningsInput.value);
-    gameState.settings.maxOversPerBowler = parseInt(maxOversPerBowlerInput.value);
-    gameState.settings.widePenalty = 1;
-    gameState.settings.noBallPenalty = 1;
-    gameState.settings.allowSingleBatsman = allowSingleBatsmanInput.checked;
-    gameState.settings.enableLegByes = enableLegByesInput.checked;
+    const settings = {
+        totalInnings: 1,
+        oversPerInnings: parseInt(oversPerInningsInput.value),
+        maxOversPerBowler: parseInt(maxOversPerBowlerInput.value),
+        widePenalty: 1,
+        noBallPenalty: 1,
+        allowSingleBatsman: allowSingleBatsmanInput.checked,
+        enableLegByes: enableLegByesInput.checked
+    };
 
-    // Parse player names from roster lists and mirror shared players
+    let t1Names = [];
+    let t2Names = [];
+
     if (team1RosterList && team2RosterList) {
-        const t1Names = [];
-        const t2Names = [];
         const t1Shared = [];
         const t2Shared = [];
 
@@ -980,30 +978,28 @@ export function startMatch() {
         t2Shared.forEach(name => {
             if (!t1Names.includes(name)) t1Names.push(name);
         });
-
-        gameState.match.team1.players = t1Names;
-        gameState.match.team2.players = t2Names;
     }
 
-    // Validation: Enough players to bowl
-    const totalOvers = gameState.settings.oversPerInnings;
-    const maxOversPerBowler = gameState.settings.maxOversPerBowler;
+    const totalOvers = settings.oversPerInnings;
+    const maxOversPerBowler = settings.maxOversPerBowler;
     const minBowlersNeeded = Math.ceil(totalOvers / maxOversPerBowler);
 
-    if (gameState.match.team1.players.length < minBowlersNeeded) {
+    if (t1Names.length < minBowlersNeeded) {
         showAlert(`Team 1 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`, "Validation Error");
         return;
     }
-    if (gameState.match.team2.players.length < minBowlersNeeded) {
+    if (t2Names.length < minBowlersNeeded) {
         showAlert(`Team 2 needs at least ${minBowlersNeeded} players to bowl ${totalOvers} overs (max ${maxOversPerBowler} per bowler).`, "Validation Error");
         return;
     }
 
-    const minBatsmenNeeded = gameState.settings.allowSingleBatsman ? 1 : 2;
-    if (gameState.match.team1.players.length < minBatsmenNeeded || gameState.match.team2.players.length < minBatsmenNeeded) {
+    const minBatsmenNeeded = settings.allowSingleBatsman ? 1 : 2;
+    if (t1Names.length < minBatsmenNeeded || t2Names.length < minBatsmenNeeded) {
         showAlert(`Each team needs at least ${minBatsmenNeeded} players to bat.`, "Validation Error");
         return;
     }
+
+    dispatch({ type: 'START_MATCH', payload: { settings, team1Players: t1Names, team2Players: t2Names } });
 
     if (typeof bootstrap === 'undefined') {
         executeStartMatch(1);
@@ -1020,19 +1016,20 @@ export function startMatch() {
 }
 
 export function executeStartMatch(battingTeamNum) {
-    scoring.startMatchEngine(battingTeamNum);
-    
+    if (tossModalInstance) tossModalInstance.hide();
+
+    dispatch({ type: 'CHOOSE_TOSS_BATTING', payload: { battingTeamNum } });
+
     if (settingsSection) settingsSection.classList.add('hidden');
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer) flipContainer.classList.remove('hidden');
 
-    saveState(gameState);
     updateUI();
 }
 
 export function resetMatch() {
     clearState();
-    resetMatchState();
+    dispatch({ type: 'RESET_MATCH' });
     expandedOvers = [];
     
     if (settingsSection) settingsSection.classList.remove('hidden');
@@ -1065,84 +1062,46 @@ export function shareMatch() {
 }
 
 export function undoLastAction() {
-    if (undo()) {
-        saveState(gameState);
-        updateUI();
-    }
-}
-
-export function addRuns(runs) {
-    const events = scoring.addRuns(runs);
-    handleScoringEvents(events);
-}
-
-export function addLegBye() {
-    const events = scoring.addLegBye();
-    handleScoringEvents(events);
-}
-
-export function addWicket() {
-    const events = scoring.addWicket();
-    handleScoringEvents(events);
-}
-
-export function finalizeDelivery(type, extraRuns, accrueTo) {
-    const events = scoring.finalizeDelivery(type, extraRuns, accrueTo, pendingRunOutStriker);
-    handleScoringEvents(events);
-}
-
-function handleScoringEvents(events) {
-    if (!events) return;
-    
-    events.forEach(evt => {
-        if (evt.type === 'innings_complete') {
-            showAlert("Innings Over! " + (evt.reason === 'overs_reached' ? "Max overs reached." : "All batsmen out."), "Innings End", () => {
-                executeEndInningsFlow();
-            });
-        } else if (evt.type === 'match_complete') {
-            let msg = "Match Over! ";
-            if (evt.result === 'tie') {
-                msg += "It's a Tie!";
-            } else if (evt.winner === 'defending') {
-                msg += "Defending team wins!";
-            } else {
-                msg += `${evt.winner} wins!`;
-            }
-            showAlert(msg, "Match Over", () => {
-                scoring.archiveLiveInnings();
-                gameState.match.matchOver = true;
-                toggleScreenshotMode();
-                saveState(gameState);
-                updateUI();
-            });
-        }
-    });
-    
-    saveState(gameState);
+    dispatch({ type: 'UNDO' });
     updateUI();
 }
 
-function executeEndInningsFlow() {
-    const targetSet = scoring.prepareEndInnings();
-    
-    const proceed = () => {
-        const result = scoring.startNextInnings();
-        if (result.event === 'match_over_limit') {
-            showAlert("Match Over!", "Match Over", () => {
-                gameState.match.matchOver = true;
-                toggleScreenshotMode();
-                saveState(gameState);
-                updateUI();
-            });
-        } else {
-            saveState(gameState);
-            updateUI();
-        }
-    };
+export function addRuns(runs) {
+    dispatch({ type: 'ADD_RUNS', payload: { runs } });
+    updateUI();
+}
 
-    if (targetSet !== null) {
-        showAlert("Target set to: " + targetSet, "Innings End", proceed);
-    } else {
-        proceed();
+export function addLegBye() {
+    dispatch({ type: 'ADD_LEG_BYE' });
+    updateUI();
+}
+
+export function addWicket() {
+    dispatch({ type: 'ADD_WICKET' });
+    updateUI();
+}
+
+export function finalizeDelivery(type, extraRuns, accrueTo) {
+    dispatch({ type: 'FINALIZE_DELIVERY', payload: { type, extraRuns, accrueTo, pendingRunOutStriker } });
+    updateUI();
+}
+
+function handleUIEvents() {
+    const events = [...(gameState.uiEvents || [])];
+    if (gameState.uiEvents) {
+        gameState.uiEvents = [];
     }
+
+    events.forEach(evt => {
+        if (evt.type === 'SHOW_ALERT') {
+            showAlert(evt.payload.message, evt.payload.title, () => {
+                if (evt.payload.triggerAction) {
+                    dispatch({ type: evt.payload.triggerAction });
+                    updateUI();
+                }
+            });
+        } else if (evt.type === 'TOGGLE_SCREENSHOT') {
+            toggleScreenshotMode();
+        }
+    });
 }

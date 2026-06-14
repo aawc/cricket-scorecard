@@ -45,6 +45,7 @@ function resetTestState() {
         matchOver: false
     };
     gameState.matchStarted = true;
+    gameState.phase = 'PLAYING_INNINGS';
     gameState.history = [];
     
     // Reset mocked elements instead of deleting them to preserve references in app.js
@@ -710,6 +711,7 @@ global.localStorage.getItem = (key) => null;
 // Test 27: startMatch validation failure (not enough players)
 resetTestState();
 gameState.matchStarted = false;
+gameState.phase = 'SETUP';
 
 // Mock input values
 document.getElementById('overs-per-innings').value = "5";
@@ -740,6 +742,7 @@ if (!alertCalled || !alertMsg.includes("needs at least 3 players to bowl")) {
 // Test 28: startMatch validation success and match start
 resetTestState();
 gameState.matchStarted = false;
+gameState.phase = 'SETUP';
 
 // Mock input values
 document.getElementById('overs-per-innings').value = "2";

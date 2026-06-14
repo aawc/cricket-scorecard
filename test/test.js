@@ -130,7 +130,6 @@ global.alert = () => {};
 async function loadModulesAndRun() {
     const stateMod = await import('../src/state.js');
     const storageMod = await import('../src/storage.js');
-    const scoringMod = await import('../src/scoring.js');
     const uiMod = await import('../src/ui.js');
 
     // Make gameState global
@@ -141,13 +140,9 @@ async function loadModulesAndRun() {
     global.addLegBye = uiMod.addLegBye;
     global.addWicket = uiMod.addWicket;
     global.finalizeDelivery = uiMod.finalizeDelivery;
-    global.rotateStrike = scoringMod.rotateStrike;
-    global.checkOverComplete = scoringMod.checkOverComplete;
-    global.checkMatchOver = scoringMod.checkMatchOver;
-    global.archiveLiveInnings = scoringMod.archiveLiveInnings;
     global.endInnings = () => {
-        scoringMod.prepareEndInnings();
-        scoringMod.startNextInnings();
+        stateMod.dispatch({ type: 'FORCE_END_INNINGS' });
+        stateMod.dispatch({ type: 'START_NEXT_INNINGS' });
     };
 
     global.loadFromLocalStorage = () => {
