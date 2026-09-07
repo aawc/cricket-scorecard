@@ -63,16 +63,17 @@ let gameState = {
                 legbyes: 0 
             },
             batsmen: {
-                // "Player Name": { runs: 0, balls: 0, active: boolean }
+                // "Player Name": { runs: 0, balls: 0, fours: 0, sixes: 0, active: boolean }
             },
             bowlers: {
-                // "Player Name": { runs: 0, balls: 0, wickets: 0, wides: 0, noballs: 0 }
+                // "Player Name": { runs: 0, balls: 0, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
             },
             currentBatsman1: "",    // Striker (traditionally)
             currentBatsman2: "",    // Non-striker
             currentBowler: "",
             previousBowler: null,   // Used to prevent consecutive overs
             outBatsmen: [],         // List of dismissed batsmen
+            fow: [],                // Fall of Wickets: [{ wicket: 1, score: 10, batsman: "P1", overs: "0.4" }]
             overs: [],              // Array of completed overs: { bowler: string, balls: string[] }
             overLog: []             // Sequence of events in current over (e.g., ["0", "wd", "W"])
         },
@@ -133,13 +134,13 @@ flowchart TD
 
 #### Detailed Delivery Processing
 -   **Wides**: 1 penalty run + extra runs. Does not count as a ball faced or bowled. Extra runs can accrue to byes or batsman (if hit).
--   **No Balls**: 1 penalty run + extra runs. Counts as ball faced for batsman, but not bowler. Extra runs accrue to batsman or byes.
+-   **No Balls**: 1 penalty run + extra runs. Counts as ball faced for batsman, but not bowler. Extra runs accrue to batsman (charged to bowler) or byes (fielding extra, not charged to bowler).
 -   **Byes**: Base 1 run + extra runs. Counts as ball faced and bowler ball, but runs do not accrue to batsman. Strike rotates on odd physical runs (1 + extraRuns) prior to evaluating over completion.
--   **Leg Byes**: 1 run. Counts as ball faced for active striker and bowler ball. Strike rotates on 1 run. Disabled if `enableLegByes` is false.
--   **Wickets**: Standard dismissal. Increments batsman balls faced, marks out batsman inactive, and appends to `outBatsmen` prior to checking all-out transitions.
+-   **Leg Byes**: Base 1 run + extra runs (supports multi-run leg byes). Counts as ball faced for active striker and bowler ball. Strike rotates on odd leg byes. Disabled if `enableLegByes` is false.
+-   **Wickets**: Standard dismissal. Increments batsman balls faced, marks out batsman inactive, records Fall of Wickets entry, and appends to `outBatsmen` prior to checking all-out transitions.
 -   **Run Outs**: Wicket + optional extra runs. Striker's balls faced is incremented regardless of who is run out. If odd runs were completed before the run out, strike switches for the surviving batsman to reflect crossed ends.
--   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L373) and [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332). Contextually assigns `active = !otherSlotBatsman.active` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field.
--   **Over Completion**: When 6 balls are bowled, the over is pushed to the `overs` array, `overLog` is cleared, and strike is rotated for the new over. If the innings ends mid-over (all out or target reached), the incomplete over is saved to `overs` upon transition.
+-   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L441) and [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L400). Contextually assigns `active = !otherSlotBatsman.active` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field.
+-   **Over Completion**: When 6 legal balls are bowled, maiden calculation evaluates whether bowler conceded 0 runs, the over is pushed to the `overs` array, `overLog` is cleared, and strike is rotated for the new over. If the innings ends mid-over (all out or target reached), the incomplete over is saved to `overs` upon transition.
 
 ### 4.3. Innings & Match Transitions
 -   **End of Innings 1**: Triggered when all batsmen are out or max overs are bowled.
@@ -215,22 +216,25 @@ Asynchronous side-effects (like Bootstrap alerts and modals) are managed by appe
 
 The test suite runs in Node.js using `ts-node` to execute TypeScript assertions directly without requiring a compilation step.
 -   **Runner (`test/test.ts`)**: Mocks browser DOM APIs in the global Node scope, uses ESM ts-node loader to dynamically import the TypeScript source modules from `src/`, binds modules to global variables for test compatibility, and executes the suite.
--   **Test Cases (`test/test_cases.ts`)**: Written in TypeScript with type definitions, containing 34 unit tests verifying:
-    *   Runs accumulation and strike rotation.
-    *   Extras calculations (Wides, No Balls, Byes) and run-out logic.
-    *   Innings completion and target calculation.
+-   **Test Cases (`test/test_cases.ts`)**: Written in TypeScript with type definitions, containing 50 unit tests verifying:
+    *   Runs accumulation, boundary tracking (`4s`, `6s`), and strike rotation.
+    *   Bowler maiden over calculation (`M`) and Economy rates (`Econ`).
+    *   Fall of Wickets (`FOW`) progression recording on dismissals and run-outs.
+    *   Extras calculations (Wides, No Balls, Byes, Multi-run Leg Byes) and run-out logic.
+    *   Innings completion, early declaration (`FORCE_END_INNINGS`), and target calculation.
     *   Auto-selection and lone-striker enforcement.
     *   Completed over archiving and incomplete final over storage.
-    *   Minification/unminification of historical over data.
+    *   Minification/unminification of historical over and stat data.
+    *   Plaintext scorecard text generation and one-click copy.
 
 ---
 
 ## 7. Known Issues & Limitations
 
-1.  **Single Innings Only**: The system is strictly limited to 1 innings per team.
-2.  **Hardcoded Penalties**: Wides and No Balls are hardcoded to a 1-run penalty.
-3.  **Manual DOM Updates**: Because the app uses Vanilla JS, state synchronization with the DOM is done manually in `updateUI()`. This can lead to bugs if a state change is not accompanied by a UI refresh.
-4.  **No True Database**: Relying solely on `localStorage` means clearing browser data deletes match history. Permalinks are the only way to backup matches.
+1.  **Single Innings Only**: The system is currently optimized for limited-overs matches (1 innings per team).
+2.  **Hardcoded Penalties**: Wides and No Balls default to a standard 1-run penalty.
+3.  **Manual DOM Updates**: Because the app uses Vanilla JS/TypeScript, state synchronization with the DOM is done via `updateUI()`.
+4.  **No True Database**: Relying solely on `localStorage` means clearing browser data deletes match history. Permalinks and plaintext exports provide easy backup.
 
 ---
 
@@ -239,11 +243,11 @@ The test suite runs in Node.js using `ts-node` to execute TypeScript assertions 
 To track history and progress, the following major refactorings have been successfully completed:
 
 1.  **Modular Architecture (Code Organization)**:
-    *   Deconstructed monolithic `app.js` into distinct ES6 modules (`src/app.js`, `src/state.js`, `src/storage.js`, `src/reducer.js`, `src/ui.js`) to separate concerns and improve maintainability.
-    *   Cleaned up test suite by separating the runner mock framework (`test/test.js`) from test cases (`test/test_cases.js`).
+    *   Deconstructed monolithic `app.js` into distinct ES6 modules (`src/app.ts`, `src/state.ts`, `src/storage.ts`, `src/reducer.ts`, `src/ui.ts`) to separate concerns and improve maintainability.
+    *   Cleaned up test suite by separating the runner mock framework (`test/test.ts`) from test cases (`test/test_cases.ts`).
 
 2.  **Formal State Machine (Game Flow Control)**:
-    *   Replaced disjointed boolean checks (`matchStarted`, `matchOver`, etc.) with a mathematically strict game flow state machine inside `src/reducer.js`.
+    *   Replaced disjointed boolean checks (`matchStarted`, `matchOver`, etc.) with a mathematically strict game flow state machine inside `src/reducer.ts`.
     *   Decoupled async side-effects (alerts/modals) using a state-driven `uiEvents` queue, making the scoring engine 100% pure and unit-testable synchronously.
 
 3.  **TypeScript Migration (Type Safety & Tooling)**:
@@ -253,13 +257,24 @@ To track history and progress, the following major refactorings have been succes
     *   Implemented a post-build asset crawler to dynamically inject hashed production bundles into the PWA Service Worker offline cache.
 
 4.  **Batsman Strike Synchronization & Scorecard Accuracy Fixes**:
-    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L373)) and robust striker resolution ([`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332)), eliminating dual-active and dual-inactive states.
+    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L441)) and robust striker resolution ([`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L400)), eliminating dual-active and dual-inactive states.
     *   Fixed leg bye delivery handling to increment active striker balls faced and rotate strike on odd runs.
     *   Fixed 6th-ball bye delivery pipeline to rotate physical runs before checking over completion.
     *   Fixed run out delivery pipeline to rotate strike for surviving batsman when odd extra runs are completed before dismissal.
     *   Fixed dismissal ordering in `ADD_WICKET` and `executeRunOutWicket` to record the out batsman in `outBatsmen` prior to all-out innings termination.
-    *   Fixed winning margin calculations in [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L580) for Single Batsman play.
-    *   Added automated unit tests 35-41 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L997-L1205).
+    *   Fixed winning margin calculations in [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L600) for Single Batsman play.
+    *   Added automated unit tests 35-41 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1000-L1205).
+
+5.  **Cricket Scoring Domain Enhancements & Accessibility**:
+    *   Added boundary tracking (`4s` and `6s`) and batting Strike Rate (`SR`) calculation.
+    *   Added bowler maiden over tracking (`M`) and Economy rate (`Econ`) calculation.
+    *   Added chronological Fall of Wickets (`FOW`) progression recording and summary rendering.
+    *   Added multi-run leg byes support (1, 2, 3, 4, 6 leg byes).
+    *   Separated bowler conceded runs from fielding byes on No-Balls (Law 21.18).
+    *   Added early declaration / forfeit / force end innings support (`FORCE_END_INNINGS`).
+    *   Enforced red-green color blindness accessibility with double encoding (solid border + background tint + `[STRIKER]` badge text).
+    *   Added Plaintext Scorecard generator ([`generateTextSummary`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1001)) with one-click clipboard copying.
+    *   Added automated unit tests 42-50 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1206-L1499).
 
 ---
 
@@ -268,13 +283,12 @@ To track history and progress, the following major refactorings have been succes
 To transition this project from a prototype implementation to a professional, industry-standard codebase, we have planned the following structural improvements:
 
 1.  **Reactive Rendering (UI Architecture)**:
-    *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`. This is error-prone and can lead to desynchronization between model and view.
-    *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Mithril) or a simple template-rendering engine that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
+    *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`.
+    *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Signals) that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
 2.  **Remote Storage Sync (Cloud Persistence)** - *Status: Active Exploration (Design Phase)*:
     *   Currently, the application relies strictly on local browser `localStorage` and permalink sharing. If the user clears browser data, match history is lost.
-    *   **Goal**: Introduce an optional remote storage adapter (e.g. Google Sheets integration, collaborative GitHub Gists, or cloud backup drives) to sync match data and dashboard history cleanly without developer upkeep.
-    *   **Design Document**: See [cloud_persistence_design.md](file:///usr/local/google/home/vakh/.gemini/jetski/brain/11ea8280-a27c-4ae3-8051-4671be9b21ed/cloud_persistence_design.md) for comparative analysis of zero-cost serverless storage architectures.
+    *   **Goal**: Introduce an optional remote storage adapter (e.g. Google Sheets integration, collaborative GitHub Gists, or cloud backup drives) to sync match data cleanly.
 
 ---
 
@@ -285,8 +299,9 @@ Vite is used to orchestrate development and production bundling. During local de
 
 ### 2. Main Data Interfaces (`src/types.ts`)
 The application state and action tree are governed by strict contracts:
-- `BatsmanStats`: Tracks runs, balls faced, and active striker flag.
-- `BowlerStats`: Tracks runs, balls bowled, wickets, wides, and noballs.
-- `LiveInnings`: Holds score, wickets, balls, extras, batsmen/bowler records, over log, and completed overs.
+- `BatsmanStats`: Tracks runs, balls faced, boundaries (`fours`, `sixes`), and active striker flag.
+- `BowlerStats`: Tracks runs, balls bowled, wickets, maidens (`maidens`), wides, and noballs.
+- `FallOfWicket`: Records chronological dismissal entries (`wicket`, `score`, `batsman`, `overs`).
+- `LiveInnings`: Holds score, wickets, balls, extras, batsmen/bowler records, Fall of Wickets, over log, and completed overs.
 - `GameState`: Houses settings, current innings, team profiles, and historical states.
-- `Action`: Discriminated union of dispatchable store actions (e.g. `ADD_RUNS`, `ADD_WICKET`, `UNDO`).
+- `Action`: Discriminated union of dispatchable store actions (e.g. `ADD_RUNS`, `ADD_WICKET`, `FINALIZE_DELIVERY`, `FORCE_END_INNINGS`, `UNDO`).

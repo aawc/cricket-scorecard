@@ -6,17 +6,25 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-Fully functional and verified. Advanced extra runs and run out specification implemented. All automated tests passing.
+Fully functional and verified. Advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, and WCAG/colorblind accessibility improvements implemented. All 50 automated tests passing.
 
 ## Features (Implemented)
 
 - Modular Architecture: Code deconstructed into clean ES6 modules (`src/` directory) separating state, rules calculation, persistence, and DOM rendering.
-- Formal State Machine: Centralized match phase flow (SETUP, TOSS, PLAYING_INNINGS, INNINGS_BREAK, MATCH_OVER) governed by a deterministic reducer inside `src/reducer.js`.
+- Formal State Machine: Centralized match phase flow (SETUP, TOSS, PLAYING_INNINGS, INNINGS_BREAK, MATCH_OVER) governed by a deterministic reducer inside `src/reducer.ts`.
 - Score tracking: Complete ball-by-ball tallying (Runs, Wickets, Overs, Wides, No Balls, Byes, Leg Byes), with Byes counting towards batsman balls faced.
+- Boundary Tracking: Independent tracking of boundaries (4s and 6s) for each batsman, calculated in batting statistics, strike rates, and scorecard tables.
+- Maiden Overs Calculation: Bowlers are automatically credited with a maiden over when completing a 6-ball legal over conceding 0 bowler runs (byes and leg-byes do not break a maiden).
+- Fall of Wickets (FOW): Complete chronological tracking and display of each dismissal (Score, Wicket Number, Batsman Out, Over and Ball).
+- Multi-run Leg Byes: Support for specifying 1 to 6 leg byes on a delivery.
+- MCC Law 21.18 Extras Separation: Bowler is charged 1 penalty run for a No-Ball; additional fielding extras (byes/leg byes) are assigned to fielding extras without penalizing bowler figures.
+- Early Declaration / Forfeit: "End Innings" feature to conclude an innings early with full confirmation safeguards for Innings 1 (triggers Innings Break with target) or Innings 2 (triggers Match Over).
+- Monospace Text Scorecard Exporter: "Copy Text Scorecard" button to instantly format and copy a complete match summary to the clipboard for sharing via chat, SMS, or email.
+- Red-Green Colorblind & Touch Accessibility: Explicit `[STRIKER]` badge, `6px solid #0d6efd` accent border, and `#e7f1ff` background tint for active striker; all scoring controls meet WCAG 2.1 AA 48px minimum touch target dimensions.
 - Configurable match parameters (Overs per innings, Bowler limits). Wide and No Ball penalties fixed at official 1 run.
 - Mobile-first design with large buttons.
 - State persistence using `localStorage`.
-- Full Scorecard mode: Clean monospace match summary featuring individual bowler wide and no-ball tallies.
+- Full Scorecard mode: Clean monospace match summary featuring individual batsman 4s/6s/SR, bowler maidens/econ, wide and no-ball tallies, and Fall of Wickets summary.
 - Full Scorecard Mode Toggle: Toggle and exit button for switching views.
 - Undo functionality.
 - Reset Match functionality (retains players).
@@ -52,7 +60,7 @@ Fully functional and verified. Advanced extra runs and run out specification imp
 - Player Count Validation: Ensures enough players to bowl all overs.
 - Summary View Fix: No extra innings when match over.
 - Credits: Added to footer with emojis.
-- Automated Tests: Node.js script for core logic.
+- Automated Tests: Node.js test suite with 50 comprehensive unit tests covering all edge cases.
 - Second Innings Stats: Show Target, CRR, RRR.
 
 ## Features (Planned / Future Architecture)
