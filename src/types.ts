@@ -5,6 +5,8 @@ export interface Player {
 export interface BatsmanStats {
   runs: number;
   balls: number;
+  fours?: number;
+  sixes?: number;
   active: boolean;
 }
 
@@ -12,6 +14,7 @@ export interface BowlerStats {
   runs: number;
   balls: number;
   wickets: number;
+  maidens?: number;
   wides?: number;
   noballs?: number;
 }
@@ -21,6 +24,13 @@ export interface Extras {
   noballs: number;
   byes: number;
   legbyes: number;
+}
+
+export interface FallOfWicket {
+  wicket: number;
+  score: number;
+  batsman: string;
+  overs: string;
 }
 
 export interface LiveInnings {
@@ -37,6 +47,7 @@ export interface LiveInnings {
   outBatsmen: string[];
   overs: Array<{ bowler: string; balls: string[] }>;
   overLog: string[];
+  fow?: FallOfWicket[];
 }
 
 export interface Innings extends LiveInnings {}

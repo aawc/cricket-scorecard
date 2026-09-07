@@ -31,7 +31,8 @@ export let gameState: GameState = {
             previousBowler: null,
             outBatsmen: [],
             overs: [],
-            overLog: []
+            overLog: [],
+            fow: []
         },
         target: null,
         matchOver: false

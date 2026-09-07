@@ -177,15 +177,16 @@ export function minifyState(state: GameState): any {
             w: inn.wickets || 0,
             b: inn.balls || 0,
             ex: { wd: inn.extras ? inn.extras.wides : 0, nb: inn.extras ? inn.extras.noballs : 0, by: inn.extras ? inn.extras.byes : 0, lb: inn.extras ? inn.extras.legbyes : 0 },
-            bat: Object.fromEntries(Object.entries(inn.batsmen || {}).map(([k, v]) => [k, { r: v.runs, b: v.balls, a: v.active ? 1 : 0 }])),
-            bowl: Object.fromEntries(Object.entries(inn.bowlers || {}).map(([k, v]) => [k, { r: v.runs, b: v.balls, wk: v.wickets, wd: v.wides || 0, nb: v.noballs || 0 }])),
+            bat: Object.fromEntries(Object.entries(inn.batsmen || {}).map(([k, v]) => [k, { r: v.runs, b: v.balls, f: v.fours || 0, s: v.sixes || 0, a: v.active ? 1 : 0 }])),
+            bowl: Object.fromEntries(Object.entries(inn.bowlers || {}).map(([k, v]) => [k, { r: v.runs, b: v.balls, wk: v.wickets, m: v.maidens || 0, wd: v.wides || 0, nb: v.noballs || 0 }])),
             cb1: inn.currentBatsman1 || "",
             cb2: inn.currentBatsman2 || "",
             cbo: inn.currentBowler || "",
             pbo: inn.previousBowler || null,
             ob: inn.outBatsmen || [],
             ov: (inn.overs || []).map(o => ({ bo: o.bowler, bl: o.balls })),
-            ol: inn.overLog || []
+            ol: inn.overLog || [],
+            fw: (inn.fow || []).map(f => ({ w: f.wicket, s: f.score, b: f.batsman, ov: f.overs }))
         };
     };
 
@@ -227,7 +228,7 @@ export function unminifyState(min: any): GameState {
             batsmen: {}, bowlers: {},
             currentBatsman1: "", currentBatsman2: "",
             currentBowler: "", previousBowler: null,
-            outBatsmen: [], overs: [], overLog: []
+            outBatsmen: [], overs: [], overLog: [], fow: []
         };
         return {
             score: inn.sc || 0,
@@ -239,15 +240,16 @@ export function unminifyState(min: any): GameState {
                 byes: inn.ex ? (inn.ex.by || 0) : 0,
                 legbyes: inn.ex ? (inn.ex.lb || 0) : 0
             },
-            batsmen: Object.fromEntries(Object.entries(inn.bat || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, active: v.a === 1 }])),
-            bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
+            batsmen: Object.fromEntries(Object.entries(inn.bat || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, fours: v.f || 0, sixes: v.s || 0, active: v.a === 1 }])),
+            bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, maidens: v.m || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
             currentBatsman1: inn.cb1 || "",
             currentBatsman2: inn.cb2 || "",
             currentBowler: inn.cbo || "",
             previousBowler: inn.pbo || null,
             outBatsmen: inn.ob || [],
             overs: (inn.ov || []).map((o: any) => ({ bowler: o.bo, balls: o.bl })),
-            overLog: inn.ol || []
+            overLog: inn.ol || [],
+            fow: (inn.fw || []).map((f: any) => ({ wicket: f.w, score: f.s, batsman: f.b, overs: f.ov }))
         };
     };
 

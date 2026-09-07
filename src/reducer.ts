@@ -54,7 +54,8 @@ export function reducer(state: GameState, action: Action): GameState {
                 previousBowler: null,
                 outBatsmen: [],
                 overs: [],
-                overLog: []
+                overLog: [],
+                fow: []
             };
 
             nextState.match.target = null;
@@ -66,8 +67,39 @@ export function reducer(state: GameState, action: Action): GameState {
         case 'FORCE_END_INNINGS': {
             const match = nextState.match;
             archiveLiveInnings(match);
-            match.target = match.liveInnings.score + 1;
-            nextState.phase = 'INNINGS_BREAK';
+            if (match.currentInnings === 1) {
+                match.target = match.liveInnings.score + 1;
+                nextState.phase = 'INNINGS_BREAK';
+                nextState.uiEvents.push({
+                    type: 'SHOW_ALERT',
+                    payload: {
+                        title: 'Innings Concluded',
+                        message: `Innings ended early. Target set to: ${match.target}`,
+                        triggerAction: 'START_NEXT_INNINGS'
+                    }
+                });
+            } else {
+                const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
+                const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
+                match.matchOver = true;
+                nextState.phase = 'MATCH_OVER';
+                let endMsg = `Match Over! ${bowlingTeam.name} wins!`;
+                if (match.target !== null) {
+                    if (match.liveInnings.score >= match.target) {
+                        endMsg = `Match Over! ${battingTeam.name} wins!`;
+                    } else if (match.liveInnings.score === match.target - 1) {
+                        endMsg = `Match Over! Match Tied!`;
+                    }
+                }
+                nextState.uiEvents.push({
+                    type: 'SHOW_ALERT',
+                    payload: {
+                        title: 'Match Concluded',
+                        message: endMsg
+                    }
+                });
+                nextState.uiEvents.push({ type: 'TOGGLE_SCREENSHOT' });
+            }
             break;
         }
 
@@ -90,6 +122,8 @@ export function reducer(state: GameState, action: Action): GameState {
             if (activeB) {
                 activeB.runs += runs;
                 activeB.balls++;
+                activeB.fours = (activeB.fours || 0) + (runs === 4 ? 1 : 0);
+                activeB.sixes = (activeB.sixes || 0) + (runs === 6 ? 1 : 0);
             }
 
             live.overLog.push(runs.toString());
@@ -154,6 +188,7 @@ export function reducer(state: GameState, action: Action): GameState {
             }
             live.overLog.push('W');
 
+            recordFallOfWicket(live, activeBatsmanName);
             live.outBatsmen.push(activeBatsmanName);
             if (live.currentBatsman1 === activeBatsmanName) {
                 live.currentBatsman1 = "";
@@ -191,8 +226,13 @@ export function reducer(state: GameState, action: Action): GameState {
                     bowler.wides = (bowler.wides || 0) + 1;
                 }
                 if (extraRuns > 0) {
-                    if (accrueTo === 'batsman' && activeB) activeB.runs += extraRuns;
-                    else live.extras.byes += extraRuns;
+                    if (accrueTo === 'batsman' && activeB) {
+                        activeB.runs += extraRuns;
+                        activeB.fours = (activeB.fours || 0) + (extraRuns === 4 ? 1 : 0);
+                        activeB.sixes = (activeB.sixes || 0) + (extraRuns === 6 ? 1 : 0);
+                    } else {
+                        live.extras.byes += extraRuns;
+                    }
                 }
                 live.overLog.push(extraRuns > 0 ? `wd+${extraRuns}${accrueTo === 'byes' ? 'b' : ''}` : 'wd');
             } else if (type === 'noball') {
@@ -200,21 +240,35 @@ export function reducer(state: GameState, action: Action): GameState {
                 live.score += totalRuns;
                 live.extras.noballs += nextState.settings.noBallPenalty;
                 if (bowler) {
-                    bowler.runs += totalRuns;
                     bowler.noballs = (bowler.noballs || 0) + 1;
+                    if (accrueTo === 'batsman') {
+                        bowler.runs += totalRuns;
+                    } else {
+                        bowler.runs += nextState.settings.noBallPenalty;
+                    }
                 }
                 if (activeB) activeB.balls++;
                 if (extraRuns > 0) {
-                    if (accrueTo === 'batsman' && activeB) activeB.runs += extraRuns;
-                    else live.extras.byes += extraRuns;
+                    if (accrueTo === 'batsman' && activeB) {
+                        activeB.runs += extraRuns;
+                        activeB.fours = (activeB.fours || 0) + (extraRuns === 4 ? 1 : 0);
+                        activeB.sixes = (activeB.sixes || 0) + (extraRuns === 6 ? 1 : 0);
+                    } else {
+                        live.extras.byes += extraRuns;
+                    }
                 }
                 live.overLog.push(extraRuns > 0 ? `nb+${extraRuns}${accrueTo === 'byes' ? 'b' : ''}` : 'nb');
             } else if (type === 'runout') {
                 live.score += extraRuns;
-                if (bowler) bowler.runs += extraRuns;
+                if (bowler && accrueTo === 'batsman') bowler.runs += extraRuns;
                 if (extraRuns > 0) {
-                    if (accrueTo === 'batsman' && activeB) activeB.runs += extraRuns;
-                    else live.extras.byes += extraRuns;
+                    if (accrueTo === 'batsman' && activeB) {
+                        activeB.runs += extraRuns;
+                        activeB.fours = (activeB.fours || 0) + (extraRuns === 4 ? 1 : 0);
+                        activeB.sixes = (activeB.sixes || 0) + (extraRuns === 6 ? 1 : 0);
+                    } else {
+                        live.extras.byes += extraRuns;
+                    }
                 }
 
                 executeRunOutWicket(nextState, !!pendingRunOutStriker, extraRuns, accrueTo);
@@ -227,17 +281,29 @@ export function reducer(state: GameState, action: Action): GameState {
                 if (bowler) bowler.balls++;
                 if (activeB) activeB.balls++;
                 live.overLog.push(`${totalByes}b`);
+            } else if (type === 'legbye') {
+                if (!nextState.settings.enableLegByes) {
+                    console.error("Leg byes are disabled in settings.");
+                    return state;
+                }
+                const totalLegByes = 1 + extraRuns;
+                live.score += totalLegByes;
+                live.extras.legbyes += totalLegByes;
+                live.balls++;
+                if (bowler) bowler.balls++;
+                if (activeB) activeB.balls++;
+                live.overLog.push(`${totalLegByes}lb`);
             }
 
             let physicalRuns = extraRuns;
-            if (type === 'bye') {
+            if (type === 'bye' || type === 'legbye') {
                 physicalRuns = 1 + extraRuns;
             }
             if (physicalRuns % 2 !== 0) {
                 rotateStrike(live);
             }
 
-            checkMatchOver(nextState) || (type === 'bye' && checkOverComplete(nextState));
+            checkMatchOver(nextState) || ((type === 'bye' || type === 'legbye') && checkOverComplete(nextState));
             break;
         }
 
@@ -273,7 +339,8 @@ export function reducer(state: GameState, action: Action): GameState {
                 previousBowler: null,
                 outBatsmen: [],
                 overs: [],
-                overLog: []
+                overLog: [],
+                fow: []
             };
 
             nextState.phase = 'PLAYING_INNINGS';
@@ -299,7 +366,8 @@ export function reducer(state: GameState, action: Action): GameState {
                     previousBowler: null,
                     outBatsmen: [],
                     overs: [],
-                    overLog: []
+                    overLog: [],
+                    fow: []
                 },
                 target: null,
                 matchOver: false
@@ -385,7 +453,7 @@ function assignBatsmanToSlot(live: LiveInnings, slot: 1 | 2, name: string): void
     }
 
     if (!live.batsmen[name]) {
-        live.batsmen[name] = { runs: 0, balls: 0, active: isActive };
+        live.batsmen[name] = { runs: 0, balls: 0, fours: 0, sixes: 0, active: isActive };
     } else {
         live.batsmen[name].active = isActive;
     }
@@ -393,8 +461,19 @@ function assignBatsmanToSlot(live: LiveInnings, slot: 1 | 2, name: string): void
 
 function initBowlerStats(live: LiveInnings, name: string): void {
     if (name && !live.bowlers[name]) {
-        live.bowlers[name] = { runs: 0, balls: 0, wickets: 0, wides: 0, noballs: 0 };
+        live.bowlers[name] = { runs: 0, balls: 0, wickets: 0, maidens: 0, wides: 0, noballs: 0 };
     }
+}
+
+function recordFallOfWicket(live: LiveInnings, batsmanName: string): void {
+    if (!live.fow) live.fow = [];
+    const oversStr = `${Math.floor(live.balls / 6)}.${live.balls % 6}`;
+    live.fow.push({
+        wicket: live.wickets,
+        score: live.score,
+        batsman: batsmanName,
+        overs: oversStr
+    });
 }
 
 function archiveLiveInnings(match: any): void {
@@ -414,6 +493,37 @@ function checkOverComplete(nextState: GameState): boolean {
     const live = nextState.match.liveInnings;
     if (live.balls % 6 === 0 && live.balls > 0) {
         rotateStrike(live);
+
+        // Check if completed over was a maiden (0 runs conceded by bowler off bat, wides, or noballs)
+        let bowlerRunsInOver = 0;
+        live.overLog.forEach(b => {
+            if (b.startsWith('wd')) {
+                const extra = b.includes('+') ? parseInt(b.split('+')[1]) : 0;
+                bowlerRunsInOver += nextState.settings.widePenalty + (isNaN(extra) ? 0 : extra);
+            } else if (b.startsWith('nb')) {
+                const extra = b.includes('+') ? parseInt(b.split('+')[1]) : 0;
+                const isByes = b.endsWith('b');
+                bowlerRunsInOver += nextState.settings.noBallPenalty + (isByes ? 0 : (isNaN(extra) ? 0 : extra));
+            } else if (b.startsWith('lb') || (b.includes('b') && !b.startsWith('n') && !b.startsWith('w'))) {
+                // Byes / leg byes are fielding extras, not bowler runs
+            } else if (b === 'W' || b === 'W-RO') {
+                // Dot wicket
+            } else if (b.includes('+W-RO')) {
+                const part = b.split('+')[0];
+                if (!part.endsWith('b')) {
+                    const r = parseInt(part);
+                    if (!isNaN(r)) bowlerRunsInOver += r;
+                }
+            } else {
+                const r = parseInt(b);
+                if (!isNaN(r)) bowlerRunsInOver += r;
+            }
+        });
+
+        if (bowlerRunsInOver === 0 && live.currentBowler && live.bowlers[live.currentBowler]) {
+            const currentB = live.bowlers[live.currentBowler];
+            currentB.maidens = (currentB.maidens || 0) + 1;
+        }
         
         live.overs.push({
             bowler: live.currentBowler || "Unknown",
@@ -569,6 +679,7 @@ function executeRunOutWicket(nextState: GameState, isStriker: boolean, extraRuns
     if (outB) {
         outB.active = false;
     }
+    recordFallOfWicket(live, outBatsmanName);
     live.outBatsmen.push(outBatsmanName);
     if (live.currentBatsman1 === outBatsmanName) {
         live.currentBatsman1 = "";
