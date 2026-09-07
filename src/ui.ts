@@ -7,9 +7,12 @@ const settingsSection = document.getElementById('settings-section') as HTMLEleme
 const scoreboardSection = document.getElementById('scoreboard-section') as HTMLElement | null;
 const startMatchBtn = document.getElementById('start-match-btn') as HTMLButtonElement | null;
 const screenshotModeBtn = document.getElementById('screenshot-mode-btn') as HTMLButtonElement | null;
+const endInningsBtn = document.getElementById('end-innings-btn') as HTMLButtonElement | null;
+const confirmEndInningsBtn = document.getElementById('confirm-end-innings-btn') as HTMLButtonElement | null;
 const resetMatchBtn = document.getElementById('reset-match-btn') as HTMLButtonElement | null;
 const exitScreenshotModeBtn = document.getElementById('exit-screenshot-mode-btn') as HTMLButtonElement | null;
 const shareMatchBtn = document.getElementById('share-match-btn') as HTMLButtonElement | null;
+const copySummaryTextBtn = document.getElementById('copy-summary-text-btn') as HTMLButtonElement | null;
 const themeBtns = document.querySelectorAll('.theme-btn') as NodeListOf<HTMLButtonElement>;
 
 const oversPerInningsInput = document.getElementById('overs-per-innings') as HTMLInputElement | null;
@@ -65,6 +68,7 @@ const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement | null;
 let runoutModalInstance: any = null;
 let extraRunsModalInstance: any = null;
 let tossModalInstance: any = null;
+let endInningsModalInstance: any = null;
 let alertModalInstance: any = null;
 let alertCallback: (() => void) | null = null;
 
@@ -109,8 +113,11 @@ function setupEventListeners(): void {
     if (startMatchBtn) startMatchBtn.addEventListener('click', startMatch);
     if (screenshotModeBtn) screenshotModeBtn.addEventListener('click', toggleScreenshotMode);
     if (exitScreenshotModeBtn) exitScreenshotModeBtn.addEventListener('click', toggleScreenshotMode);
+    if (endInningsBtn) endInningsBtn.addEventListener('click', triggerEndInningsModal);
+    if (confirmEndInningsBtn) confirmEndInningsBtn.addEventListener('click', executeEndInnings);
     if (resetMatchBtn) resetMatchBtn.addEventListener('click', resetMatch);
     if (shareMatchBtn) shareMatchBtn.addEventListener('click', shareMatch);
+    if (copySummaryTextBtn) copySummaryTextBtn.addEventListener('click', copyTextScorecard);
 
     if (team1AddBtn) team1AddBtn.addEventListener('click', () => handleQuickAdd(1));
     if (team2AddBtn) team2AddBtn.addEventListener('click', () => handleQuickAdd(2));
@@ -161,6 +168,9 @@ function setupEventListeners(): void {
             } else if (currentDeliveryType === 'bye') {
                 if (extraRunsModalInstance) extraRunsModalInstance.hide();
                 finalizeDelivery('bye', selectedExtraRuns, 'byes');
+            } else if (currentDeliveryType === 'legbye') {
+                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                finalizeDelivery('legbye', selectedExtraRuns, 'byes');
             } else {
                 if (accrualSection) accrualSection.classList.remove('hidden');
             }
@@ -176,7 +186,7 @@ function setupEventListeners(): void {
     });
 
     if (byeBtn) byeBtn.addEventListener('click', () => triggerExtraRunsModal('bye'));
-    if (legbyeBtn) legbyeBtn.addEventListener('click', addLegBye);
+    if (legbyeBtn) legbyeBtn.addEventListener('click', () => triggerExtraRunsModal('legbye'));
     if (undoBtn) undoBtn.addEventListener('click', undoLastAction);
 
     if (batsman1Select) batsman1Select.addEventListener('change', (e) => handleBatsmanChange(1, (e.target as HTMLSelectElement).value));
@@ -439,12 +449,13 @@ export function generateSummaryView(): void {
 
             const batsmenTable = document.createElement('table');
             batsmenTable.classList.add('summary-table');
-            batsmenTable.innerHTML = `<thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th></tr></thead>`;
+            batsmenTable.innerHTML = `<thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>`;
             const batsmenTbody = document.createElement('tbody');
             for (const name in inningsData.batsmen) {
                 const b = inningsData.batsmen[name];
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${name}</td><td>${b.runs}</td><td>${b.balls}</td>`;
+                const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
+                tr.innerHTML = `<td>${name}</td><td>${b.runs}</td><td>${b.balls}</td><td>${b.fours || 0}</td><td>${b.sixes || 0}</td><td>${sr}</td>`;
                 batsmenTbody.appendChild(tr);
             }
             batsmenTable.appendChild(batsmenTbody);
@@ -452,7 +463,7 @@ export function generateSummaryView(): void {
 
             const bowlersTable = document.createElement('table');
             bowlersTable.classList.add('summary-table');
-            bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Runs</th><th>Wickets</th><th>Wides</th><th>No Balls</th></tr></thead>`;
+            bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Maidens</th><th>Runs</th><th>Wickets</th><th>Econ</th><th>Wides</th><th>No Balls</th></tr></thead>`;
             const bowlersTbody = document.createElement('tbody');
             for (const name in inningsData.bowlers) {
                 const b = inningsData.bowlers[name];
@@ -461,7 +472,8 @@ export function generateSummaryView(): void {
                 const bBalls = b.balls % 6;
                 const bWides = b.wides || 0;
                 const bNoBalls = b.noballs || 0;
-                tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
+                const econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
+                tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.maidens || 0}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${econ}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
                 bowlersTbody.appendChild(tr);
             }
             bowlersTable.appendChild(bowlersTbody);
@@ -472,6 +484,14 @@ export function generateSummaryView(): void {
             const totalExtras = ext.wides + ext.noballs + ext.byes + ext.legbyes;
             extrasP.innerHTML = `<strong>Extras:</strong> ${totalExtras} (W: ${ext.wides}, NB: ${ext.noballs}, B: ${ext.byes}, LB: ${ext.legbyes})`;
             inningsDiv.appendChild(extrasP);
+
+            if (inningsData.fow && inningsData.fow.length > 0) {
+                const fowDiv = document.createElement('div');
+                fowDiv.classList.add('fow-container');
+                const fowList = inningsData.fow.map((f: any) => `${f.wicket}-${f.score} (${f.batsman}, ${f.overs} ov)`).join(', ');
+                fowDiv.innerHTML = `<strong>Fall of Wickets:</strong> ${fowList}`;
+                inningsDiv.appendChild(fowDiv);
+            }
 
             // Over Log Table (U2)
             let displayOvers = [...(inningsData.overs || [])];
@@ -732,17 +752,13 @@ export function updateUI(): void {
         if (gameState.match.matchOver) {
             if (isChasing && target !== null) {
                 if (live.score >= target) {
-                    const wicketsRemaining = maxWickets - live.wickets;
+                    const wicketsRemaining = Math.max(1, maxWickets - live.wickets);
                     const wicketWord = wicketsRemaining === 1 ? 'wicket' : 'wickets';
                     matchStatusDisplay.textContent = `Match Over! ${battingTeam.name} won by ${wicketsRemaining} ${wicketWord}!`;
-                } else if (live.wickets >= maxWickets) {
+                } else if (live.score === target - 1) {
+                    matchStatusDisplay.textContent = `Match Over! Match Tied!`;
+                } else {
                     matchStatusDisplay.textContent = `Match Over! ${bowlingTeam.name} won by ${target - 1 - live.score} runs!`;
-                } else if (live.balls >= gameState.settings.oversPerInnings * 6) {
-                    if (live.score === target - 1) {
-                        matchStatusDisplay.textContent = `Match Over! Match Tied!`;
-                    } else {
-                        matchStatusDisplay.textContent = `Match Over! ${bowlingTeam.name} won by ${target - 1 - live.score} runs!`;
-                    }
                 }
             } else {
                 matchStatusDisplay.textContent = "Match Over!";
@@ -925,12 +941,18 @@ export function triggerExtraRunsModal(deliveryType: string): void {
     
     const wideLabel = document.getElementById('extraRunsModalLabel') as HTMLElement | null;
     if (wideLabel) {
-        wideLabel.textContent = `Runs scored on ${deliveryType.toUpperCase()}?`;
+        if (deliveryType === 'legbye') {
+            wideLabel.textContent = "Runs scored on LEG BYE?";
+        } else if (deliveryType === 'bye') {
+            wideLabel.textContent = "Runs scored on BYE?";
+        } else {
+            wideLabel.textContent = `Runs scored on ${deliveryType.toUpperCase()}?`;
+        }
     }
 
     const accrueBatsmanBtnLocal = document.getElementById('accrue-batsman-btn') as HTMLButtonElement | null;
     if (accrueBatsmanBtnLocal) {
-        if (deliveryType === 'wide') {
+        if (deliveryType === 'wide' || deliveryType === 'bye' || deliveryType === 'legbye') {
             accrueBatsmanBtnLocal.classList.add('hidden');
         } else {
             accrueBatsmanBtnLocal.classList.remove('hidden');
@@ -949,6 +971,97 @@ export function triggerExtraRunsModal(deliveryType: string): void {
         const accrueTo = (global as any).mockAccrueTo || 'byes';
         finalizeDelivery(currentDeliveryType, selectedExtraRuns, accrueTo);
     }
+}
+
+export function triggerEndInningsModal(): void {
+    if (!gameState.matchStarted || gameState.match.matchOver) return;
+
+    if (typeof bootstrap !== 'undefined') {
+        const modalEl = document.getElementById('endInningsModal');
+        if (!endInningsModalInstance && modalEl) {
+            endInningsModalInstance = new bootstrap.Modal(modalEl);
+        }
+        if (endInningsModalInstance) endInningsModalInstance.show();
+    } else {
+        const ok = confirm("Are you sure you want to conclude this innings early?");
+        if (ok) executeEndInnings();
+    }
+}
+
+export function executeEndInnings(): void {
+    if (endInningsModalInstance) endInningsModalInstance.hide();
+    dispatch({ type: 'FORCE_END_INNINGS' });
+    updateUI();
+}
+
+export function generateTextSummary(): string {
+    const match = gameState.match;
+    if (!match) return "";
+
+    const status = (document.getElementById('match-status')?.textContent || "Match In Progress").trim();
+    let text = `🏏 CRICKET SCORECARD\n`;
+    text += `----------------------------------------\n`;
+    text += `Status: ${status}\n\n`;
+
+    const formatInnings = (teamName: string, inn: any, num: number) => {
+        const overs = `${Math.floor(inn.balls / 6)}.${inn.balls % 6}`;
+        let res = `=== Innings ${num}: ${teamName} (${inn.score}/${inn.wickets} in ${overs} ov) ===\n`;
+        res += `BATSMEN:\n`;
+        for (const name in inn.batsmen) {
+            const b = inn.batsmen[name];
+            const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
+            const isNotOut = !inn.outBatsmen.includes(name) && (name === inn.currentBatsman1 || name === inn.currentBatsman2 || inn.balls === 0);
+            res += `  - ${name}${isNotOut ? '*' : ''}: ${b.runs} (${b.balls}b, ${b.fours || 0}x4, ${b.sixes || 0}x6, SR: ${sr})\n`;
+        }
+        const ext = inn.extras || { wides: 0, noballs: 0, byes: 0, legbyes: 0 };
+        const totalExt = ext.wides + ext.noballs + ext.byes + ext.legbyes;
+        res += `EXTRAS: ${totalExt} (wd: ${ext.wides}, nb: ${ext.noballs}, b: ${ext.byes}, lb: ${ext.legbyes})\n`;
+
+        if (inn.fow && inn.fow.length > 0) {
+            const fowStr = inn.fow.map((f: any) => `${f.wicket}-${f.score} (${f.batsman}, ${f.overs} ov)`).join(', ');
+            res += `FALL OF WICKETS: ${fowStr}\n`;
+        }
+
+        res += `\nBOWLERS:\n`;
+        for (const name in inn.bowlers) {
+            const b = inn.bowlers[name];
+            const bOvers = `${Math.floor(b.balls / 6)}.${b.balls % 6}`;
+            const econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
+            res += `  - ${name}: ${bOvers}-${b.maidens || 0}-${b.runs}-${b.wickets} (Econ: ${econ}, wd: ${b.wides || 0}, nb: ${b.noballs || 0})\n`;
+        }
+        res += `\n`;
+        return res;
+    };
+
+    match.team1.innings.forEach(inn => {
+        text += formatInnings(match.team1.name, inn, 1);
+    });
+    match.team2.innings.forEach(inn => {
+        text += formatInnings(match.team2.name, inn, 2);
+    });
+
+    if (!match.matchOver) {
+        const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
+        text += formatInnings(battingTeam.name, match.liveInnings, match.currentInnings);
+    }
+
+    text += `----------------------------------------\n`;
+    text += `Generated via Cricket Scorecard PWA\n`;
+    return text;
+}
+
+export function copyTextScorecard(): void {
+    const text = generateTextSummary();
+    if (!navigator.clipboard) {
+        showAlert(text, "Scorecard Text");
+        return;
+    }
+    navigator.clipboard.writeText(text).then(() => {
+        showAlert("Scorecard summary copied to clipboard!", "Scorecard Text");
+    }).catch(err => {
+        console.error("Failed to copy summary text:", err);
+        showAlert(text, "Scorecard Text");
+    });
 }
 
 export function processRunOut(isStriker: boolean): void {
@@ -1097,6 +1210,11 @@ export function shareMatch(): void {
 
 export function undoLastAction(): void {
     dispatch({ type: 'UNDO' });
+    const flipContainer = document.querySelector('.flip-container');
+    if (flipContainer && flipContainer.classList.contains('flipped') && !gameState.match.matchOver) {
+        flipContainer.classList.remove('flipped');
+        document.body.classList.remove('screenshot-mode');
+    }
     updateUI();
 }
 

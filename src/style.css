@@ -6,12 +6,19 @@
 
 /* Scoreboard specific styles that Bootstrap doesn't cover well */
 .batsman.active {
-    background-color: rgba(40, 167, 69, 0.2) !important; /* Light green tint */
-    border-color: #28a745 !important;
+    background-color: rgba(13, 110, 253, 0.12) !important;
+    border-color: #0d6efd !important;
+    border-left: 6px solid #0d6efd !important;
+}
+
+.strike-badge {
+    font-size: 0.72rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
 }
 
 .ball-log {
-    padding: 0.25rem 0.5rem;
+    padding: 0.3rem 0.6rem;
     border-radius: 4px;
     font-size: 0.9rem;
     font-weight: bold;
@@ -21,17 +28,36 @@
 .ball-log.normal {
     background-color: #f8f9fa;
     color: #212529;
-    border: 1px solid #dee2e6;
+    border: 1px solid #ced4da;
 }
 
 .ball-log.wicket {
     background-color: #dc3545;
-    color: white;
+    color: #ffffff;
+    border: 1px solid #b02a37;
 }
 
 .ball-log.extra {
     background-color: #ffc107;
-    color: #212529;
+    color: #000000;
+    border: 1px solid #d39e00;
+}
+
+/* Touch targets for mobile scoring */
+.runs-buttons button,
+.extra-buttons button,
+.other-buttons button {
+    min-height: 48px;
+    font-weight: 600;
+}
+
+.fow-container {
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(0, 0, 0, 0.03);
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    font-size: 0.9rem;
 }
 
 /* Flip Effect */

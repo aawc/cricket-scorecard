@@ -18,6 +18,7 @@
             <h1 class="h3 mb-0 text-primary">Cricket Scorecard</h1>
             <div class="btn-group" role="group">
                 <button id="screenshot-mode-btn" class="btn btn-outline-primary btn-sm">Full Scorecard</button>
+                <button id="end-innings-btn" class="btn btn-outline-warning btn-sm">End Innings</button>
                 <button id="reset-match-btn" class="btn btn-outline-danger btn-sm">Reset</button>
                 <button id="share-match-btn" class="btn btn-outline-success btn-sm">Share</button>
                 <div class="btn-group" role="group">
@@ -173,9 +174,12 @@
                     <div class="back-face">
                         <section id="summary-section" class="card mb-3">
                             <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
                                     <h2 class="card-title h4 mb-0 text-primary">Full Scorecard</h2>
-                                    <button id="exit-screenshot-mode-btn" class="btn btn-outline-secondary btn-sm">Exit Full Scorecard</button>
+                                    <div>
+                                        <button id="copy-summary-text-btn" class="btn btn-outline-success btn-sm me-2">Copy Text Scorecard</button>
+                                        <button id="exit-screenshot-mode-btn" class="btn btn-outline-secondary btn-sm">Exit Full Scorecard</button>
+                                    </div>
                                 </div>
                                 <div id="innings-summaries"></div>
                             </div>
@@ -272,6 +276,25 @@
                 </div>
             </div>
 
+            <!-- End Innings Modal -->
+            <div class="modal fade" id="endInningsModal" tabindex="-1" aria-labelledby="endInningsModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="endInningsModalLabel">End Innings</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center">
+                            <p class="mb-3">Are you sure you want to conclude this innings early?</p>
+                            <div class="d-grid gap-2">
+                                <button id="confirm-end-innings-btn" class="btn btn-warning" data-bs-dismiss="modal">End Innings</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Alert Modal -->
             <div class="modal fade" id="alertDialogModal" tabindex="-1" aria-labelledby="alertDialogModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -292,7 +315,7 @@
         </main>
 
         <footer class="text-center text-muted mt-auto py-2 border-top">
-            <small>Version: v20260907-001 | Deployed: 2026-09-07 01:38</small>
+            <small>Version: v20260907-002 | Deployed: 2026-09-07 02:00</small>
             <div class="mt-1">
                 <small>🚀 Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with ✨ Gemini</small>
             </div>
