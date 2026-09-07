@@ -278,7 +278,7 @@ export async function copyBugReportToClipboard(reportText: string): Promise<bool
  * Build a GitHub New Issue URL with pre-filled title and report body.
  */
 export function getGitHubIssueUrl(reportText: string, customTitle?: string): string {
-    const repoBase = 'https://github.com/aawc/cricket-scorecard-pwa/issues/new';
+    const repoBase = 'https://github.com/aawc/cricket-scorecard/issues/new';
     const title = customTitle || 'Bug / Scoring Anomaly Report';
     
     // GitHub URL length is limited (~8000 chars); truncate body if necessary

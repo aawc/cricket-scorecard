@@ -1606,7 +1606,7 @@ const issueTitle = "Bug: Strike rotation issue";
 const issueBody = "Detailed markdown report body with special chars: 🏏 & ? = %";
 const issueUrl = getGitHubIssueUrl(issueBody, issueTitle);
 
-if (!issueUrl.startsWith("https://github.com/aawc/cricket-scorecard-pwa/issues/new")) {
+if (!issueUrl.startsWith("https://github.com/aawc/cricket-scorecard/issues/new")) {
     console.error(`Test 53 Failed: GitHub issue URL base invalid: ${issueUrl}`);
     process.exit(1);
 }

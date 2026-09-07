@@ -2,8 +2,8 @@
 
 **Application**: Cricket Scorecard PWA  
 **Version**: `v20260907-003`  
-**Repository**: `cricket-scorecard-pwa`  
-**Module**: [`src/feedback.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts)
+**Repository**: `cricket-scorecard`  
+**Module**: [`src/feedback.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L1)
 
 ---
 
@@ -37,7 +37,7 @@ The application automatically compiles:
 
 ### Step 4: Export Options
 - **📋 Copy Bug Report to Clipboard**: Copies the complete, formatted Markdown report directly to the system clipboard. A confirmation toast is displayed.
-- **🐛 Open GitHub Issue**: Opens a new issue window on `https://github.com/aawc/cricket-scorecard-pwa/issues/new` with pre-filled title and markdown report body.
+- **🐛 Open GitHub Issue**: Opens a new issue window on `https://github.com/aawc/cricket-scorecard/issues/new` with pre-filled title and markdown report body.
 
 ---
 
