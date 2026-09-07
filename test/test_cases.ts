@@ -69,6 +69,9 @@ function resetTestState() {
     gameState.matchStarted = true;
     gameState.phase = 'PLAYING_INNINGS';
     gameState.history = [];
+    delete (global as any).mockExtraRuns;
+    delete (global as any).mockAccrueTo;
+    (global as any).confirm = () => true;
     
     // Reset mocked elements instead of deleting them to preserve references in app.js
     for (const id in elements) {
@@ -991,6 +994,210 @@ if (b1Container.classList.contains('active')) {
 }
 if (!b2Container.classList.contains('active')) {
     console.error("Test 34 Failed: Expected batsman 2 container to have 'active' class after strike rotation");
+    process.exit(1);
+}
+
+// Test 35: Bug 1 - Dual active batsman bug on non-striker run out with replacement in Slot 1
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+
+// P1 in Slot 1 (striker, active: true), P2 in Slot 2 (non-striker, active: false)
+addRuns(1); // Strike rotates: P1 active: false, P2 active: true
+
+// Non-striker P1 is run out
+global.confirm = () => false; // Non-striker run out
+triggerRunOutModal();
+
+if (gameState.match.liveInnings.currentBatsman1 !== "") {
+    console.error(`Test 35 Failed: Expected currentBatsman1 to be empty after run out, got: ${gameState.match.liveInnings.currentBatsman1}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.currentBatsman2 !== "P2" || !gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 35 Failed: P2 should remain active striker in slot 2");
+    process.exit(1);
+}
+
+// User selects P3 for slot 1
+handleBatsmanChange(1, "P3");
+
+if (gameState.match.liveInnings.batsmen["P3"].active) {
+    console.error("Test 35 Failed (Bug 1): P3 in Slot 1 was set to active: true while P2 in Slot 2 was already active! Both batsmen are active!");
+    process.exit(1);
+}
+if (!gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 35 Failed (Bug 1): P2 active flag was improperly cleared");
+    process.exit(1);
+}
+
+// Next ball: P2 faces and gets out
+addWicket();
+
+if (!gameState.match.liveInnings.outBatsmen.includes("P2")) {
+    console.error("Test 35 Failed (Bug 1): Active striker P2 should have been marked out, but was not!");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.outBatsmen.includes("P3")) {
+    console.error("Test 35 Failed (Bug 1): Wrong batsman P3 was marked as out instead of P2!");
+    process.exit(1);
+}
+
+// Test 36: Bug 1b - Dual inactive batsman bug when striker in Slot 2 gets out and is replaced in Slot 2
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+
+addRuns(1); // P1 active: false, P2 active: true
+addWicket(); // Striker P2 gets out
+
+if (gameState.match.liveInnings.currentBatsman2 !== "") {
+    console.error("Test 36 Failed: currentBatsman2 should be empty after wicket");
+    process.exit(1);
+}
+if (!gameState.match.liveInnings.outBatsmen.includes("P2")) {
+    console.error("Test 36 Failed: P2 should be in outBatsmen");
+    process.exit(1);
+}
+
+// Replace slot 2 with P3
+handleBatsmanChange(2, "P3");
+
+// Invariant: Exactly one batsman must be active. Since P1 was non-striker (active: false), P3 must be striker (active: true)
+if (!gameState.match.liveInnings.batsmen["P3"].active) {
+    console.error("Test 36 Failed (Bug 1b): P3 in Slot 2 is inactive, but P1 is also inactive! Neither batsman is active!");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].active) {
+    console.error("Test 36 Failed (Bug 1b): P1 should not be active");
+    process.exit(1);
+}
+
+// Next ball: P3 scores 4 runs
+addRuns(4);
+if (gameState.match.liveInnings.batsmen["P3"].runs !== 4 || gameState.match.liveInnings.batsmen["P3"].balls !== 1) {
+    console.error(`Test 36 Failed (Bug 1b): Runs should accrue to active striker P3 (got runs: ${gameState.match.liveInnings.batsmen["P3"].runs}, balls: ${gameState.match.liveInnings.batsmen["P3"].balls})`);
+    process.exit(1);
+}
+
+// Test 37: Bug 1c - Re-selecting an already initialized batsman retains/sets correct active flag
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+
+// Initially P1 is striker (active: true), P2 is non-striker (active: false)
+// Change Slot 2 to P3, then change back to P2
+handleBatsmanChange(2, "P3");
+handleBatsmanChange(2, "P2");
+
+if (!gameState.match.liveInnings.batsmen["P1"].active) {
+    console.error("Test 37 Failed: P1 should be active");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 37 Failed: P2 in slot 2 should be inactive (non-striker)");
+    process.exit(1);
+}
+
+// Test 38: Bug 2 - Leg bye increments striker balls faced and rotates strike
+resetTestState();
+gameState.settings.enableLegByes = true;
+gameState.match.liveInnings.batsmen["P1"].balls = 0;
+
+addLegBye();
+
+if (gameState.match.liveInnings.score !== 1) {
+    console.error(`Test 38 Failed: Score should be 1 on leg bye, got ${gameState.match.liveInnings.score}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.extras.legbyes !== 1) {
+    console.error("Test 38 Failed: extras.legbyes should be 1");
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].balls !== 1) {
+    console.error(`Test 38 Failed (Bug 2): Striker P1 balls faced should be 1 on leg bye, got ${gameState.match.liveInnings.batsmen["P1"].balls}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].active || !gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 38 Failed (Bug 2): Strike should rotate to P2 on 1 leg bye");
+    process.exit(1);
+}
+
+// Test 39: Bug 3 - 1 Bye on 6th ball of over cleanly completes over and sets correct striker for next over
+resetTestState();
+// Bowl 5 dot balls
+for (let i = 0; i < 5; i++) addRuns(0);
+
+// Ball 6: 1 bye
+finalizeDelivery('bye', 0, 'byes');
+
+if (gameState.match.liveInnings.balls !== 6) {
+    console.error(`Test 39 Failed: Balls should be 6, got ${gameState.match.liveInnings.balls}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.overs.length !== 1) {
+    console.error(`Test 39 Failed: 1 completed over should be archived, got ${gameState.match.liveInnings.overs.length}`);
+    process.exit(1);
+}
+// 1 bye on ball 6: batsmen crossed once (P2 at striker end of over 1). Over ended (ends swapped).
+// P1 at striker end of over 2 -> P1 is active striker!
+if (!gameState.match.liveInnings.batsmen["P1"].active || gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 39 Failed (Bug 3): P1 should be on strike for the start of the next over");
+    process.exit(1);
+}
+
+// Test 40: Bug 4 - Run out with 1 extra run completed before run out
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+
+// P1 striker (active), P2 non-striker.
+// P1 is run out attempting 2nd run after completing 1 run (accrued to batsman P1)
+(global as any).mockExtraRuns = 1;
+(global as any).mockAccrueTo = 'batsman';
+processRunOut(true); // Striker P1 run out
+
+if (gameState.match.liveInnings.score !== 1) {
+    console.error(`Test 40 Failed: Score should be 1 on runout+1, got ${gameState.match.liveInnings.score}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 1) {
+    console.error(`Test 40 Failed: P1 runs should be 1, got ${gameState.match.liveInnings.batsmen["P1"].runs}`);
+    process.exit(1);
+}
+if (!gameState.match.liveInnings.outBatsmen.includes("P1")) {
+    console.error("Test 40 Failed: P1 should be out");
+    process.exit(1);
+}
+// Because 1 run was completed, P2 crossed to striker end, so P2 is now striker (active: true)
+if (!gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 40 Failed (Bug 4): Surviving batsman P2 should be on strike (active: true) after 1 completed run on run out");
+    process.exit(1);
+}
+
+// When P3 enters slot 1, P3 should be non-striker (active: false)
+handleBatsmanChange(1, "P3");
+if (gameState.match.liveInnings.batsmen["P3"].active) {
+    console.error("Test 40 Failed (Bug 4): Incoming batsman P3 should be non-striker (active: false)");
+    process.exit(1);
+}
+
+// Test 41: Bug 5 - matchStatusDisplay winning margin with single batsman allowed
+resetTestState();
+gameState.settings.allowSingleBatsman = true;
+gameState.match.team1.players = ["P1", "P2"];
+gameState.match.team2.players = ["B1", "B2"];
+gameState.match.currentInnings = 2;
+gameState.match.currentBattingTeam = 2;
+gameState.match.target = 5;
+gameState.match.liveInnings.score = 5;
+gameState.match.liveInnings.wickets = 0;
+gameState.match.matchOver = true;
+
+updateUI();
+
+const matchStatusText = doc.getElementById('match-status').textContent;
+if (!matchStatusText.includes("won by 2 wickets")) {
+    console.error(`Test 41 Failed (Bug 5): Expected 'won by 2 wickets', got: '${matchStatusText}'`);
     process.exit(1);
 }
 

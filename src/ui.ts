@@ -732,7 +732,9 @@ export function updateUI(): void {
         if (gameState.match.matchOver) {
             if (isChasing && target !== null) {
                 if (live.score >= target) {
-                    matchStatusDisplay.textContent = `Match Over! ${battingTeam.name} won by ${totalPlayers - 1 - live.wickets} wickets!`;
+                    const wicketsRemaining = maxWickets - live.wickets;
+                    const wicketWord = wicketsRemaining === 1 ? 'wicket' : 'wickets';
+                    matchStatusDisplay.textContent = `Match Over! ${battingTeam.name} won by ${wicketsRemaining} ${wicketWord}!`;
                 } else if (live.wickets >= maxWickets) {
                     matchStatusDisplay.textContent = `Match Over! ${bowlingTeam.name} won by ${target - 1 - live.score} runs!`;
                 } else if (live.balls >= gameState.settings.oversPerInnings * 6) {
@@ -891,7 +893,9 @@ export function triggerRunOutModal(): void {
     if (gameState.match.matchOver) return;
     const live = gameState.match.liveInnings;
     
-    const striker = live.currentBatsman1 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman1].active ? live.currentBatsman1 : live.currentBatsman2;
+    const striker = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
+        ? live.currentBatsman1
+        : (live.currentBatsman2 || live.currentBatsman1 || '');
     const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
     
     const strikerBtn = document.getElementById('runout-striker-btn') as HTMLButtonElement | null;
@@ -1058,6 +1062,9 @@ export function resetMatch(): void {
     clearState();
     dispatch({ type: 'RESET_MATCH' });
     expandedOvers = [];
+    pendingRunOutStriker = true;
+    currentDeliveryType = null;
+    selectedExtraRuns = 0;
     
     if (settingsSection) settingsSection.classList.remove('hidden');
     

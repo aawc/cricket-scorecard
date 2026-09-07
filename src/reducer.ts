@@ -85,9 +85,7 @@ export function reducer(state: GameState, action: Action): GameState {
                 }
             }
 
-            const activeBatsman = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active) 
-                ? live.currentBatsman1 
-                : (live.currentBatsman2 || '');
+            const activeBatsman = getStriker(live);
             const activeB = live.batsmen[activeBatsman];
             if (activeB) {
                 activeB.runs += runs;
@@ -120,7 +118,16 @@ export function reducer(state: GameState, action: Action): GameState {
                     bowler.balls++;
                 }
             }
+
+            const activeBatsman = getStriker(live);
+            const activeB = live.batsmen[activeBatsman];
+            if (activeB) {
+                activeB.balls++;
+            }
+
             live.overLog.push('lb1');
+
+            rotateStrike(live);
 
             checkMatchOver(nextState) || checkOverComplete(nextState);
             break;
@@ -128,12 +135,11 @@ export function reducer(state: GameState, action: Action): GameState {
 
         case 'ADD_WICKET': {
             const live = nextState.match.liveInnings;
-            const activeBatsmanName = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
-                ? live.currentBatsman1
-                : (live.currentBatsman2 || '');
+            const activeBatsmanName = getStriker(live);
             const activeB = live.batsmen[activeBatsmanName];
             if (activeB) {
                 activeB.balls++;
+                activeB.active = false;
             }
 
             live.wickets++;
@@ -148,6 +154,13 @@ export function reducer(state: GameState, action: Action): GameState {
             }
             live.overLog.push('W');
 
+            live.outBatsmen.push(activeBatsmanName);
+            if (live.currentBatsman1 === activeBatsmanName) {
+                live.currentBatsman1 = "";
+            } else {
+                live.currentBatsman2 = "";
+            }
+
             const battingTeam = nextState.match.currentBattingTeam === 1 ? nextState.match.team1 : nextState.match.team2;
             const totalPlayers = battingTeam.players.length;
             const maxWickets = nextState.settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
@@ -155,13 +168,6 @@ export function reducer(state: GameState, action: Action): GameState {
             if (live.wickets >= maxWickets && totalPlayers > 0) {
                 handleAllOut(nextState);
                 break;
-            }
-
-            live.outBatsmen.push(activeBatsmanName);
-            if (live.currentBatsman1 === activeBatsmanName) {
-                live.currentBatsman1 = "";
-            } else {
-                live.currentBatsman2 = "";
             }
 
             enforceSingleBatsmanRule(nextState, battingTeam, totalPlayers);
@@ -172,9 +178,7 @@ export function reducer(state: GameState, action: Action): GameState {
         case 'FINALIZE_DELIVERY': {
             const { type, extraRuns, accrueTo, pendingRunOutStriker } = action.payload;
             const live = nextState.match.liveInnings;
-            const striker = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
-                ? live.currentBatsman1
-                : (live.currentBatsman2 || '');
+            const striker = getStriker(live);
             const activeB = live.batsmen[striker];
             const bowler = live.currentBowler ? live.bowlers[live.currentBowler] : null;
 
@@ -223,7 +227,6 @@ export function reducer(state: GameState, action: Action): GameState {
                 if (bowler) bowler.balls++;
                 if (activeB) activeB.balls++;
                 live.overLog.push(`${totalByes}b`);
-                checkOverComplete(nextState);
             }
 
             let physicalRuns = extraRuns;
@@ -234,20 +237,14 @@ export function reducer(state: GameState, action: Action): GameState {
                 rotateStrike(live);
             }
 
-            checkMatchOver(nextState);
+            checkMatchOver(nextState) || (type === 'bye' && checkOverComplete(nextState));
             break;
         }
 
         case 'CHANGE_BATSMAN': {
             const { slot, name } = action.payload;
             const live = nextState.match.liveInnings;
-            if (slot === 1) {
-                live.currentBatsman1 = name;
-                initBatsmanStats(live, name, true);
-            } else {
-                live.currentBatsman2 = name;
-                initBatsmanStats(live, name, false);
-            }
+            assignBatsmanToSlot(live, slot, name);
             break;
         }
 
@@ -332,16 +329,65 @@ export function reducer(state: GameState, action: Action): GameState {
     return nextState;
 }
 
+function getStriker(live: LiveInnings): string {
+    if (live.currentBatsman1 && live.currentBatsman2) {
+        const b1Active = !!live.batsmen[live.currentBatsman1]?.active;
+        const b2Active = !!live.batsmen[live.currentBatsman2]?.active;
+        if (b1Active && !b2Active) return live.currentBatsman1;
+        if (!b1Active && b2Active) return live.currentBatsman2;
+        // Repair corrupted state: make batsman1 active and batsman2 inactive
+        if (live.batsmen[live.currentBatsman1]) live.batsmen[live.currentBatsman1].active = true;
+        if (live.batsmen[live.currentBatsman2]) live.batsmen[live.currentBatsman2].active = false;
+        return live.currentBatsman1;
+    }
+    if (live.currentBatsman1) {
+        if (live.batsmen[live.currentBatsman1]) live.batsmen[live.currentBatsman1].active = true;
+        return live.currentBatsman1;
+    }
+    if (live.currentBatsman2) {
+        if (live.batsmen[live.currentBatsman2]) live.batsmen[live.currentBatsman2].active = true;
+        return live.currentBatsman2;
+    }
+    return '';
+}
+
 function rotateStrike(live: LiveInnings): void {
     if (live.currentBatsman1 && live.currentBatsman2 && live.batsmen[live.currentBatsman1] && live.batsmen[live.currentBatsman2]) {
-        live.batsmen[live.currentBatsman1].active = !live.batsmen[live.currentBatsman1].active;
-        live.batsmen[live.currentBatsman2].active = !live.batsmen[live.currentBatsman2].active;
+        const b1Active = !!live.batsmen[live.currentBatsman1].active;
+        const b2Active = !!live.batsmen[live.currentBatsman2].active;
+        if (b1Active === b2Active) {
+            // Repair corrupted state: toggle cleanly
+            live.batsmen[live.currentBatsman1].active = false;
+            live.batsmen[live.currentBatsman2].active = true;
+        } else {
+            live.batsmen[live.currentBatsman1].active = !b1Active;
+            live.batsmen[live.currentBatsman2].active = !b2Active;
+        }
+    } else if (live.currentBatsman1 && live.batsmen[live.currentBatsman1]) {
+        live.batsmen[live.currentBatsman1].active = true;
+    } else if (live.currentBatsman2 && live.batsmen[live.currentBatsman2]) {
+        live.batsmen[live.currentBatsman2].active = true;
     }
 }
 
-function initBatsmanStats(live: LiveInnings, name: string, active: boolean): void {
-    if (name && !live.batsmen[name]) {
-        live.batsmen[name] = { runs: 0, balls: 0, active: active };
+function assignBatsmanToSlot(live: LiveInnings, slot: 1 | 2, name: string): void {
+    if (!name) return;
+    if (slot === 1) {
+        live.currentBatsman1 = name;
+    } else {
+        live.currentBatsman2 = name;
+    }
+
+    const otherSlotName = slot === 1 ? live.currentBatsman2 : live.currentBatsman1;
+    let isActive = true;
+    if (otherSlotName && live.batsmen[otherSlotName]) {
+        isActive = !live.batsmen[otherSlotName].active;
+    }
+
+    if (!live.batsmen[name]) {
+        live.batsmen[name] = { runs: 0, balls: 0, active: isActive };
+    } else {
+        live.batsmen[name].active = isActive;
     }
 }
 
@@ -493,9 +539,7 @@ function enforceSingleBatsmanRule(nextState: GameState, battingTeam: Team, total
 
 function executeRunOutWicket(nextState: GameState, isStriker: boolean, extraRuns: number, accrueTo: string): void {
     const live = nextState.match.liveInnings;
-    const striker = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
-        ? live.currentBatsman1
-        : (live.currentBatsman2 || '');
+    const striker = getStriker(live);
     const nonStriker = striker === live.currentBatsman1 ? live.currentBatsman2 : live.currentBatsman1;
     const outBatsmanName = isStriker ? striker : nonStriker;
 
@@ -522,6 +566,16 @@ function executeRunOutWicket(nextState: GameState, isStriker: boolean, extraRuns
     }
     live.overLog.push(logStr);
 
+    if (outB) {
+        outB.active = false;
+    }
+    live.outBatsmen.push(outBatsmanName);
+    if (live.currentBatsman1 === outBatsmanName) {
+        live.currentBatsman1 = "";
+    } else {
+        live.currentBatsman2 = "";
+    }
+
     const battingTeam = nextState.match.currentBattingTeam === 1 ? nextState.match.team1 : nextState.match.team2;
     const totalPlayers = battingTeam.players.length;
     const maxWickets = nextState.settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
@@ -531,11 +585,14 @@ function executeRunOutWicket(nextState: GameState, isStriker: boolean, extraRuns
         return;
     }
 
-    live.outBatsmen.push(outBatsmanName);
-    if (live.currentBatsman1 === outBatsmanName) {
-        live.currentBatsman1 = "";
-    } else {
-        live.currentBatsman2 = "";
+    // Handle strike change for surviving batsman based on physical runs completed before run out
+    const survivingBatsman = live.currentBatsman1 || live.currentBatsman2;
+    if (survivingBatsman && live.batsmen[survivingBatsman]) {
+        if (extraRuns % 2 !== 0) {
+            live.batsmen[survivingBatsman].active = isStriker;
+        } else {
+            live.batsmen[survivingBatsman].active = !isStriker;
+        }
     }
 
     enforceSingleBatsmanRule(nextState, battingTeam, totalPlayers);
@@ -555,16 +612,14 @@ function autoSelectEligiblePlayers(nextState: GameState): void {
     if (!live.currentBatsman1) {
         const candidates = eligibleBatsmen.filter(p => p !== live.currentBatsman2);
         if (candidates.length === 1) {
-            live.currentBatsman1 = candidates[0];
-            initBatsmanStats(live, candidates[0], true);
+            assignBatsmanToSlot(live, 1, candidates[0]);
         }
     }
 
     if (!live.currentBatsman2 && (live.wickets < battingTeam.players.length - 1 || !nextState.settings.allowSingleBatsman)) {
         const candidates = eligibleBatsmen.filter(p => p !== live.currentBatsman1);
         if (candidates.length === 1) {
-            live.currentBatsman2 = candidates[0];
-            initBatsmanStats(live, candidates[0], false);
+            assignBatsmanToSlot(live, 2, candidates[0]);
         }
     }
 
