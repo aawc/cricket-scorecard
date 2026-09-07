@@ -1,6 +1,7 @@
 import { gameState, dispatch, setGameState } from './state.js';
 import { saveState, loadState, generatePermalink, clearState } from './storage.js';
 import { GameState, LiveInnings, Team } from './types.js';
+import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl } from './feedback.js';
 
 // DOM Elements
 const settingsSection = document.getElementById('settings-section') as HTMLElement | null;
@@ -12,6 +13,8 @@ const confirmEndInningsBtn = document.getElementById('confirm-end-innings-btn') 
 const resetMatchBtn = document.getElementById('reset-match-btn') as HTMLButtonElement | null;
 const exitScreenshotModeBtn = document.getElementById('exit-screenshot-mode-btn') as HTMLButtonElement | null;
 const shareMatchBtn = document.getElementById('share-match-btn') as HTMLButtonElement | null;
+const feedbackBtn = document.getElementById('feedback-btn') as HTMLButtonElement | null;
+const footerFeedbackLink = document.getElementById('footer-feedback-link') as HTMLButtonElement | null;
 const copySummaryTextBtn = document.getElementById('copy-summary-text-btn') as HTMLButtonElement | null;
 const themeBtns = document.querySelectorAll('.theme-btn') as NodeListOf<HTMLButtonElement>;
 
@@ -69,8 +72,17 @@ let runoutModalInstance: any = null;
 let extraRunsModalInstance: any = null;
 let tossModalInstance: any = null;
 let endInningsModalInstance: any = null;
+let feedbackModalInstance: any = null;
 let alertModalInstance: any = null;
 let alertCallback: (() => void) | null = null;
+
+const feedbackModalEl = document.getElementById('feedbackModal') as HTMLElement | null;
+const feedbackTextInput = document.getElementById('feedback-text') as HTMLTextAreaElement | null;
+const feedbackIncludeStateInput = document.getElementById('feedback-include-state') as HTMLInputElement | null;
+const feedbackPreviewEl = document.getElementById('feedback-preview') as HTMLElement | null;
+const feedbackToastEl = document.getElementById('feedback-toast') as HTMLElement | null;
+const copyFeedbackReportBtn = document.getElementById('copy-feedback-report-btn') as HTMLButtonElement | null;
+const openGithubIssueBtn = document.getElementById('open-github-issue-btn') as HTMLButtonElement | null;
 
 let currentDeliveryType: string | null = null;
 let selectedExtraRuns = 0;
@@ -118,6 +130,15 @@ function setupEventListeners(): void {
     if (resetMatchBtn) resetMatchBtn.addEventListener('click', resetMatch);
     if (shareMatchBtn) shareMatchBtn.addEventListener('click', shareMatch);
     if (copySummaryTextBtn) copySummaryTextBtn.addEventListener('click', copyTextScorecard);
+    if (feedbackBtn) feedbackBtn.addEventListener('click', triggerFeedbackModal);
+    if (footerFeedbackLink) footerFeedbackLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        triggerFeedbackModal();
+    });
+    if (feedbackTextInput) feedbackTextInput.addEventListener('input', updateFeedbackPreview);
+    if (feedbackIncludeStateInput) feedbackIncludeStateInput.addEventListener('change', updateFeedbackPreview);
+    if (copyFeedbackReportBtn) copyFeedbackReportBtn.addEventListener('click', handleCopyFeedbackReport);
+    if (openGithubIssueBtn) openGithubIssueBtn.addEventListener('click', handleOpenGithubIssue);
 
     if (team1AddBtn) team1AddBtn.addEventListener('click', () => handleQuickAdd(1));
     if (team2AddBtn) team2AddBtn.addEventListener('click', () => handleQuickAdd(2));
@@ -1062,6 +1083,65 @@ export function copyTextScorecard(): void {
         console.error("Failed to copy summary text:", err);
         showAlert(text, "Scorecard Text");
     });
+}
+
+export function triggerFeedbackModal(): void {
+    if (feedbackToastEl) feedbackToastEl.classList.add('d-none');
+    updateFeedbackPreview();
+
+    if (typeof bootstrap !== 'undefined' && feedbackModalEl) {
+        if (!feedbackModalInstance) {
+            feedbackModalInstance = new bootstrap.Modal(feedbackModalEl);
+        }
+        feedbackModalInstance.show();
+    }
+}
+
+export function updateFeedbackPreview(): void {
+    if (!feedbackPreviewEl) return;
+    const userFeedback = feedbackTextInput ? feedbackTextInput.value : '';
+    const includeState = feedbackIncludeStateInput ? feedbackIncludeStateInput.checked : true;
+    const markdown = generateBugReportMarkdown({
+        userFeedback,
+        includeState,
+        appVersion: 'v20260907-003'
+    });
+    feedbackPreviewEl.textContent = markdown;
+}
+
+export async function handleCopyFeedbackReport(): Promise<void> {
+    const userFeedback = feedbackTextInput ? feedbackTextInput.value : '';
+    const includeState = feedbackIncludeStateInput ? feedbackIncludeStateInput.checked : true;
+    const markdown = generateBugReportMarkdown({
+        userFeedback,
+        includeState,
+        appVersion: 'v20260907-003'
+    });
+
+    const success = await copyBugReportToClipboard(markdown);
+    if (success) {
+        if (feedbackToastEl) {
+            feedbackToastEl.classList.remove('d-none');
+        }
+    } else {
+        showAlert(markdown, "Bug Report Markdown");
+    }
+}
+
+export function handleOpenGithubIssue(): void {
+    const userFeedback = feedbackTextInput ? feedbackTextInput.value : '';
+    const includeState = feedbackIncludeStateInput ? feedbackIncludeStateInput.checked : true;
+    const markdown = generateBugReportMarkdown({
+        userFeedback,
+        includeState,
+        appVersion: 'v20260907-003'
+    });
+
+    const title = userFeedback ? `Bug: ${userFeedback.substring(0, 50)}...` : undefined;
+    const url = getGitHubIssueUrl(markdown, title);
+    if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+    }
 }
 
 export function processRunOut(isStriker: boolean): void {

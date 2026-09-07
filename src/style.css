@@ -225,3 +225,22 @@ body.screenshot-mode #app-container {
     border-top: 1px solid var(--bs-border-color);
 }
 
+/* Feedback & Diagnostic Preview */
+#feedback-preview {
+    user-select: text;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid var(--bs-border-color);
+    background-color: rgba(0, 0, 0, 0.03);
+}
+
+[data-bs-theme="dark"] #feedback-preview {
+    background-color: #1e1e1e !important;
+    color: #f8f9fa !important;
+}
+
+[data-bs-theme="green"] #feedback-preview {
+    background-color: #1b4d3e !important;
+    color: #e8f5e9 !important;
+}
+

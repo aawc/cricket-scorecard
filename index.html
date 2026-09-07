@@ -21,6 +21,7 @@
                 <button id="end-innings-btn" class="btn btn-outline-warning btn-sm">End Innings</button>
                 <button id="reset-match-btn" class="btn btn-outline-danger btn-sm">Reset</button>
                 <button id="share-match-btn" class="btn btn-outline-success btn-sm">Share</button>
+                <button id="feedback-btn" class="btn btn-outline-info btn-sm">Feedback / Bug</button>
                 <div class="btn-group" role="group">
                     <button id="theme-dropdown" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                         Theme
@@ -312,10 +313,65 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Feedback & Bug Report Modal -->
+            <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="feedbackModalLabel">Feedback & Bug Report</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="small text-muted mb-2">
+                                Describe the issue or feedback below. Current match state and diagnostic logs are automatically generated for reproduction.
+                            </p>
+                            <div class="mb-3">
+                                <label for="feedback-text" class="form-label fw-bold small">Description / What happened:</label>
+                                <textarea id="feedback-text" class="form-control" rows="4" placeholder="e.g. Batsman strike swapped unexpectedly after a run out on ball 4, or bowler maiden count was incorrect..."></textarea>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input type="checkbox" id="feedback-include-state" class="form-check-input" checked>
+                                <label for="feedback-include-state" class="form-check-label small">Include match state & diagnostic logs (recommended for reproduction)</label>
+                            </div>
+                            <div class="accordion mb-3" id="diagnosticAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="diagnosticHeading">
+                                        <button class="accordion-button collapsed py-2 small" type="button" data-bs-toggle="collapse" data-bs-target="#diagnosticCollapse" aria-expanded="false" aria-controls="diagnosticCollapse">
+                                            Preview Generated Diagnostic Report
+                                        </button>
+                                    </h2>
+                                    <div id="diagnosticCollapse" class="accordion-collapse collapse" aria-labelledby="diagnosticHeading" data-bs-parent="#diagnosticAccordion">
+                                        <div class="accordion-body p-2">
+                                            <pre id="feedback-preview" class="bg-light p-2 rounded small text-dark mb-0 font-monospace" style="max-height: 220px; overflow-y: auto; font-size: 0.78rem;"></pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="feedback-toast" class="alert alert-success d-none py-2 px-3 small mb-0" role="alert">
+                                <strong>✓ Copied!</strong> Bug report copied to clipboard. You can paste it directly into the chat with the developer.
+                            </div>
+                        </div>
+                        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
+                            <div>
+                                <button type="button" id="open-github-issue-btn" class="btn btn-outline-dark btn-sm">
+                                    🐛 Open GitHub Issue
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                <button type="button" id="copy-feedback-report-btn" class="btn btn-primary btn-sm">
+                                    📋 Copy Bug Report to Clipboard
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <footer class="text-center text-muted mt-auto py-2 border-top">
-            <small>Version: v20260907-002 | Deployed: 2026-09-07 02:00</small>
+            <small>Version: v20260907-003 | Deployed: 2026-09-07 02:45 | <button id="footer-feedback-link" class="btn btn-link btn-sm text-muted p-0 text-decoration-underline align-baseline" style="font-size: inherit;">Report Issue / Feedback</button></small>
             <div class="mt-1">
                 <small>🚀 Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with ✨ Gemini</small>
             </div>
