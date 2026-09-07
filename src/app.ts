@@ -1,4 +1,8 @@
 import { initUI } from './ui.js';
+import { initGlobalErrorListeners } from './feedback.js';
+
+// Initialize global runtime error monitoring
+initGlobalErrorListeners();
 
 // Initialize the application
 initUI();
