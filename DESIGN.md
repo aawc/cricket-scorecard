@@ -262,7 +262,7 @@ To track history and progress, the following major refactorings have been succes
     *   Fixed 6th-ball bye delivery pipeline to rotate physical runs before checking over completion.
     *   Fixed run out delivery pipeline to rotate strike for surviving batsman when odd extra runs are completed before dismissal.
     *   Fixed dismissal ordering in `ADD_WICKET` and `executeRunOutWicket` to record the out batsman in `outBatsmen` prior to all-out innings termination.
-    *   Fixed winning margin calculations in [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L600) for Single Batsman play.
+    *   Fixed winning margin calculations in [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L621) for Single Batsman play.
     *   Added automated unit tests 35-41 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1000-L1205).
 
 5.  **Cricket Scoring Domain Enhancements & Accessibility**:
@@ -273,8 +273,15 @@ To track history and progress, the following major refactorings have been succes
     *   Separated bowler conceded runs from fielding byes on No-Balls (Law 21.18).
     *   Added early declaration / forfeit / force end innings support (`FORCE_END_INNINGS`).
     *   Enforced red-green color blindness accessibility with double encoding (solid border + background tint + `[STRIKER]` badge text).
-    *   Added Plaintext Scorecard generator ([`generateTextSummary`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1001)) with one-click clipboard copying.
+    *   Added Plaintext Scorecard generator ([`generateTextSummary`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1018)) with one-click clipboard copying.
     *   Added automated unit tests 42-50 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1206-L1499).
+
+6.  **User Feedback & Diagnostic Bug Reporting Mechanism**:
+    *   Implemented an in-memory runtime error ring buffer ([`recordRuntimeError`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L20-L64)) listening to `window.error` and `window.unhandledrejection`.
+    *   Added structured Markdown diagnostic report generator ([`generateBugReportMarkdown`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L106-L239)) that compiles user descriptions, match state figures (active striker/non-striker, bowler maidens/econ, FOW, extras), minified state JSON, and LZString permalink.
+    *   Added interactive modal dialog (`#feedbackModal`) with real-time diagnostic preview accordion, one-click clipboard copy ([`copyBugReportToClipboard`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L244-L275)), and pre-filled GitHub issue URL builder ([`getGitHubIssueUrl`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L280-L293)).
+    *   Added header "Feedback / Bug" button and footer shortcut in [`index.html:L24`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L24) and [`src/ui.ts:L1088-L1145`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1088-L1145).
+    *   Added automated unit tests 51-53 in [`test/test_cases.ts:L1500-L1625`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1500-L1625).
 
 ---
 

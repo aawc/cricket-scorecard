@@ -6,13 +6,14 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-Fully functional and verified. Advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, and WCAG/colorblind accessibility improvements implemented. All 50 automated tests passing.
+Fully functional and verified. Advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, and WCAG/colorblind accessibility improvements implemented. All 53 automated tests passing.
 
 ## Features (Implemented)
 
 - Modular Architecture: Code deconstructed into clean ES6 modules (`src/` directory) separating state, rules calculation, persistence, and DOM rendering.
 - Formal State Machine: Centralized match phase flow (SETUP, TOSS, PLAYING_INNINGS, INNINGS_BREAK, MATCH_OVER) governed by a deterministic reducer inside `src/reducer.ts`.
 - Score tracking: Complete ball-by-ball tallying (Runs, Wickets, Overs, Wides, No Balls, Byes, Leg Byes), with Byes counting towards batsman balls faced.
+- Feedback & Diagnostic Bug Reporting: Dedicated "Feedback / Bug" modal generating comprehensive Markdown bug reports with user description, complete match state (striker/non-striker figures, bowler maidens/econ, FOW, extras), minified state JSON, LZString permalink, and captured runtime errors for instant reproduction.
 - Boundary Tracking: Independent tracking of boundaries (4s and 6s) for each batsman, calculated in batting statistics, strike rates, and scorecard tables.
 - Maiden Overs Calculation: Bowlers are automatically credited with a maiden over when completing a 6-ball legal over conceding 0 bowler runs (byes and leg-byes do not break a maiden).
 - Fall of Wickets (FOW): Complete chronological tracking and display of each dismissal (Score, Wicket Number, Batsman Out, Over and Ball).
