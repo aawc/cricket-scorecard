@@ -1,18 +1,18 @@
-# Task List - TypeScript Migration
+# Task List - Batsman Strike Synchronization & Scorecard Bug Fixes
 
-- [x] Create package.json and configure dependencies (typescript, vite, ts-node)
-- [x] Install package dependencies locally (bypassing custom proxy to public npm registry)
-- [x] Configure root `tsconfig.json` (strict checking for `src/`)
-- [x] Configure `test/tsconfig.json` (relaxed checking for dynamic DOM tests)
-- [x] Configure `vite.config.js` for bundling assets
-- [x] Rename source and test files from `.js` to `.ts` via `git mv`
-- [x] Define global/app interfaces and reducer action unions in `src/types.ts`
-- [x] Add TypeScript annotations to state coordinations, reducer state transitions, and DOM binders
-- [x] Move static PWA assets (manifest, sw.js, icons) to `public/` directory
-- [x] Update entry script and stylesheet import paths in `index.html`
-- [x] Fix global `navigator` overrides and add missing type declarations in `test/test.ts` and `test/test_cases.ts`
-- [x] Implement post-build asset compiler `scripts/build-sw.js` to automatically cache compiled chunks in `sw.js`
-- [x] Run unit tests and verify all 34 assertions pass cleanly
-- [x] Execute production build and assert that compilation is error-free
-- [x] Update `DESIGN.md` "Completed Improvements" list
-- [ ] Propose commit description, get approval, and commit
+- [x] Create feature branch `fix-batsman-strike-and-scorecard-bugs`
+- [x] Add reproduction tests 35-41 in `test/test_cases.ts` for dual-active batsmen, leg byes, bye 6th-ball ordering, and single batsman status
+- [x] Verify red state failure on reproduction test suite
+- [x] Fix batsman active state management (`assignBatsmanToSlot` and `getStriker`) in `src/reducer.ts`
+- [x] Fix leg bye balls faced increment and strike rotation in `src/reducer.ts`
+- [x] Fix 6th-ball bye delivery pipeline ordering in `src/reducer.ts`
+- [x] Fix run out odd extra runs strike rotation in `src/reducer.ts`
+- [x] Fix all-out dismissal recording in `src/reducer.ts`
+- [x] Fix Single Batsman mode winning margin text calculation in `src/ui.ts`
+- [x] Update version in `index.html` footer to `v20260907-001` and cache name in `public/sw.js`
+- [x] Run unit tests and verify all 41 test assertions pass cleanly (`npm test`)
+- [x] Run TypeScript type checking (`tsc --noEmit`)
+- [x] Create comprehensive in-repo audit report `BUG_REPORT.md`
+- [x] Synchronize `DESIGN.md`, `PROMPT.md`, `README.md`, and `task.md`
+- [ ] Run independent subagent code review and pre-commit symbol verification
+- [ ] Propose structured commit descriptions and obtain user approval prior to executing git commit

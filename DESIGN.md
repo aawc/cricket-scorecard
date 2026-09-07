@@ -134,11 +134,12 @@ flowchart TD
 #### Detailed Delivery Processing
 -   **Wides**: 1 penalty run + extra runs. Does not count as a ball faced or bowled. Extra runs can accrue to byes or batsman (if hit).
 -   **No Balls**: 1 penalty run + extra runs. Counts as ball faced for batsman, but not bowler. Extra runs accrue to batsman or byes.
--   **Byes**: Base 1 run + extra runs. Counts as ball faced and bowler ball, but runs do not accrue to batsman.
--   **Leg Byes**: 1 run. Counts as ball faced and bowler ball. Disabled if `enableLegByes` is false.
--   **Wickets**: Standard dismissal. Increments batsman balls faced.
--   **Run Outs**: Wicket + optional extra runs. Striker's balls faced is incremented regardless of who is run out.
--   **Over Completion**: When 6 balls are bowled, the over is pushed to the `overs` array and `overLog` is cleared. If the innings ends mid-over (all out or target reached), the incomplete over is also saved to `overs` upon transition.
+-   **Byes**: Base 1 run + extra runs. Counts as ball faced and bowler ball, but runs do not accrue to batsman. Strike rotates on odd physical runs (1 + extraRuns) prior to evaluating over completion.
+-   **Leg Byes**: 1 run. Counts as ball faced for active striker and bowler ball. Strike rotates on 1 run. Disabled if `enableLegByes` is false.
+-   **Wickets**: Standard dismissal. Increments batsman balls faced, marks out batsman inactive, and appends to `outBatsmen` prior to checking all-out transitions.
+-   **Run Outs**: Wicket + optional extra runs. Striker's balls faced is incremented regardless of who is run out. If odd runs were completed before the run out, strike switches for the surviving batsman to reflect crossed ends.
+-   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L373) and [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332). Contextually assigns `active = !otherSlotBatsman.active` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field.
+-   **Over Completion**: When 6 balls are bowled, the over is pushed to the `overs` array, `overLog` is cleared, and strike is rotated for the new over. If the innings ends mid-over (all out or target reached), the incomplete over is saved to `overs` upon transition.
 
 ### 4.3. Innings & Match Transitions
 -   **End of Innings 1**: Triggered when all batsmen are out or max overs are bowled.
@@ -250,6 +251,15 @@ To track history and progress, the following major refactorings have been succes
     *   Integrated Vite bundler for hot-reloading development and minified production builds under `dist/`.
     *   Configured Node.js unit tests to execute directly on TypeScript modules via `ts-node/esm` loaders.
     *   Implemented a post-build asset crawler to dynamically inject hashed production bundles into the PWA Service Worker offline cache.
+
+4.  **Batsman Strike Synchronization & Scorecard Accuracy Fixes**:
+    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L373)) and robust striker resolution ([`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332)), eliminating dual-active and dual-inactive states.
+    *   Fixed leg bye delivery handling to increment active striker balls faced and rotate strike on odd runs.
+    *   Fixed 6th-ball bye delivery pipeline to rotate physical runs before checking over completion.
+    *   Fixed run out delivery pipeline to rotate strike for surviving batsman when odd extra runs are completed before dismissal.
+    *   Fixed dismissal ordering in `ADD_WICKET` and `executeRunOutWicket` to record the out batsman in `outBatsmen` prior to all-out innings termination.
+    *   Fixed winning margin calculations in [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L580) for Single Batsman play.
+    *   Added automated unit tests 35-41 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L997-L1205).
 
 ---
 
