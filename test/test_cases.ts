@@ -21,6 +21,9 @@ declare function unminifyState(min: any): any;
 declare function healInningsOvers(inn: any): void;
 declare function generateSummaryView(): void;
 declare function loadFromLocalStorage(): void;
+declare function generateTextSummary(): string;
+declare function executeEndInnings(): void;
+declare function dispatch(action: any): void;
 
 const doc = document as any;
 
@@ -49,12 +52,13 @@ function resetTestState() {
             balls: 0,
             extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
             batsmen: {
-                "P1": { runs: 0, balls: 0, active: true },
-                "P2": { runs: 0, balls: 0, active: false }
+                "P1": { runs: 0, balls: 0, fours: 0, sixes: 0, active: true },
+                "P2": { runs: 0, balls: 0, fours: 0, sixes: 0, active: false }
             },
             bowlers: {
-                "B1": { runs: 0, balls: 0, wickets: 0 }
+                "B1": { runs: 0, balls: 0, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
             },
+            fow: [],
             currentBatsman1: "P1",
             currentBatsman2: "P2",
             currentBowler: "B1",
@@ -1198,6 +1202,298 @@ updateUI();
 const matchStatusText = doc.getElementById('match-status').textContent;
 if (!matchStatusText.includes("won by 2 wickets")) {
     console.error(`Test 41 Failed (Bug 5): Expected 'won by 2 wickets', got: '${matchStatusText}'`);
+    process.exit(1);
+}
+
+// Test 42: Batsman 4s and 6s boundary counters and Strike Rate calculation
+console.log("Running Test 42...");
+resetTestState();
+// Striker P1 scores a four
+addRuns(4);
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 4 || gameState.match.liveInnings.batsmen["P1"].fours !== 1 || gameState.match.liveInnings.batsmen["P1"].sixes !== 0) {
+    console.error(`Test 42 Failed: Expected 4 runs, 1 four, 0 sixes for P1, got runs=${gameState.match.liveInnings.batsmen["P1"].runs}, 4s=${gameState.match.liveInnings.batsmen["P1"].fours}, 6s=${gameState.match.liveInnings.batsmen["P1"].sixes}`);
+    process.exit(1);
+}
+// Striker P1 scores a six
+addRuns(6);
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 10 || gameState.match.liveInnings.batsmen["P1"].fours !== 1 || gameState.match.liveInnings.batsmen["P1"].sixes !== 1) {
+    console.error(`Test 42 Failed: Expected 10 runs, 1 four, 1 six for P1, got runs=${gameState.match.liveInnings.batsmen["P1"].runs}, 4s=${gameState.match.liveInnings.batsmen["P1"].fours}, 6s=${gameState.match.liveInnings.batsmen["P1"].sixes}`);
+    process.exit(1);
+}
+// Striker P1 hits a 4 off a no-ball (extraRuns = 4, accrueTo = 'batsman')
+finalizeDelivery('noball', 4, 'batsman');
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 14 || gameState.match.liveInnings.batsmen["P1"].fours !== 2 || gameState.match.liveInnings.batsmen["P1"].sixes !== 1) {
+    console.error(`Test 42 Failed: Expected 14 runs, 2 fours, 1 six for P1 after no-ball 4, got runs=${gameState.match.liveInnings.batsmen["P1"].runs}, 4s=${gameState.match.liveInnings.batsmen["P1"].fours}, 6s=${gameState.match.liveInnings.batsmen["P1"].sixes}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P2"].fours !== 0 || gameState.match.liveInnings.batsmen["P2"].sixes !== 0) {
+    console.error("Test 42 Failed: P2 boundary counters should remain 0");
+    process.exit(1);
+}
+
+// Test 43: Bowler maiden over calculation on 6 dot balls & on byes/leg-byes
+console.log("Running Test 43...");
+resetTestState();
+// Over 1: B1 bowls 6 dot balls
+for (let i = 0; i < 6; i++) {
+    addRuns(0);
+}
+if (gameState.match.liveInnings.bowlers["B1"].maidens !== 1 || gameState.match.liveInnings.bowlers["B1"].runs !== 0) {
+    console.error(`Test 43 Failed: B1 should have 1 maiden over and 0 runs conceded, got maidens=${gameState.match.liveInnings.bowlers["B1"].maidens}, runs=${gameState.match.liveInnings.bowlers["B1"].runs}`);
+    process.exit(1);
+}
+
+// Select bowler B2 for Over 2
+handleBowlerChange("B2");
+// Over 2: B2 bowls 6 deliveries where batsmen run byes (byes do not charge the bowler)
+for (let i = 0; i < 6; i++) {
+    finalizeDelivery('bye', 0, 'byes');
+}
+if (gameState.match.liveInnings.bowlers["B2"].maidens !== 1 || gameState.match.liveInnings.bowlers["B2"].runs !== 0) {
+    console.error(`Test 43 Failed: B2 should have 1 maiden over (byes do not count against bowler runs), got maidens=${gameState.match.liveInnings.bowlers["B2"].maidens}, runs=${gameState.match.liveInnings.bowlers["B2"].runs}`);
+    process.exit(1);
+}
+
+// Test 44: Maiden over broken when bowler concedes runs
+console.log("Running Test 44...");
+resetTestState();
+// B1 bowls 5 dot balls
+for (let i = 0; i < 5; i++) {
+    addRuns(0);
+}
+// Ball 6: Wide ball (concedes 1 run)
+finalizeDelivery('wide', 0, 'byes');
+// Ball 6 (re-bowled): Dot ball
+addRuns(0);
+
+if (gameState.match.liveInnings.bowlers["B1"].maidens !== 0 || gameState.match.liveInnings.bowlers["B1"].runs !== 1) {
+    console.error(`Test 44 Failed: B1 conceded a wide so maidens should be 0, got maidens=${gameState.match.liveInnings.bowlers["B1"].maidens}, runs=${gameState.match.liveInnings.bowlers["B1"].runs}`);
+    process.exit(1);
+}
+
+// Test 45: Fall of Wickets (FOW) recording on standard wicket and run out
+console.log("Running Test 45...");
+resetTestState();
+gameState.settings.allowSingleBatsman = false;
+gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+
+// P1 scores 10 runs off 3 balls
+addRuns(4);
+addRuns(6);
+addRuns(0);
+
+// Ball 4: P1 gets out (score is 10/1, ball is 0.4)
+addWicket();
+
+if (!gameState.match.liveInnings.fow || gameState.match.liveInnings.fow.length !== 1) {
+    console.error(`Test 45 Failed: Expected 1 FOW entry, got ${gameState.match.liveInnings.fow ? gameState.match.liveInnings.fow.length : 0}`);
+    process.exit(1);
+}
+const fow1 = gameState.match.liveInnings.fow[0];
+if (fow1.wicket !== 1 || fow1.score !== 10 || fow1.batsman !== "P1" || fow1.overs !== "0.4") {
+    console.error(`Test 45 Failed: FOW 1 mismatch: got ${JSON.stringify(fow1)}`);
+    process.exit(1);
+}
+
+// Replace slot 1 with P3 (incoming batsman takes strike replacing striker P1)
+handleBatsmanChange(1, "P3");
+
+// P3 scores 2 runs on ball 5 (score: 12)
+addRuns(2);
+
+// Ball 6: Non-striker P2 is run out without completing a run (score: 12/2, ball is 1.0)
+(global as any).mockExtraRuns = 0;
+(global as any).mockAccrueTo = 'batsman';
+processRunOut(false); // Non-striker run out
+
+if (gameState.match.liveInnings.fow.length !== 2) {
+    console.error(`Test 45 Failed: Expected 2 FOW entries, got ${gameState.match.liveInnings.fow.length}`);
+    process.exit(1);
+}
+const fow2 = gameState.match.liveInnings.fow[1];
+if (fow2.wicket !== 2 || fow2.score !== 12 || fow2.batsman !== "P2" || fow2.overs !== "1.0") {
+    console.error(`Test 45 Failed: FOW 2 mismatch: got ${JSON.stringify(fow2)}`);
+    process.exit(1);
+}
+
+// Test 46: Multi-run leg byes
+console.log("Running Test 46...");
+resetTestState();
+gameState.settings.enableLegByes = true;
+
+// Striker P1 faces 2 leg byes (type='legbye', extraRuns=1, accrueTo='byes' => 1+1 = 2 leg byes)
+finalizeDelivery('legbye', 1, 'byes');
+
+if (gameState.match.liveInnings.score !== 2 || gameState.match.liveInnings.extras.legbyes !== 2) {
+    console.error(`Test 46 Failed: Expected score=2 and legbyes=2, got score=${gameState.match.liveInnings.score}, legbyes=${gameState.match.liveInnings.extras.legbyes}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].balls !== 1 || gameState.match.liveInnings.batsmen["P1"].runs !== 0) {
+    console.error("Test 46 Failed: P1 balls faced should be 1 and runs 0 on leg byes");
+    process.exit(1);
+}
+// Even runs -> strike does not rotate
+if (!gameState.match.liveInnings.batsmen["P1"].active || gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 46 Failed: P1 should remain on strike after 2 leg byes");
+    process.exit(1);
+}
+
+// Next delivery: 3 leg byes (extraRuns=2)
+finalizeDelivery('legbye', 2, 'byes');
+
+if (gameState.match.liveInnings.score !== 5 || gameState.match.liveInnings.extras.legbyes !== 5) {
+    console.error(`Test 46 Failed: Expected score=5 and legbyes=5, got score=${gameState.match.liveInnings.score}, legbyes=${gameState.match.liveInnings.extras.legbyes}`);
+    process.exit(1);
+}
+// Odd runs -> strike rotates to P2
+if (gameState.match.liveInnings.batsmen["P1"].active || !gameState.match.liveInnings.batsmen["P2"].active) {
+    console.error("Test 46 Failed: P2 should now be on strike after 3 leg byes");
+    process.exit(1);
+}
+
+// Test 47: No-ball with byes charges only penalty to bowler figures
+console.log("Running Test 47...");
+resetTestState();
+gameState.settings.noBallPenalty = 1;
+
+// Striker P1 faces a no ball with 2 byes (1 nb penalty + 2 byes = 3 total runs)
+finalizeDelivery('noball', 2, 'byes');
+
+if (gameState.match.liveInnings.score !== 3) {
+    console.error(`Test 47 Failed: Total score should be 3, got ${gameState.match.liveInnings.score}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.extras.noballs !== 1 || gameState.match.liveInnings.extras.byes !== 2) {
+    console.error(`Test 47 Failed: Expected 1 noball extra and 2 bye extras, got nb=${gameState.match.liveInnings.extras.noballs}, b=${gameState.match.liveInnings.extras.byes}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.bowlers["B1"].runs !== 1) {
+    console.error(`Test 47 Failed: Bowler B1 should only be charged 1 run penalty for no-ball, not byes! Got B1.runs=${gameState.match.liveInnings.bowlers["B1"].runs}`);
+    process.exit(1);
+}
+if (gameState.match.liveInnings.batsmen["P1"].runs !== 0 || gameState.match.liveInnings.batsmen["P1"].balls !== 1) {
+    console.error("Test 47 Failed: Batsman P1 runs should be 0 and balls faced should be 1");
+    process.exit(1);
+}
+
+// Test 48: FORCE_END_INNINGS declaration and forfeit handling
+console.log("Running Test 48...");
+resetTestState();
+// Innings 1: Team 1 scores 20 runs
+for (let i = 0; i < 5; i++) addRuns(4);
+
+// Team 1 declares innings early via executeEndInnings
+executeEndInnings();
+
+if (gameState.match.team1.innings.length !== 1) {
+    console.error(`Test 48 Failed: Innings 1 should be archived, got ${gameState.match.team1.innings.length}`);
+    process.exit(1);
+}
+if (gameState.match.team1.innings[0].score !== 20) {
+    console.error(`Test 48 Failed: Archived Innings 1 score should be 20, got ${gameState.match.team1.innings[0].score}`);
+    process.exit(1);
+}
+if (gameState.match.target !== 21) {
+    console.error(`Test 48 Failed: Target for Team 2 should be 21, got ${gameState.match.target}`);
+    process.exit(1);
+}
+if (gameState.match.currentInnings !== 2 || gameState.match.currentBattingTeam !== 2) {
+    console.error(`Test 48 Failed: Should advance to Innings 2 with Team 2 batting, got innings=${gameState.match.currentInnings}, battingTeam=${gameState.match.currentBattingTeam}`);
+    process.exit(1);
+}
+
+// Innings 2: Team 2 scores 5 runs and then forfeits/declares
+addRuns(4);
+addRuns(1);
+executeEndInnings();
+
+if (!gameState.match.matchOver) {
+    console.error("Test 48 Failed: Match should be marked over after Innings 2 force end");
+    process.exit(1);
+}
+if (gameState.match.team2.innings.length !== 1 || gameState.match.team2.innings[0].score !== 5) {
+    console.error(`Test 48 Failed: Innings 2 should be archived with score 5, got ${JSON.stringify(gameState.match.team2.innings)}`);
+    process.exit(1);
+}
+
+updateUI();
+const endStatusText = doc.getElementById('match-status').textContent;
+if (!endStatusText.includes("Team 1 won by 15 runs")) {
+    console.error(`Test 48 Failed: Expected 'Team 1 won by 15 runs', got '${endStatusText}'`);
+    process.exit(1);
+}
+
+// Test 49: Minification and Unminification preserves boundaries, maidens, and Fall of Wickets
+console.log("Running Test 49...");
+resetTestState();
+gameState.match.liveInnings.batsmen["P1"] = { runs: 24, balls: 10, active: true, fours: 3, sixes: 2 };
+gameState.match.liveInnings.bowlers["B1"] = { runs: 12, balls: 12, wickets: 1, wides: 0, noballs: 0, maidens: 1 };
+gameState.match.liveInnings.fow = [{ wicket: 1, score: 14, batsman: "P2", overs: "1.2" }];
+
+const minified49 = minifyState(gameState);
+if (!minified49.m || !minified49.m.li) {
+    console.error("Test 49 Failed: Minified state missing match or liveInnings");
+    process.exit(1);
+}
+const p1Min = minified49.m.li.bat["P1"];
+if (p1Min.f !== 3 || p1Min.s !== 2) {
+    console.error(`Test 49 Failed: Boundaries not preserved in minification: got ${JSON.stringify(p1Min)}`);
+    process.exit(1);
+}
+const b1Min = minified49.m.li.bowl["B1"];
+if (b1Min.m !== 1) {
+    console.error(`Test 49 Failed: Maidens not preserved in minification: got ${JSON.stringify(b1Min)}`);
+    process.exit(1);
+}
+if (!minified49.m.li.fw || minified49.m.li.fw.length !== 1 || minified49.m.li.fw[0].b !== "P2") {
+    console.error(`Test 49 Failed: Fall of Wickets not preserved in minification: got ${JSON.stringify(minified49.m.li.fw)}`);
+    process.exit(1);
+}
+
+const unminified49 = unminifyState(minified49);
+const p1Restored = unminified49.match.liveInnings.batsmen["P1"];
+if (p1Restored.fours !== 3 || p1Restored.sixes !== 2) {
+    console.error(`Test 49 Failed: Boundaries not restored in unminification: got ${JSON.stringify(p1Restored)}`);
+    process.exit(1);
+}
+const b1Restored = unminified49.match.liveInnings.bowlers["B1"];
+if (b1Restored.maidens !== 1) {
+    console.error(`Test 49 Failed: Maidens not restored in unminification: got ${JSON.stringify(b1Restored)}`);
+    process.exit(1);
+}
+const fowRestored = unminified49.match.liveInnings.fow;
+if (!fowRestored || fowRestored.length !== 1 || fowRestored[0].batsman !== "P2" || fowRestored[0].overs !== "1.2") {
+    console.error(`Test 49 Failed: Fall of Wickets not restored in unminification: got ${JSON.stringify(fowRestored)}`);
+    process.exit(1);
+}
+
+// Test 50: generateTextSummary() formatting and output
+console.log("Running Test 50...");
+resetTestState();
+gameState.match.liveInnings.batsmen["P1"] = { runs: 28, balls: 14, active: true, fours: 4, sixes: 1 };
+gameState.match.liveInnings.batsmen["P2"] = { runs: 12, balls: 8, active: false, fours: 1, sixes: 0 };
+gameState.match.liveInnings.bowlers["B1"] = { runs: 15, balls: 12, wickets: 1, wides: 1, noballs: 0, maidens: 1 };
+gameState.match.liveInnings.fow = [{ wicket: 1, score: 18, batsman: "P2", overs: "1.3" }];
+gameState.match.liveInnings.extras = { wides: 1, noballs: 0, byes: 2, legbyes: 0 };
+gameState.match.liveInnings.score = 43;
+gameState.match.liveInnings.wickets = 1;
+gameState.match.liveInnings.balls = 22;
+
+const summaryText = generateTextSummary();
+if (!summaryText.includes("CRICKET SCORECARD")) {
+    console.error("Test 50 Failed: Text summary missing header");
+    process.exit(1);
+}
+if (!summaryText.includes("P1*: 28 (14b, 4x4, 1x6, SR: 200.0)")) {
+    console.error(`Test 50 Failed: P1 batsman stats line missing or incorrect: got\n${summaryText}`);
+    process.exit(1);
+}
+if (!summaryText.includes("FALL OF WICKETS: 1-18 (P2, 1.3 ov)")) {
+    console.error(`Test 50 Failed: Fall of Wickets line missing or incorrect: got\n${summaryText}`);
+    process.exit(1);
+}
+if (!summaryText.includes("B1: 2.0-1-15-1 (Econ: 7.50, wd: 1, nb: 0)")) {
+    console.error(`Test 50 Failed: Bowler line missing or incorrect: got\n${summaryText}`);
     process.exit(1);
 }
 

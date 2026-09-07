@@ -178,6 +178,9 @@ async function loadModulesAndRun() {
     (global as any).updateUI = uiMod.updateUI;
     (global as any).handleBatsmanChange = uiMod.handleBatsmanChange;
     (global as any).handleBowlerChange = uiMod.handleBowlerChange;
+    (global as any).generateTextSummary = uiMod.generateTextSummary;
+    (global as any).executeEndInnings = uiMod.executeEndInnings;
+    (global as any).dispatch = stateMod.dispatch;
 
     // Run tests - dynamic import for ESM compatibility
     await import('./test_cases.js');
