@@ -24,6 +24,12 @@ declare function loadFromLocalStorage(): void;
 declare function generateTextSummary(): string;
 declare function executeEndInnings(): void;
 declare function dispatch(action: any): void;
+declare function generateBugReportMarkdown(options?: any): string;
+declare function recordRuntimeError(error: any): void;
+declare function getRuntimeErrors(): any[];
+declare function clearRuntimeErrors(): void;
+declare function getGitHubIssueUrl(reportText: string, customTitle?: string): string;
+declare function copyBugReportToClipboard(reportText: string): Promise<boolean>;
 
 const doc = document as any;
 
@@ -1494,6 +1500,130 @@ if (!summaryText.includes("FALL OF WICKETS: 1-18 (P2, 1.3 ov)")) {
 }
 if (!summaryText.includes("B1: 2.0-1-15-1 (Econ: 7.50, wd: 1, nb: 0)")) {
     console.error(`Test 50 Failed: Bowler line missing or incorrect: got\n${summaryText}`);
+    process.exit(1);
+}
+
+// Test 51: generateBugReportMarkdown() output structure and state inclusion/exclusion
+console.log("Running Test 51...");
+resetTestState();
+gameState.match.liveInnings.currentBatsman1 = "P1";
+gameState.match.liveInnings.currentBatsman2 = "P2";
+gameState.match.liveInnings.currentBowler = "B1";
+gameState.match.liveInnings.batsmen["P1"] = { runs: 24, balls: 12, active: true, fours: 3, sixes: 1 };
+gameState.match.liveInnings.batsmen["P2"] = { runs: 10, balls: 6, active: false, fours: 1, sixes: 0 };
+gameState.match.liveInnings.bowlers["B1"] = { runs: 14, balls: 10, wickets: 1, wides: 0, noballs: 0, maidens: 0 };
+gameState.match.liveInnings.fow = [{ wicket: 1, score: 12, batsman: "P0", overs: "1.1" }];
+gameState.match.liveInnings.overLog = ["0", "4", "W", "1"];
+gameState.match.liveInnings.score = 35;
+gameState.match.liveInnings.wickets = 1;
+gameState.match.liveInnings.balls = 16;
+
+const userDescription = "Strike rotation didn't happen after odd bye on ball 4.";
+const reportFull = generateBugReportMarkdown({
+    userFeedback: userDescription,
+    includeState: true,
+    appVersion: "v20260907-003"
+});
+
+if (!reportFull.includes("Cricket Scorecard Bug Report & Diagnostic Context")) {
+    console.error("Test 51 Failed: Bug report missing title header");
+    process.exit(1);
+}
+if (!reportFull.includes("v20260907-003")) {
+    console.error("Test 51 Failed: Bug report missing app version");
+    process.exit(1);
+}
+if (!reportFull.includes(userDescription)) {
+    console.error("Test 51 Failed: Bug report missing user feedback description");
+    process.exit(1);
+}
+if (!reportFull.includes("P1 [STRIKER] (24 runs, 12 balls, 3x4, 1x6)")) {
+    console.error(`Test 51 Failed: Striker P1 stats missing or malformed in report: got\n${reportFull}`);
+    process.exit(1);
+}
+if (!reportFull.includes("1-12 (P0, 1.1 ov)")) {
+    console.error(`Test 51 Failed: Fall of wickets missing in report: got\n${reportFull}`);
+    process.exit(1);
+}
+if (!reportFull.includes("Minified State JSON")) {
+    console.error("Test 51 Failed: Bug report missing minified state payload");
+    process.exit(1);
+}
+
+// Test state exclusion
+const reportNoState = generateBugReportMarkdown({
+    userFeedback: "Feedback without state",
+    includeState: false,
+    appVersion: "v20260907-003"
+});
+if (reportNoState.includes("### 2. Match State Summary") || reportNoState.includes("Minified State JSON")) {
+    console.error("Test 51 Failed: Match state should be excluded when includeState is false");
+    process.exit(1);
+}
+
+// Test 52: Runtime error ring buffer management
+console.log("Running Test 52...");
+clearRuntimeErrors();
+if (getRuntimeErrors().length !== 0) {
+    console.error("Test 52 Failed: Buffer not empty after clearRuntimeErrors");
+    process.exit(1);
+}
+
+recordRuntimeError("String error test");
+recordRuntimeError(new Error("Standard Error instance"));
+recordRuntimeError({ message: "Object error payload" });
+
+const errorsAfterAdd = getRuntimeErrors();
+if (errorsAfterAdd.length !== 3) {
+    console.error(`Test 52 Failed: Expected 3 error logs, got ${errorsAfterAdd.length}`);
+    process.exit(1);
+}
+if (errorsAfterAdd[0].message !== "String error test" || errorsAfterAdd[1].message !== "Standard Error instance" || errorsAfterAdd[2].message !== "Object error payload") {
+    console.error(`Test 52 Failed: Error messages do not match: ${JSON.stringify(errorsAfterAdd)}`);
+    process.exit(1);
+}
+
+// Test buffer overflow (> 20 entries)
+for (let i = 0; i < 25; i++) {
+    recordRuntimeError(`Spam error ${i}`);
+}
+if (getRuntimeErrors().length > 20) {
+    console.error(`Test 52 Failed: Buffer length exceeded maximum of 20: got ${getRuntimeErrors().length}`);
+    process.exit(1);
+}
+
+// Verify error appears in markdown report
+const reportWithErrors = generateBugReportMarkdown({ includeState: false });
+if (!reportWithErrors.includes("Spam error 24")) {
+    console.error("Test 52 Failed: Runtime error not rendered in bug report markdown");
+    process.exit(1);
+}
+clearRuntimeErrors();
+
+// Test 53: getGitHubIssueUrl() creation, encoding, and truncation
+console.log("Running Test 53...");
+const issueTitle = "Bug: Strike rotation issue";
+const issueBody = "Detailed markdown report body with special chars: 🏏 & ? = %";
+const issueUrl = getGitHubIssueUrl(issueBody, issueTitle);
+
+if (!issueUrl.startsWith("https://github.com/aawc/cricket-scorecard-pwa/issues/new")) {
+    console.error(`Test 53 Failed: GitHub issue URL base invalid: ${issueUrl}`);
+    process.exit(1);
+}
+if (!issueUrl.includes(encodeURIComponent(issueTitle))) {
+    console.error("Test 53 Failed: Title not properly encoded in GitHub issue URL");
+    process.exit(1);
+}
+if (!issueUrl.includes(encodeURIComponent(issueBody))) {
+    console.error("Test 53 Failed: Body not properly encoded in GitHub issue URL");
+    process.exit(1);
+}
+
+// Test truncation for very large body
+const giantBody = "A".repeat(10000);
+const giantUrl = getGitHubIssueUrl(giantBody);
+if (giantUrl.length > 8000) {
+    console.error(`Test 53 Failed: GitHub issue URL should be bounded under ~8000 chars, got ${giantUrl.length}`);
     process.exit(1);
 }
 

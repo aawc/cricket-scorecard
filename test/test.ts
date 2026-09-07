@@ -136,6 +136,7 @@ async function loadModulesAndRun() {
     const stateMod = await import('../src/state.js');
     const storageMod = await import('../src/storage.js');
     const uiMod = await import('../src/ui.js');
+    const feedbackMod = await import('../src/feedback.js');
 
     // Make gameState global
     (global as any).gameState = stateMod.gameState;
@@ -166,6 +167,7 @@ async function loadModulesAndRun() {
     (global as any).minifyState = storageMod.minifyState;
     (global as any).unminifyState = storageMod.unminifyState;
     (global as any).healInningsOvers = storageMod.healInningsOvers;
+    (global as any).generatePermalink = storageMod.generatePermalink;
 
     (global as any).resetMatch = uiMod.resetMatch;
     (global as any).startMatch = uiMod.startMatch;
@@ -181,6 +183,14 @@ async function loadModulesAndRun() {
     (global as any).generateTextSummary = uiMod.generateTextSummary;
     (global as any).executeEndInnings = uiMod.executeEndInnings;
     (global as any).dispatch = stateMod.dispatch;
+
+    // Feedback & Bug Reporting globals
+    (global as any).generateBugReportMarkdown = feedbackMod.generateBugReportMarkdown;
+    (global as any).recordRuntimeError = feedbackMod.recordRuntimeError;
+    (global as any).getRuntimeErrors = feedbackMod.getRuntimeErrors;
+    (global as any).clearRuntimeErrors = feedbackMod.clearRuntimeErrors;
+    (global as any).getGitHubIssueUrl = feedbackMod.getGitHubIssueUrl;
+    (global as any).copyBugReportToClipboard = feedbackMod.copyBugReportToClipboard;
 
     // Run tests - dynamic import for ESM compatibility
     await import('./test_cases.js');
