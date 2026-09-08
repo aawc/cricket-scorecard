@@ -2,253 +2,367 @@
 <html lang="en" data-bs-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cricket Scorecard PWA</title>
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap CSS for base grid utility -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="src/style.css">
     <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
-    <meta name="theme-color" content="#0d6efd">
+    <meta name="theme-color" content="#0072b2">
     <link rel="apple-touch-icon" href="icon-192x192.png">
     <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-    <div id="app-container" class="container-md py-3 d-flex flex-column min-vh-100">
-        <header class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
-            <h1 class="h3 mb-0 text-primary">Cricket Scorecard</h1>
-            <div class="btn-group" role="group">
-                <button id="screenshot-mode-btn" class="btn btn-outline-primary btn-sm">Full Scorecard</button>
-                <button id="end-innings-btn" class="btn btn-outline-warning btn-sm">End Innings</button>
-                <button id="reset-match-btn" class="btn btn-outline-danger btn-sm">Reset</button>
-                <button id="live-stream-btn" class="btn btn-outline-primary btn-sm">📡 Live Stream</button>
-                <button id="share-match-btn" class="btn btn-outline-success btn-sm">Share</button>
-                <button id="feedback-btn" class="btn btn-outline-info btn-sm">Feedback / Bug</button>
-                <div class="btn-group" role="group">
-                    <button id="theme-dropdown" class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        Theme
+    <div id="app-container" class="app-wrapper">
+        <!-- Minimalist Top Navigation Header -->
+        <header class="app-header">
+            <div class="header-main">
+                <div class="brand-group">
+                    <h1 class="brand-title">Cricket Scorecard</h1>
+                    <span id="live-sync-badge" class="badge status-pill live-synced d-none">[LIVE - SYNCED]</span>
+                </div>
+                <div class="header-actions">
+                    <button id="screenshot-mode-btn" class="nav-btn" title="View full match scorecard">
+                        <span class="btn-icon">📊</span>
+                        <span class="btn-text">Scorecard</span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="theme-dropdown">
-                        <li><button class="dropdown-item theme-btn" data-theme="light">Light</button></li>
-                        <li><button class="dropdown-item theme-btn" data-theme="dark">Dark</button></li>
-                        <li><button class="dropdown-item theme-btn" data-theme="green">Cricket Green</button></li>
-                    </ul>
+                    <button id="new-match-btn" class="nav-btn primary" title="Start a fresh match">
+                        <span class="btn-icon">➕</span>
+                        <span class="btn-text">New Match</span>
+                    </button>
+                    <button id="live-stream-btn" class="nav-btn" title="Live stream & share match">
+                        <span class="btn-icon">📡</span>
+                        <span class="btn-text">Live</span>
+                    </button>
+                    <button id="share-match-btn" class="nav-btn" title="Copy match permalink">
+                        <span class="btn-icon">🔗</span>
+                        <span class="btn-text">Share</span>
+                    </button>
+                    <button id="feedback-btn" class="nav-btn" title="Report issue or send feedback">
+                        <span class="btn-icon">🐛</span>
+                        <span class="btn-text">Feedback</span>
+                    </button>
+                    <div class="theme-menu-wrapper dropdown">
+                        <button id="theme-dropdown" class="nav-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Switch theme">
+                            <span class="btn-icon">🌓</span>
+                            <span class="btn-text">Theme</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="theme-dropdown">
+                            <li><button class="dropdown-item theme-btn" data-theme="light">☀️ Light</button></li>
+                            <li><button class="dropdown-item theme-btn" data-theme="dark">🌙 OLED Dark</button></li>
+                            <li><button class="dropdown-item theme-btn" data-theme="green">🌿 Pitch Green</button></li>
+                        </ul>
+                    </div>
+                    <!-- Legacy buttons preserved for programmatic tests/scripts -->
+                    <button id="reset-match-btn" class="d-none" aria-hidden="true" tabindex="-1">Reset</button>
+                    <button id="end-innings-btn" class="d-none" aria-hidden="true" tabindex="-1">End Innings</button>
                 </div>
             </div>
         </header>
 
-        <main class="flex-grow-1">
+        <main class="app-content">
             <!-- Spectator Mode Banner -->
-            <div id="spectator-banner" class="alert alert-info py-2 px-3 mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2 d-none" role="alert">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-primary" id="spectator-status-badge">[SPECTATOR MODE]</span>
-                    <span id="spectator-status-text" class="small fw-semibold">Live match feed connected. Auto-refreshing...</span>
+            <div id="spectator-banner" class="spectator-banner d-none" role="region" aria-label="Spectator Mode Status">
+                <div class="spectator-info">
+                    <span class="spectator-badge" id="spectator-status-badge">
+                        <span class="live-pulse"></span> [SPECTATOR MODE]
+                    </span>
+                    <span id="spectator-status-text" class="spectator-text">Live feed connected &bull; Auto-refreshing</span>
                 </div>
-                <div class="d-flex gap-2 align-items-center">
-                    <span id="spectator-last-update" class="text-muted small">Updated: Just now</span>
-                    <button id="spectator-refresh-btn" class="btn btn-outline-primary btn-sm py-0 px-2" type="button">↻ Refresh</button>
+                <div class="spectator-actions">
+                    <span id="spectator-last-update" class="spectator-timestamp">Updated: Just now</span>
+                    <button id="spectator-refresh-btn" class="btn-refresh" type="button">↻ Refresh</button>
                 </div>
             </div>
 
             <!-- Settings Section -->
-            <section id="settings-section" class="card mb-3">
-                <div class="card-body">
-                    <h2 class="card-title h4 mb-3 text-primary">Match Settings</h2>
-                    <div class="row g-3">
-                        <div class="col-sm-6 col-md-4">
-                            <label for="overs-per-innings" class="form-label">Overs per Innings:</label>
-                            <input type="number" id="overs-per-innings" class="form-control" value="8" min="1">
-                        </div>
-                        <div class="col-sm-6 col-md-4">
-                            <label for="max-overs-per-bowler" class="form-label">Max Overs per Bowler:</label>
-                            <input type="number" id="max-overs-per-bowler" class="form-control" value="2" min="1">
-                        </div>
-                        <div class="col-sm-6 col-md-4 d-flex flex-column justify-content-end">
-                            <div class="form-check mb-2">
-                                <input type="checkbox" id="allow-single-batsman" class="form-check-input" checked>
-                                <label for="allow-single-batsman" class="form-check-label">Allow single batsman</label>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input type="checkbox" id="enable-legbyes" class="form-check-input">
-                                <label for="enable-legbyes" class="form-check-label">Enable Leg Byes</label>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-primary h-100">
-                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1 px-2">
-                                    <span class="fw-bold small">Team 1 Roster</span>
-                                    <button id="team1-bulk-btn" class="btn btn-sm btn-light py-0 px-1 small" data-bs-toggle="modal" data-bs-target="#bulkImportModal" data-team="1">Bulk Paste</button>
-                                </div>
-                                <div class="card-body p-2 d-flex flex-column">
-                                    <div class="input-group input-group-sm mb-2">
-                                        <input type="text" id="team1-quick-add" class="form-control" placeholder="Add player name...">
-                                        <button id="team1-add-btn" class="btn btn-outline-primary" type="button">Add</button>
-                                    </div>
-                                    <ul id="team1-roster-list" class="list-group roster-list flex-grow-1 min-vh-25"></ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="card border-primary h-100">
-                                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-1 px-2">
-                                    <span class="fw-bold small">Team 2 Roster</span>
-                                    <button id="team2-bulk-btn" class="btn btn-sm btn-light py-0 px-1 small" data-bs-toggle="modal" data-bs-target="#bulkImportModal" data-team="2">Bulk Paste</button>
-                                </div>
-                                <div class="card-body p-2 d-flex flex-column">
-                                    <div class="input-group input-group-sm mb-2">
-                                        <input type="text" id="team2-quick-add" class="form-control" placeholder="Add player name...">
-                                        <button id="team2-add-btn" class="btn btn-outline-primary" type="button">Add</button>
-                                    </div>
-                                    <ul id="team2-roster-list" class="list-group roster-list flex-grow-1 min-vh-25"></ul>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-12">
-                            <button id="start-match-btn" class="btn btn-primary w-100">Start Match</button>
+            <section id="settings-section" class="settings-card">
+                <div class="section-header">
+                    <h2 class="section-title">Match Setup</h2>
+                    <p class="section-subtitle">Configure match parameters and player lineups</p>
+                </div>
+
+                <div class="settings-grid">
+                    <div class="settings-col">
+                        <div class="field-group">
+                            <label for="overs-per-innings" class="field-label">Overs per Innings</label>
+                            <input type="number" id="overs-per-innings" class="field-input" value="8" min="1" max="100">
                         </div>
                     </div>
+                    <div class="settings-col">
+                        <div class="field-group">
+                            <label for="max-overs-per-bowler" class="field-label">Max Overs per Bowler</label>
+                            <input type="number" id="max-overs-per-bowler" class="field-input" value="2" min="1" max="50">
+                        </div>
+                    </div>
+                    <div class="settings-col rules-col">
+                        <div class="toggle-group">
+                            <label class="toggle-control" for="allow-single-batsman">
+                                <input type="checkbox" id="allow-single-batsman" class="toggle-checkbox" checked>
+                                <span class="toggle-label">Allow single batsman (last man stands)</span>
+                            </label>
+                            <label class="toggle-control" for="enable-legbyes">
+                                <input type="checkbox" id="enable-legbyes" class="toggle-checkbox">
+                                <span class="toggle-label">Enable Leg Byes</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rosters-row">
+                    <!-- Team 1 Roster -->
+                    <div class="roster-col">
+                        <div class="roster-card">
+                            <div class="roster-header">
+                                <span class="roster-title">Team 1 Roster</span>
+                                <button id="team1-bulk-btn" class="roster-action-btn" data-team="1">Bulk Paste</button>
+                            </div>
+                            <div class="roster-input-row">
+                                <input type="text" id="team1-quick-add" class="roster-quick-input" placeholder="Add player name...">
+                                <button id="team1-add-btn" class="roster-add-btn" type="button">Add</button>
+                            </div>
+                            <ul id="team1-roster-list" class="roster-list"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Team 2 Roster -->
+                    <div class="roster-col">
+                        <div class="roster-card">
+                            <div class="roster-header">
+                                <span class="roster-title">Team 2 Roster</span>
+                                <button id="team2-bulk-btn" class="roster-action-btn" data-team="2">Bulk Paste</button>
+                            </div>
+                            <div class="roster-input-row">
+                                <input type="text" id="team2-quick-add" class="roster-quick-input" placeholder="Add player name...">
+                                <button id="team2-add-btn" class="roster-add-btn" type="button">Add</button>
+                            </div>
+                            <ul id="team2-roster-list" class="roster-list"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-footer">
+                    <button id="start-match-btn" class="btn-start-match">
+                        ▶ Start Match
+                    </button>
                 </div>
             </section>
 
             <!-- Flip Container for Scoreboard and Summary -->
             <div class="flip-container hidden">
                 <div class="flipper" id="app-flipper">
-                    <!-- Front Face: Scoreboard -->
+                    <!-- Front Face: Live Scoreboard -->
                     <div class="front-face">
-                        <section id="scoreboard-section" class="card mb-3">
-                            <div class="card-body">
-                                <div class="scoreboard-header text-center mb-3">
-                                    <div class="d-flex justify-content-center align-items-center gap-2">
-                                        <h2 id="match-status" class="h5 text-muted mb-0">First Innings</h2>
-                                        <span id="live-sync-badge" class="badge bg-success-subtle text-success border border-success d-none">[LIVE - SYNCED]</span>
-                                    </div>
-                                    <div id="score-display" class="display-1 fw-bold text-primary">0 - 0</div>
-                                    <div id="overs-display" class="fs-4 text-secondary">Overs: 0.0 / 8</div>
-                                    <div id="target-display" class="fs-5 text-info hidden">Target: 0 | CRR: 0.00 | RRR: 0.00</div>
+                        <section id="scoreboard-section" class="scoreboard-card">
+                            <!-- Hero Match Header -->
+                            <div class="scoreboard-hero">
+                                <div class="match-meta-bar">
+                                    <h2 id="match-status" class="match-status-title">First Innings</h2>
                                 </div>
 
-                                <div class="row g-2 mb-3">
-                                    <div class="col-12">
-                                        <div id="batsman1-container" class="batsman p-2 border rounded d-flex justify-content-between align-items-center">
-                                            <select id="batsman1-select" class="form-select form-select-sm w-auto" aria-label="Batsman 1"></select>
-                                            <span id="batsman1-stats" class="badge bg-secondary">0 (0)</span>
-                                        </div>
-                                    </div>
-                                    <div class="col-12">
-                                        <div id="batsman2-container" class="batsman p-2 border rounded d-flex justify-content-between align-items-center">
-                                            <select id="batsman2-select" class="form-select form-select-sm w-auto" aria-label="Batsman 2"></select>
-                                            <span id="batsman2-stats" class="badge bg-secondary">0 (0)</span>
-                                        </div>
+                                <div class="hero-score-row">
+                                    <div class="hero-score-block">
+                                        <div id="score-display" class="hero-score" aria-live="polite">0 - 0</div>
+                                        <div id="overs-display" class="hero-overs">Overs: 0.0 / 8</div>
                                     </div>
                                 </div>
 
-                                <div class="bowler-display p-2 border rounded d-flex justify-content-between align-items-center mb-3">
-                                    <div class="d-flex align-items-center">
-                                        <label for="bowler-select" class="form-label mb-0 me-2">Bowler:</label>
-                                        <select id="bowler-select" class="form-select form-select-sm w-auto" aria-label="Bowler"></select>
-                                    </div>
-                                    <span id="bowler-stats" class="badge bg-secondary">0/0 (0.0)</span>
+                                <div id="target-display" class="target-strip hidden">
+                                    Target: 0 &bull; CRR: 0.00 &bull; RRR: 0.00
                                 </div>
-
-                                <!-- Over Log -->
-                                <div class="over-log-container p-2 border rounded mb-3 d-flex align-items-center gap-2">
-                                    <span class="fw-bold">This Over:</span>
-                                    <div id="over-log" class="d-flex gap-1 flex-wrap"></div>
-                                </div>
-
-                                <div class="extras-display p-2 border rounded mb-3 text-center">
-                                    Extras: <span id="extras-total" class="fw-bold">0</span> (W: <span id="wides-display">0</span>, NB: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, LB: <span id="legbyes-display">0</span>)
-                                </div>
-
-                                <!-- Controls -->
-                                <div id="controls-section">
-                                    <div class="runs-buttons row g-2 mb-2">
-                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="0">0</button></div>
-                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="1">1</button></div>
-                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="2">2</button></div>
-                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="3">3</button></div>
-                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="4">4</button></div>
-                                        <div class="col-4"><button class="run-btn btn btn-outline-secondary w-100 fs-4" data-runs="6">6</button></div>
-                                    </div>
-                                    <div class="extra-buttons row g-2 mb-2">
-                                        <div class="col-3"><button id="wide-btn" class="btn btn-warning w-100">Wide</button></div>
-                                        <div class="col-3"><button id="noball-btn" class="btn btn-warning w-100">No Ball</button></div>
-                                        <div class="col-3"><button id="wicket-btn" class="btn btn-danger w-100">Wicket</button></div>
-                                        <div class="col-3"><button id="runout-btn" class="btn btn-danger w-100">Run Out</button></div>
-                                    </div>
-                                    <div class="other-buttons row g-2">
-                                        <div class="col-4"><button id="bye-btn" class="btn btn-info w-100">Bye</button></div>
-                                        <div class="col-4"><button id="legbye-btn" class="btn btn-info w-100">Leg Bye</button></div>
-                                        <div class="col-4"><button id="undo-btn" class="btn btn-secondary w-100">Undo</button></div>
-                                    </div>
-                                </div>
-                                <!-- Completed Overs History -->
-                                <div id="completed-overs-section" class="mt-3"></div>
                             </div>
+
+                            <!-- Match Over Actions (Visible when match concludes) -->
+                            <div id="match-over-banner" class="match-over-banner d-none">
+                                <div class="match-over-content">
+                                    <span class="match-over-icon">🏆</span>
+                                    <span id="match-over-text" class="match-over-text">Match Finished</span>
+                                </div>
+                                <button id="match-over-new-match-btn" class="btn-match-over-new">
+                                    ➕ Start New Match
+                                </button>
+                            </div>
+
+                            <!-- Batsmen & Bowler Grid -->
+                            <div class="match-players-grid">
+                                <!-- Batsman 1 (Striker Slot) -->
+                                <div id="batsman1-container" class="player-card batsman">
+                                    <div class="player-info-row">
+                                        <div class="player-role-title">
+                                            <span class="strike-dot">●</span>
+                                            <label for="batsman1-select" class="player-label">Batsman 1 (Striker)</label>
+                                        </div>
+                                        <span id="batsman1-stats" class="player-stat-pill">0 (0)</span>
+                                    </div>
+                                    <select id="batsman1-select" class="player-select" aria-label="Select Striker Batsman"></select>
+                                </div>
+
+                                <!-- Batsman 2 (Non-Striker Slot) -->
+                                <div id="batsman2-container" class="player-card batsman">
+                                    <div class="player-info-row">
+                                        <div class="player-role-title">
+                                            <span class="strike-dot">●</span>
+                                            <label for="batsman2-select" class="player-label">Batsman 2</label>
+                                        </div>
+                                        <span id="batsman2-stats" class="player-stat-pill">0 (0)</span>
+                                    </div>
+                                    <select id="batsman2-select" class="player-select" aria-label="Select Non-Striker Batsman"></select>
+                                </div>
+
+                                <!-- Active Bowler -->
+                                <div class="player-card bowler">
+                                    <div class="player-info-row">
+                                        <div class="player-role-title">
+                                            <span class="bowler-icon">🎯</span>
+                                            <label for="bowler-select" class="player-label">Current Bowler</label>
+                                        </div>
+                                        <span id="bowler-stats" class="player-stat-pill">0/0 (0.0)</span>
+                                    </div>
+                                    <select id="bowler-select" class="player-select" aria-label="Select Bowler"></select>
+                                </div>
+                            </div>
+
+                            <!-- This Over Timeline -->
+                            <div class="over-strip-card">
+                                <div class="over-strip-label">THIS OVER</div>
+                                <div id="over-log" class="over-balls-wrap"></div>
+                            </div>
+
+                            <!-- Extras Counter Strip -->
+                            <div class="extras-strip">
+                                Extras: <strong id="extras-total">0</strong> 
+                                <span class="extras-breakdown">(Wd: <span id="wides-display">0</span>, Nb: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, Lb: <span id="legbyes-display">0</span>)</span>
+                            </div>
+
+                            <!-- Selection Helper Banner -->
+                            <div id="selection-warning" class="selection-notice d-none">
+                                ⚠️ Select active batsmen and bowler above to enable scoring
+                            </div>
+
+                            <!-- Umpire Scoring Controls -->
+                            <div id="controls-section" class="keypad-section">
+                                <!-- Primary Runs Grid -->
+                                <div class="keypad-runs-grid">
+                                    <button class="run-btn key-num" data-runs="0">0</button>
+                                    <button class="run-btn key-num" data-runs="1">1</button>
+                                    <button class="run-btn key-num" data-runs="2">2</button>
+                                    <button class="run-btn key-num" data-runs="3">3</button>
+                                    <button class="run-btn key-num boundary-four" data-runs="4">4</button>
+                                    <button class="run-btn key-num boundary-six" data-runs="6">6</button>
+                                </div>
+
+                                <!-- Delivery Extras & Wickets Grid -->
+                                <div class="keypad-actions-grid">
+                                    <button id="wide-btn" class="key-action key-wide" title="Wide ball (+1 run, ball not counted)">+1 Wd</button>
+                                    <button id="noball-btn" class="key-action key-noball" title="No ball (+1 run penalty)">+1 Nb</button>
+                                    <button id="wicket-btn" class="key-action key-wicket" title="Wicket (Bowled, Caught, LBW, Stumped)">Wkt</button>
+                                    <button id="runout-btn" class="key-action key-runout" title="Run out dismissal">Run Out</button>
+                                </div>
+
+                                <!-- Secondary Scoring Operations -->
+                                <div class="keypad-aux-grid">
+                                    <button id="bye-btn" class="key-aux" title="Bye runs">Bye</button>
+                                    <button id="legbye-btn" class="key-aux" title="Leg bye runs">Leg Bye</button>
+                                    <button id="undo-btn" class="key-aux key-undo" title="Undo previous delivery">⤺ Undo</button>
+                                    <button id="trigger-end-innings-btn" class="key-aux key-end-innings" title="Conclude current innings">End Innings</button>
+                                </div>
+                            </div>
+
+                            <!-- Completed Overs Collapsible List -->
+                            <div id="completed-overs-section" class="completed-overs-wrap"></div>
                         </section>
                     </div>
 
-                    <!-- Back Face: Summary -->
+                    <!-- Back Face: Full Detailed Scorecard -->
                     <div class="back-face">
-                        <section id="summary-section" class="card mb-3">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2 flex-wrap gap-2">
-                                    <h2 class="card-title h4 mb-0 text-primary">Full Scorecard</h2>
-                                    <div>
-                                        <button id="copy-summary-text-btn" class="btn btn-outline-success btn-sm me-2">Copy Text Scorecard</button>
-                                        <button id="exit-screenshot-mode-btn" class="btn btn-outline-secondary btn-sm">Exit Full Scorecard</button>
-                                    </div>
+                        <section id="summary-section" class="summary-card">
+                            <div class="summary-header">
+                                <div>
+                                    <h2 class="summary-title">Full Match Scorecard</h2>
+                                    <p class="summary-subtitle">Official ball-by-ball analysis and stats</p>
                                 </div>
-                                <div id="innings-summaries"></div>
+                                <div class="summary-actions">
+                                    <button id="copy-summary-text-btn" class="btn-summary-action">📋 Copy Text Summary</button>
+                                    <button id="exit-screenshot-mode-btn" class="btn-summary-action primary">✕ Exit Scorecard</button>
+                                </div>
                             </div>
+                            <div id="innings-summaries" class="innings-container"></div>
                         </section>
                     </div>
                 </div>
             </div>
 
-            <!-- Run Out Modal -->
+            <!-- Unified Run Out Modal -->
             <div class="modal fade" id="runoutModal" tabindex="-1" aria-labelledby="runoutModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="runoutModalLabel">Run Out Details</h5>
+                            <h5 class="modal-title" id="runoutModalLabel">Record Run Out</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="mb-3">Which batsman was run out?</p>
-                            <div class="d-grid gap-2">
-                                <button id="runout-striker-btn" class="btn btn-danger" data-bs-dismiss="modal">Striker</button>
-                                <button id="runout-nonstriker-btn" class="btn btn-danger" data-bs-dismiss="modal">Non-Striker</button>
+                            <p class="modal-instruction">1. Which batsman was run out?</p>
+                            <div class="runout-batter-group mb-3">
+                                <button id="runout-striker-btn" class="btn-choice active" type="button">Striker</button>
+                                <button id="runout-nonstriker-btn" class="btn-choice" type="button">Non-Striker</button>
+                            </div>
+
+                            <p class="modal-instruction">2. Runs completed before run out:</p>
+                            <div class="runout-runs-grid">
+                                <button class="btn-runout-val" data-runs="0">0 Runs</button>
+                                <button class="btn-runout-val" data-runs="1">1 Run</button>
+                                <button class="btn-runout-val" data-runs="2">2 Runs</button>
+                                <button class="btn-runout-val" data-runs="3">3 Runs</button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Extra Runs Modal -->
+            <!-- Extra Runs Modal (Wide / No Ball / Bye modifiers) -->
             <div class="modal fade" id="extraRunsModal" tabindex="-1" aria-labelledby="extraRunsModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
                             <h5 class="modal-title" id="extraRunsModalLabel">Extra Runs Details</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-center">
-                            <p class="mb-2">How many extra runs were scored?</p>
-                            <div class="row g-2 mb-3">
-                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="0">0</button></div>
-                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="1">1</button></div>
-                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="2">2</button></div>
-                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="3">3</button></div>
-                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="4">4</button></div>
-                                <div class="col-4"><button class="btn btn-outline-primary w-100 extra-run-val-btn" data-val="6">6</button></div>
+                            <p class="modal-instruction" id="extra-runs-prompt">Select total/additional runs scored:</p>
+                            <div class="extra-runs-grid mb-3">
+                                <button class="btn-extra-val extra-run-val-btn" data-val="0">0</button>
+                                <button class="btn-extra-val extra-run-val-btn" data-val="1">1</button>
+                                <button class="btn-extra-val extra-run-val-btn" data-val="2">2</button>
+                                <button class="btn-extra-val extra-run-val-btn" data-val="3">3</button>
+                                <button class="btn-extra-val extra-run-val-btn" data-val="4">4</button>
+                                <button class="btn-extra-val extra-run-val-btn" data-val="6">6</button>
                             </div>
-                            <div id="accrual-section" class="hidden">
-                                <p class="mb-2">Accrue extra runs to:</p>
-                                <div class="d-grid gap-2">
-                                    <button id="accrue-batsman-btn" class="btn btn-success" data-bs-dismiss="modal">Batsman</button>
-                                    <button id="accrue-byes-btn" class="btn btn-info" data-bs-dismiss="modal">Byes</button>
+                            <div id="accrual-section" class="accrual-box hidden">
+                                <p class="modal-instruction mb-2">Accrue extra runs to:</p>
+                                <div class="accrual-btn-group">
+                                    <button id="accrue-batsman-btn" class="btn-accrue batsman" data-bs-dismiss="modal">🏏 Batsman</button>
+                                    <button id="accrue-byes-btn" class="btn-accrue byes" data-bs-dismiss="modal">🏃 Byes</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start New Match Confirmation Modal -->
+            <div class="modal fade" id="newMatchModal" tabindex="-1" aria-labelledby="newMatchModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-sm">
+                    <div class="modal-content modal-card">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="newMatchModalLabel">Start New Match?</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center py-3">
+                            <p class="mb-0 text-muted">Starting a new match will conclude the current match and reset to setup. Are you sure you want to proceed?</p>
+                        </div>
+                        <div class="modal-footer d-flex justify-content-between">
+                            <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" id="confirm-new-match-btn" class="btn-dialog danger" data-bs-dismiss="modal">Start New Match</button>
                         </div>
                     </div>
                 </div>
@@ -257,18 +371,18 @@
             <!-- Bulk Import Modal -->
             <div class="modal fade" id="bulkImportModal" tabindex="-1" aria-labelledby="bulkImportModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
                             <h5 class="modal-title" id="bulkImportModalLabel">Bulk Paste Roster</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="small text-muted mb-2">Paste player names separated by commas or newlines:</p>
-                            <textarea id="bulk-import-textarea" class="form-control" rows="6" placeholder="Rohit Sharma&#10;Shubman Gill&#10;Virat Kohli..."></textarea>
+                            <p class="modal-instruction mb-2">Paste player names separated by newlines or commas:</p>
+                            <textarea id="bulk-import-textarea" class="modal-textarea" rows="6" placeholder="Rohit Sharma&#10;Virat Kohli&#10;Jasprit Bumrah..."></textarea>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" id="execute-bulk-import-btn" class="btn btn-primary btn-sm" data-bs-dismiss="modal">Import Players</button>
+                        <div class="modal-footer d-flex justify-content-between">
+                            <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" id="execute-bulk-import-btn" class="btn-dialog primary" data-bs-dismiss="modal">Import Players</button>
                         </div>
                     </div>
                 </div>
@@ -277,16 +391,16 @@
             <!-- Toss Modal -->
             <div class="modal fade" id="tossModal" tabindex="-1" aria-labelledby="tossModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="tossModalLabel">Toss Details</h5>
+                            <h5 class="modal-title" id="tossModalLabel">Match Toss</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-center">
-                            <p class="mb-3">Which team is batting first?</p>
-                            <div class="d-grid gap-2">
-                                <button id="toss-team1-btn" class="btn btn-primary" data-bs-dismiss="modal">Team 1</button>
-                                <button id="toss-team2-btn" class="btn btn-primary" data-bs-dismiss="modal">Team 2</button>
+                            <p class="modal-instruction mb-3">Which team is batting first?</p>
+                            <div class="toss-btn-group">
+                                <button id="toss-team1-btn" class="btn-toss" data-bs-dismiss="modal">Team 1</button>
+                                <button id="toss-team2-btn" class="btn-toss" data-bs-dismiss="modal">Team 2</button>
                             </div>
                         </div>
                     </div>
@@ -296,35 +410,35 @@
             <!-- End Innings Modal -->
             <div class="modal fade" id="endInningsModal" tabindex="-1" aria-labelledby="endInningsModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
                             <h5 class="modal-title" id="endInningsModalLabel">End Innings</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center">
-                            <p class="mb-3">Are you sure you want to conclude this innings early?</p>
-                            <div class="d-grid gap-2">
-                                <button id="confirm-end-innings-btn" class="btn btn-warning" data-bs-dismiss="modal">End Innings</button>
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                            </div>
+                        <div class="modal-body text-center py-3">
+                            <p class="mb-0 text-muted">Are you sure you want to conclude this innings early?</p>
+                        </div>
+                        <div class="modal-footer d-flex justify-content-between">
+                            <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button id="confirm-end-innings-btn" class="btn-dialog warning" data-bs-dismiss="modal">End Innings</button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Alert Modal -->
+            <!-- Alert Dialog Modal -->
             <div class="modal fade" id="alertDialogModal" tabindex="-1" aria-labelledby="alertDialogModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header py-2">
-                            <h5 class="modal-title fs-6" id="alertDialogModalLabel">Alert</h5>
+                            <h5 class="modal-title" id="alertDialogModalLabel">Notice</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body text-center py-3">
-                            <p id="alert-message" class="mb-0 small"></p>
+                            <p id="alert-message" class="mb-0 alert-dialog-text"></p>
                         </div>
-                        <div class="modal-footer py-1 justify-content-center">
-                            <button type="button" class="btn btn-sm btn-primary px-3" data-bs-dismiss="modal">OK</button>
+                        <div class="modal-footer py-2 justify-content-center">
+                            <button type="button" class="btn-dialog primary px-4" data-bs-dismiss="modal">OK</button>
                         </div>
                     </div>
                 </div>
@@ -333,51 +447,41 @@
             <!-- Feedback & Bug Report Modal -->
             <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="feedbackModalLabel">Feedback & Bug Report</h5>
+                            <h5 class="modal-title" id="feedbackModalLabel">Feedback & Bug Reporting</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p class="small text-muted mb-2">
-                                Describe the issue or feedback below. Current match state and diagnostic logs are automatically generated for reproduction.
+                            <p class="modal-instruction mb-2">
+                                Describe the issue or request below. Match state and logs are attached for instant reproduction.
                             </p>
                             <div class="mb-3">
-                                <label for="feedback-text" class="form-label fw-bold small">Description / What happened:</label>
-                                <textarea id="feedback-text" class="form-control" rows="4" placeholder="e.g. Batsman strike swapped unexpectedly after a run out on ball 4, or bowler maiden count was incorrect..."></textarea>
+                                <label for="feedback-text" class="field-label">Description / What happened:</label>
+                                <textarea id="feedback-text" class="modal-textarea" rows="4" placeholder="e.g. Strike was not rotated on ball 4 after 1 run..."></textarea>
                             </div>
-                            <div class="form-check mb-3">
-                                <input type="checkbox" id="feedback-include-state" class="form-check-input" checked>
-                                <label for="feedback-include-state" class="form-check-label small">Include match state & diagnostic logs (recommended for reproduction)</label>
+                            <div class="toggle-control mb-3">
+                                <input type="checkbox" id="feedback-include-state" class="toggle-checkbox" checked>
+                                <label for="feedback-include-state" class="toggle-label">Include match state & diagnostic logs (recommended)</label>
                             </div>
-                            <div class="accordion mb-3" id="diagnosticAccordion">
-                                <div class="accordion-item">
-                                    <h2 class="accordion-header" id="diagnosticHeading">
-                                        <button class="accordion-button collapsed py-2 small" type="button" data-bs-toggle="collapse" data-bs-target="#diagnosticCollapse" aria-expanded="false" aria-controls="diagnosticCollapse">
-                                            Preview Generated Diagnostic Report
-                                        </button>
-                                    </h2>
-                                    <div id="diagnosticCollapse" class="accordion-collapse collapse" aria-labelledby="diagnosticHeading" data-bs-parent="#diagnosticAccordion">
-                                        <div class="accordion-body p-2">
-                                            <pre id="feedback-preview" class="bg-light p-2 rounded small text-dark mb-0 font-monospace" style="max-height: 220px; overflow-y: auto; font-size: 0.78rem;"></pre>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div class="diagnostic-accordion mb-3">
+                                <details class="diagnostic-details">
+                                    <summary class="diagnostic-summary">Preview Generated Diagnostic Report</summary>
+                                    <pre id="feedback-preview" class="diagnostic-preview"></pre>
+                                </details>
                             </div>
-                            <div id="feedback-toast" class="alert alert-success d-none py-2 px-3 small mb-0" role="alert">
-                                <strong>✓ Copied!</strong> Bug report copied to clipboard. You can paste it directly into the chat with the developer.
+                            <div id="feedback-toast" class="alert-toast d-none" role="alert">
+                                <strong>✓ Copied!</strong> Bug report copied to clipboard.
                             </div>
                         </div>
                         <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
-                            <div>
-                                <button type="button" id="open-github-issue-btn" class="btn btn-outline-dark btn-sm">
-                                    🐛 Open GitHub Issue
-                                </button>
-                            </div>
+                            <button type="button" id="open-github-issue-btn" class="btn-dialog secondary">
+                                🐛 Open GitHub Issue
+                            </button>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-                                <button type="button" id="copy-feedback-report-btn" class="btn btn-primary btn-sm">
-                                    📋 Copy Bug Report to Clipboard
+                                <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" id="copy-feedback-report-btn" class="btn-dialog primary">
+                                    📋 Copy Bug Report
                                 </button>
                             </div>
                         </div>
@@ -385,71 +489,68 @@
                 </div>
             </div>
 
-            <!-- Live Stream Modal -->
+            <!-- Live Stream & Sharing Modal -->
             <div class="modal fade" id="liveModal" tabindex="-1" aria-labelledby="liveModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content">
+                    <div class="modal-content modal-card">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="liveModalLabel">📡 Live Match Streaming & Sharing</h5>
+                            <h5 class="modal-title" id="liveModalLabel">📡 Live Match Streaming & Broadcast</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div id="live-inactive-section" class="text-center py-3">
-                                <p class="mb-3">
-                                    Broadcast this cricket scorecard live! Spectators and players can watch ball-by-ball updates in real time on their phones or computers without disrupting your scoring.
+                                <p class="mb-3 text-muted">
+                                    Broadcast this match live! Spectators and players can watch ball-by-ball updates in real time with zero setup.
                                 </p>
-                                <div class="alert alert-secondary py-2 px-3 small mb-3 text-start">
-                                    <strong>Key Features:</strong>
-                                    <ul class="mb-0 ps-3 mt-1">
-                                        <li><strong>100% Free:</strong> Operates at zero cost with no signup or credit card required.</li>
-                                        <li><strong>1-Year Retention:</strong> Match state is persisted remotely for 1 year (365 days) for post-match review.</li>
-                                        <li><strong>Role Protection:</strong> Spectators have read-only access; only the umpire can score.</li>
-                                        <li><strong>Offline Resilient:</strong> Continues scoring even with spotty ground cellular service.</li>
-                                    </ul>
+                                <div class="live-features-list text-start mb-3">
+                                    <div class="live-feature-item"><strong>100% Free:</strong> No account or credit card needed.</div>
+                                    <div class="live-feature-item"><strong>1-Year Cloud Retention:</strong> Archived for 365 days.</div>
+                                    <div class="live-feature-item"><strong>Spectator Lock:</strong> Viewers are strictly read-only.</div>
+                                    <div class="live-feature-item"><strong>Offline Resilient:</strong> Queues and syncs seamlessly.</div>
                                 </div>
-                                <button type="button" id="start-live-btn" class="btn btn-primary btn-lg px-4">
-                                    🚀 Start Live Stream
+                                <button type="button" id="start-live-btn" class="btn-start-broadcast">
+                                    🚀 Start Live Broadcast
                                 </button>
                             </div>
 
                             <div id="live-active-section" class="d-none">
-                                <div class="d-flex justify-content-between align-items-center mb-3 p-2 border rounded bg-light">
-                                    <div>
-                                        <strong>Status:</strong> <span id="modal-live-status-badge" class="badge bg-success">[LIVE - SYNCED]</span>
-                                        <span id="modal-live-seq" class="text-muted small ms-2">Packet #1</span>
+                                <div class="live-status-card mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span id="modal-live-status-badge" class="badge status-pill live-synced">[SYNCED]</span>
+                                        <span id="modal-live-seq" class="text-muted small">Packet #1</span>
                                     </div>
-                                    <div class="small text-muted" id="modal-live-expires">
-                                        Expires in 1 year
+                                    <div class="text-muted small" id="modal-live-expires">
+                                        Retention: 1 Year
                                     </div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold small text-primary">📢 Spectator Link (Share with Viewers & Players):</label>
-                                    <div class="input-group mb-1">
-                                        <input type="text" id="spectator-url-input" class="form-control font-monospace small" readonly>
-                                        <button class="btn btn-success" type="button" id="copy-spectator-url-btn">📋 Copy Spectator Link</button>
+                                    <label class="field-label" for="spectator-url-input">📢 Spectator Link (Share with Viewers & Players):</label>
+                                    <div class="input-copy-group">
+                                        <input type="text" id="spectator-url-input" class="copy-input" readonly>
+                                        <button class="btn-copy" type="button" id="copy-spectator-url-btn">📋 Copy Link</button>
                                     </div>
-                                    <small class="text-muted">Anyone with this link can watch the match score update in real-time (Read-Only).</small>
+                                    <span class="field-hint">Anyone with this link gets read-only live scoreboard access.</span>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label fw-bold small text-secondary">🔑 Umpire Link (Private Scorer Access):</label>
-                                    <div class="input-group mb-1">
-                                        <input type="text" id="umpire-url-input" class="form-control font-monospace small" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" id="copy-umpire-url-btn">📋 Copy Umpire Link</button>
+                                    <label class="field-label" for="umpire-url-input">🔑 Umpire Link (Private Scoring Access):</label>
+                                    <div class="input-copy-group">
+                                        <input type="text" id="umpire-url-input" class="copy-input" readonly>
+                                        <button class="btn-copy secondary" type="button" id="copy-umpire-url-btn">📋 Copy Link</button>
                                     </div>
-                                    <small class="text-muted">Keep this private. Allows resuming scoring as Umpire from another browser or device.</small>
+                                    <span class="field-hint">Private scorer key. Resume scoring from any device.</span>
                                 </div>
 
-                                <div id="live-modal-toast" class="alert alert-success d-none py-2 px-3 small mb-3" role="alert">
-                                    <strong>✓ Copied!</strong> Link copied to clipboard.
+                                <div id="live-modal-toast" class="alert-toast d-none" role="alert">
+                                    ✓ Link copied to clipboard!
                                 </div>
 
-                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                                    <button type="button" id="stop-live-btn" class="btn btn-outline-danger btn-sm">
+                                <div class="modal-footer-row pt-2 border-top d-flex justify-content-between align-items-center">
+                                    <button type="button" id="stop-live-btn" class="btn-dialog danger">
                                         ⏹ End Live Stream
                                     </button>
-                                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Close</button>
                                 </div>
                             </div>
                         </div>
@@ -458,17 +559,21 @@
             </div>
         </main>
 
-        <footer class="text-center text-muted mt-auto py-2 border-top">
-            <small>Version: v20260908-001 | Deployed: 2026-09-08 00:30 | <button id="footer-feedback-link" class="btn btn-link btn-sm text-muted p-0 text-decoration-underline align-baseline" style="font-size: inherit;">Report Issue / Feedback</button></small>
-            <div class="mt-1">
-                <small>🚀 Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with ✨ Gemini</small>
+        <footer class="app-footer">
+            <div class="footer-meta">
+                <span>Version: v20260908-002</span>
+                <span class="footer-dot">&bull;</span>
+                <button id="footer-feedback-link" class="footer-link">Report Issue</button>
+            </div>
+            <div class="footer-credits">
+                <span>Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with Gemini</span>
             </div>
         </footer>
     </div>
 
-    <!-- Bootstrap Bundle with Popper (optional enhancement) -->
+    <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-    <!-- SortableJS for Drag and Drop (optional enhancement) -->
+    <!-- SortableJS for Drag and Drop -->
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js" crossorigin="anonymous"></script>
     <script type="module" src="src/app.ts"></script>
 </body>

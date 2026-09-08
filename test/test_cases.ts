@@ -1990,6 +1990,129 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
+    // Test 68: Spectator Mode Control Locking
+    console.log("Running Test 68...");
+    resetTestState();
+    updateLiveSession({
+        matchId: 'm_spectate_test',
+        isLive: true,
+        role: 'SPECTATOR',
+        status: 'SYNCED',
+        seq: 1
+    });
+    updateUI();
+
+    // In spectator mode, scoring functions must not modify state
+    const initialScore = gameState.match.liveInnings.score;
+    const initialWickets = gameState.match.liveInnings.wickets;
+    const initialBalls = gameState.match.liveInnings.balls;
+
+    addRuns(4);
+    if (gameState.match.liveInnings.score !== initialScore || gameState.match.liveInnings.balls !== initialBalls) {
+        console.error("Test 68 Failed: addRuns must be blocked in spectator mode");
+        process.exit(1);
+    }
+
+    addWicket();
+    if (gameState.match.liveInnings.wickets !== initialWickets) {
+        console.error("Test 68 Failed: addWicket must be blocked in spectator mode");
+        process.exit(1);
+    }
+
+    finalizeDelivery('wide', 0, 'byes');
+    if (gameState.match.liveInnings.score !== initialScore) {
+        console.error("Test 68 Failed: finalizeDelivery must be blocked in spectator mode");
+        process.exit(1);
+    }
+
+    resetMatch();
+    if (!gameState.matchStarted) {
+        console.error("Test 68 Failed: resetMatch must be blocked in spectator mode");
+        process.exit(1);
+    }
+
+    // Clean up spectator session
+    updateLiveSession({
+        matchId: null,
+        isLive: false,
+        role: 'NONE',
+        status: 'DISCONNECTED',
+        seq: 0
+    });
+
+    // Test 69: Start New Match Flow
+    console.log("Running Test 69...");
+    resetTestState();
+    addRuns(6);
+    addRuns(4);
+    if (gameState.match.liveInnings.score !== 10) {
+        console.error("Test 69 Setup Failed: Score should be 10");
+        process.exit(1);
+    }
+
+    // Execute New Match
+    (global as any).executeNewMatch();
+    if (gameState.matchStarted) {
+        console.error("Test 69 Failed: matchStarted should be false after executeNewMatch");
+        process.exit(1);
+    }
+    if (gameState.phase !== 'SETUP') {
+        console.error(`Test 69 Failed: Phase should be SETUP, got ${gameState.phase}`);
+        process.exit(1);
+    }
+    if (gameState.match.liveInnings.score !== 0) {
+        console.error(`Test 69 Failed: Live innings score should be reset to 0, got ${gameState.match.liveInnings.score}`);
+        process.exit(1);
+    }
+
+    // Test 70: Umpire Mode Extra Runs (Wide, No Ball, Byes, Leg Byes)
+    console.log("Running Test 70...");
+    resetTestState();
+    // 1 standard Wide
+    finalizeDelivery('wide', 0, 'byes');
+    if (gameState.match.liveInnings.score !== 1 || gameState.match.liveInnings.extras.wides !== 1 || gameState.match.liveInnings.balls !== 0) {
+        console.error(`Test 70 Failed: Standard wide failed. Score: ${gameState.match.liveInnings.score}, Balls: ${gameState.match.liveInnings.balls}`);
+        process.exit(1);
+    }
+
+    // 1 standard No Ball
+    finalizeDelivery('noball', 0, 'byes');
+    if (gameState.match.liveInnings.score !== 2 || gameState.match.liveInnings.extras.noballs !== 1 || gameState.match.liveInnings.balls !== 0) {
+        console.error(`Test 70 Failed: Standard noball failed. Score: ${gameState.match.liveInnings.score}, Balls: ${gameState.match.liveInnings.balls}`);
+        process.exit(1);
+    }
+
+    // 1 Bye
+    finalizeDelivery('bye', 0, 'byes');
+    if (gameState.match.liveInnings.score !== 3 || gameState.match.liveInnings.extras.byes !== 1 || gameState.match.liveInnings.balls !== 1) {
+        console.error(`Test 70 Failed: Standard bye failed. Score: ${gameState.match.liveInnings.score}, Balls: ${gameState.match.liveInnings.balls}`);
+        process.exit(1);
+    }
+
+    // Test 71: Unified Run Out Delivery with Strike Rotation and Balls Counted
+    console.log("Running Test 71...");
+    resetTestState();
+    gameState.match.team1.players = ["P1", "P2", "P3"];
+    // P1 striker, P2 non-striker. Non-striker P2 is run out after completing 1 physical run
+    dispatch({ type: 'FINALIZE_DELIVERY', payload: { type: 'runout', extraRuns: 1, accrueTo: 'byes', pendingRunOutStriker: false } });
+
+    if (gameState.match.liveInnings.score !== 1) {
+        console.error(`Test 71 Failed: Score should be 1, got ${gameState.match.liveInnings.score}`);
+        process.exit(1);
+    }
+    if (gameState.match.liveInnings.wickets !== 1) {
+        console.error(`Test 71 Failed: Wickets should be 1, got ${gameState.match.liveInnings.wickets}`);
+        process.exit(1);
+    }
+    if (gameState.match.liveInnings.balls !== 1) {
+        console.error(`Test 71 Failed: Balls should be 1, got ${gameState.match.liveInnings.balls}`);
+        process.exit(1);
+    }
+    if (!gameState.match.liveInnings.outBatsmen.includes("P2")) {
+        console.error("Test 71 Failed: Non-striker P2 should be out");
+        process.exit(1);
+    }
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {

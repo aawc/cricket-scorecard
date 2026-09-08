@@ -15,13 +15,18 @@ import {
 } from './sync.js';
 
 // DOM Elements
+const appContainer = document.getElementById('app-container') as HTMLElement | null;
 const settingsSection = document.getElementById('settings-section') as HTMLElement | null;
 const scoreboardSection = document.getElementById('scoreboard-section') as HTMLElement | null;
 const startMatchBtn = document.getElementById('start-match-btn') as HTMLButtonElement | null;
 const screenshotModeBtn = document.getElementById('screenshot-mode-btn') as HTMLButtonElement | null;
 const endInningsBtn = document.getElementById('end-innings-btn') as HTMLButtonElement | null;
+const triggerEndInningsBtn = document.getElementById('trigger-end-innings-btn') as HTMLButtonElement | null;
 const confirmEndInningsBtn = document.getElementById('confirm-end-innings-btn') as HTMLButtonElement | null;
 const resetMatchBtn = document.getElementById('reset-match-btn') as HTMLButtonElement | null;
+const newMatchBtn = document.getElementById('new-match-btn') as HTMLButtonElement | null;
+const matchOverNewMatchBtn = document.getElementById('match-over-new-match-btn') as HTMLButtonElement | null;
+const confirmNewMatchBtn = document.getElementById('confirm-new-match-btn') as HTMLButtonElement | null;
 const exitScreenshotModeBtn = document.getElementById('exit-screenshot-mode-btn') as HTMLButtonElement | null;
 const shareMatchBtn = document.getElementById('share-match-btn') as HTMLButtonElement | null;
 const liveStreamBtn = document.getElementById('live-stream-btn') as HTMLButtonElement | null;
@@ -51,6 +56,7 @@ const tossTeam2Btn = document.getElementById('toss-team2-btn') as HTMLButtonElem
 const scoreDisplay = document.getElementById('score-display') as HTMLElement | null;
 const oversDisplay = document.getElementById('overs-display') as HTMLElement | null;
 const matchStatusDisplay = document.getElementById('match-status') as HTMLElement | null;
+const targetDisplay = document.getElementById('target-display') as HTMLElement | null;
 const batsman1Select = document.getElementById('batsman1-select') as HTMLSelectElement | null;
 const batsman2Select = document.getElementById('batsman2-select') as HTMLSelectElement | null;
 const bowlerSelect = document.getElementById('bowler-select') as HTMLSelectElement | null;
@@ -63,6 +69,9 @@ const noballsDisplay = document.getElementById('noballs-display') as HTMLElement
 const byesDisplay = document.getElementById('byes-display') as HTMLElement | null;
 const legbyesDisplay = document.getElementById('legbyes-display') as HTMLElement | null;
 const overLogDisplay = document.getElementById('over-log') as HTMLElement | null;
+const selectionWarning = document.getElementById('selection-warning') as HTMLElement | null;
+const matchOverBanner = document.getElementById('match-over-banner') as HTMLElement | null;
+const matchOverText = document.getElementById('match-over-text') as HTMLElement | null;
 
 const controlsSection = document.getElementById('controls-section') as HTMLElement | null;
 const runBtns = document.querySelectorAll('.run-btn') as NodeListOf<HTMLButtonElement>;
@@ -116,7 +125,15 @@ let currentDeliveryType: string | null = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
 let activeBulkImportTeam: 1 | 2 = 1;
-let expandedOvers: number[] = []; // Tracks expanded over indices in U1 UI
+let expandedOvers: number[] = [];
+
+/**
+ * Helper to check if current session is in spectator mode.
+ */
+export function isSpectator(): boolean {
+    const session = getLiveSession();
+    return !!(session && session.isLive && session.role === 'SPECTATOR');
+}
 
 export function initUI(): void {
     initModalSystem();
@@ -184,8 +201,15 @@ function setupEventListeners(): void {
     if (screenshotModeBtn) screenshotModeBtn.addEventListener('click', toggleScreenshotMode);
     if (exitScreenshotModeBtn) exitScreenshotModeBtn.addEventListener('click', toggleScreenshotMode);
     if (endInningsBtn) endInningsBtn.addEventListener('click', triggerEndInningsModal);
+    if (triggerEndInningsBtn) triggerEndInningsBtn.addEventListener('click', triggerEndInningsModal);
     if (confirmEndInningsBtn) confirmEndInningsBtn.addEventListener('click', executeEndInnings);
+    
+    // New Match button handlers
+    if (newMatchBtn) newMatchBtn.addEventListener('click', handleNewMatchClick);
+    if (matchOverNewMatchBtn) matchOverNewMatchBtn.addEventListener('click', handleNewMatchClick);
+    if (confirmNewMatchBtn) confirmNewMatchBtn.addEventListener('click', executeNewMatch);
     if (resetMatchBtn) resetMatchBtn.addEventListener('click', resetMatch);
+
     if (shareMatchBtn) shareMatchBtn.addEventListener('click', shareMatch);
     if (liveStreamBtn) liveStreamBtn.addEventListener('click', triggerLiveModal);
     if (copySummaryTextBtn) copySummaryTextBtn.addEventListener('click', copyTextScorecard);
@@ -242,24 +266,66 @@ function setupEventListeners(): void {
 
     runBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (isSpectator()) return;
             const r = btn.dataset.runs;
-            if (r) addRuns(parseInt(r));
+            if (r !== undefined) addRuns(parseInt(r, 10));
         });
     });
 
-    if (wideBtn) wideBtn.addEventListener('click', () => triggerExtraRunsModal('wide'));
-    if (noballBtn) noballBtn.addEventListener('click', () => triggerExtraRunsModal('noball'));
-    if (wicketBtn) wicketBtn.addEventListener('click', addWicket);
-    if (runoutBtn) runoutBtn.addEventListener('click', triggerRunOutModal);
-    if (runoutStrikerBtn) runoutStrikerBtn.addEventListener('click', () => processRunOut(true));
-    if (runoutNonstrikerBtn) runoutNonstrikerBtn.addEventListener('click', () => processRunOut(false));
+    if (wideBtn) wideBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        triggerExtraRunsModal('wide');
+    });
+
+    if (noballBtn) noballBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        triggerExtraRunsModal('noball');
+    });
+
+    if (wicketBtn) wicketBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        addWicket();
+    });
+
+    if (runoutBtn) runoutBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        triggerRunOutModal();
+    });
+
+    if (runoutStrikerBtn) {
+        runoutStrikerBtn.addEventListener('click', () => {
+            pendingRunOutStriker = true;
+            runoutStrikerBtn.classList.add('active');
+            if (runoutNonstrikerBtn) runoutNonstrikerBtn.classList.remove('active');
+        });
+    }
+
+    if (runoutNonstrikerBtn) {
+        runoutNonstrikerBtn.addEventListener('click', () => {
+            pendingRunOutStriker = false;
+            runoutNonstrikerBtn.classList.add('active');
+            if (runoutStrikerBtn) runoutStrikerBtn.classList.remove('active');
+        });
+    }
+
+    // Run out run value buttons inside unified modal
+    const runoutValBtns = document.querySelectorAll('.btn-runout-val') as NodeListOf<HTMLButtonElement>;
+    runoutValBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (isSpectator()) return;
+            const r = parseInt(btn.dataset.runs || '0', 10);
+            closeModal('runoutModal');
+            finalizeDelivery('runout', r, 'byes');
+        });
+    });
     
     extraRunValBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+            if (isSpectator()) return;
             extraRunValBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             const v = btn.dataset.val;
-            selectedExtraRuns = v ? parseInt(v) : 0;
+            selectedExtraRuns = v ? parseInt(v, 10) : 0;
 
             if (selectedExtraRuns === 0) {
                 closeModal('extraRunsModal');
@@ -280,22 +346,46 @@ function setupEventListeners(): void {
     });
 
     if (accrueBatsmanBtn) accrueBatsmanBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
         closeModal('extraRunsModal');
         finalizeDelivery(currentDeliveryType!, selectedExtraRuns, 'batsman');
     });
 
     if (accrueByesBtn) accrueByesBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
         closeModal('extraRunsModal');
         finalizeDelivery(currentDeliveryType!, selectedExtraRuns, 'byes');
     });
 
-    if (byeBtn) byeBtn.addEventListener('click', () => triggerExtraRunsModal('bye'));
-    if (legbyeBtn) legbyeBtn.addEventListener('click', () => triggerExtraRunsModal('legbye'));
-    if (undoBtn) undoBtn.addEventListener('click', undoLastAction);
+    if (byeBtn) byeBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        triggerExtraRunsModal('bye');
+    });
 
-    if (batsman1Select) batsman1Select.addEventListener('change', (e) => handleBatsmanChange(1, (e.target as HTMLSelectElement).value));
-    if (batsman2Select) batsman2Select.addEventListener('change', (e) => handleBatsmanChange(2, (e.target as HTMLSelectElement).value));
-    if (bowlerSelect) bowlerSelect.addEventListener('change', (e) => handleBowlerChange((e.target as HTMLSelectElement).value));
+    if (legbyeBtn) legbyeBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        triggerExtraRunsModal('legbye');
+    });
+
+    if (undoBtn) undoBtn.addEventListener('click', () => {
+        if (isSpectator()) return;
+        undoLastAction();
+    });
+
+    if (batsman1Select) batsman1Select.addEventListener('change', (e) => {
+        if (isSpectator()) return;
+        handleBatsmanChange(1, (e.target as HTMLSelectElement).value);
+    });
+
+    if (batsman2Select) batsman2Select.addEventListener('change', (e) => {
+        if (isSpectator()) return;
+        handleBatsmanChange(2, (e.target as HTMLSelectElement).value);
+    });
+
+    if (bowlerSelect) bowlerSelect.addEventListener('change', (e) => {
+        if (isSpectator()) return;
+        handleBowlerChange((e.target as HTMLSelectElement).value);
+    });
 
     const completedOversSection = document.getElementById('completed-overs-section');
     if (completedOversSection) {
@@ -306,7 +396,7 @@ function setupEventListeners(): void {
             if (header) {
                 const idxStr = header.dataset.index;
                 if (!idxStr) return;
-                const idx = parseInt(idxStr);
+                const idx = parseInt(idxStr, 10);
                 const pos = expandedOvers.indexOf(idx);
                 if (pos === -1) {
                     expandedOvers.push(idx);
@@ -347,11 +437,11 @@ export function renderRosters(): void {
 
     const createRosterItem = (name: string, isShared: boolean): HTMLElement => {
         const li = document.createElement('li');
-        li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item');
+        li.classList.add('list-group-item', 'roster-item');
         li.dataset.shared = isShared ? "true" : "false";
         li.innerHTML = `
             <div class="d-flex align-items-center flex-grow-1">
-                <span class="drag-handle me-2 text-muted">☰</span>
+                <span class="drag-handle text-muted">☰</span>
                 <span class="lineup-number me-2 text-muted fw-bold"></span>
                 <span class="player-name">${name}</span>
             </div>
@@ -398,6 +488,7 @@ function updateLineupNumbers(): void {
 }
 
 function handleQuickAdd(teamNum: number): void {
+    if (isSpectator()) return;
     const input = teamNum === 1 ? team1QuickAdd : team2QuickAdd;
     const roster = teamNum === 1 ? team1RosterList : team2RosterList;
     if (!input || !roster) return;
@@ -412,11 +503,11 @@ function handleQuickAdd(teamNum: number): void {
     }
 
     const li = document.createElement('li');
-    li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item');
+    li.classList.add('list-group-item', 'roster-item');
     li.dataset.shared = isShared ? "true" : "false";
     li.innerHTML = `
         <div class="d-flex align-items-center flex-grow-1">
-            <span class="drag-handle me-2 text-muted">☰</span>
+            <span class="drag-handle text-muted">☰</span>
             <span class="lineup-number me-2 text-muted fw-bold"></span>
             <span class="player-name">${name}</span>
         </div>
@@ -428,6 +519,7 @@ function handleQuickAdd(teamNum: number): void {
     const deleteBtn = li.querySelector('.delete-player-btn') as HTMLButtonElement | null;
     if (deleteBtn) {
         deleteBtn.addEventListener('click', () => {
+            if (isSpectator()) return;
             li.remove();
             updateLineupNumbers();
         });
@@ -439,6 +531,7 @@ function handleQuickAdd(teamNum: number): void {
 }
 
 export function openBulkImportModal(teamNum: 1 | 2, triggerEl?: HTMLElement | null): void {
+    if (isSpectator()) return;
     activeBulkImportTeam = teamNum;
     const label = document.getElementById('bulkImportModalLabel');
     if (label) {
@@ -452,6 +545,7 @@ export function openBulkImportModal(teamNum: 1 | 2, triggerEl?: HTMLElement | nu
 }
 
 export function handleBulkImport(): void {
+    if (isSpectator()) return;
     if (!bulkImportTextarea) return;
     const text = bulkImportTextarea.value;
     const names = text.split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
@@ -467,11 +561,11 @@ export function handleBulkImport(): void {
             }
 
             const li = document.createElement('li');
-            li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item');
+            li.classList.add('list-group-item', 'roster-item');
             li.dataset.shared = isShared ? "true" : "false";
             li.innerHTML = `
                 <div class="d-flex align-items-center flex-grow-1">
-                    <span class="drag-handle me-2 text-muted">☰</span>
+                    <span class="drag-handle text-muted">☰</span>
                     <span class="lineup-number me-2 text-muted fw-bold"></span>
                     <span class="player-name">${cleanName}</span>
                 </div>
@@ -520,27 +614,27 @@ export function parseBallLog(b: string): { runs: number; wicket: number } {
     }
     
     if (b.startsWith('wd')) {
-        const extra = b.includes('+') ? parseInt(b.split('+')[1]) : 0;
+        const extra = b.includes('+') ? parseInt(b.split('+')[1], 10) : 0;
         runs = gameState.settings.widePenalty + (isNaN(extra) ? 0 : extra);
     } else if (b.startsWith('nb')) {
-        const extra = b.includes('+') ? parseInt(b.split('+')[1]) : 0;
+        const extra = b.includes('+') ? parseInt(b.split('+')[1], 10) : 0;
         runs = gameState.settings.noBallPenalty + (isNaN(extra) ? 0 : extra);
     } else if (b.startsWith('lb')) {
-        runs = parseInt(b.replace('lb', ''));
+        runs = parseInt(b.replace('lb', ''), 10);
     } else if (b.includes('b') && !b.startsWith('n') && !b.startsWith('w')) {
         const part = b.split('+')[0];
-        runs = parseInt(part.replace('b', ''));
+        runs = parseInt(part.replace('b', ''), 10);
     } else if (b === 'W' || b === 'W-RO') {
         runs = 0;
     } else if (b.includes('+W-RO')) {
         const part = b.split('+')[0];
         if (part.endsWith('b')) {
-            runs = parseInt(part.replace('b', ''));
+            runs = parseInt(part.replace('b', ''), 10);
         } else {
-            runs = parseInt(part);
+            runs = parseInt(part, 10);
         }
     } else {
-        runs = parseInt(b);
+        runs = parseInt(b, 10);
     }
     
     return { runs, wicket };
@@ -612,7 +706,7 @@ export function generateSummaryView(): void {
                 inningsDiv.appendChild(fowDiv);
             }
 
-            // Over Log Table (U2)
+            // Over Log Table
             let displayOvers = [...(inningsData.overs || [])];
             if (inningsData === gameState.match.liveInnings && inningsData.overLog && inningsData.overLog.length > 0) {
                 displayOvers.push({
@@ -624,9 +718,9 @@ export function generateSummaryView(): void {
             if (displayOvers.length > 0) {
                 const overLogHeading = document.createElement('h4');
                 overLogHeading.textContent = "Over Log";
-                overLogHeading.style.fontSize = "1rem";
-                overLogHeading.style.marginTop = "1rem";
-                overLogHeading.style.borderBottom = "1px solid #ddd";
+                overLogHeading.style.fontSize = "0.95rem";
+                overLogHeading.style.marginTop = "0.8rem";
+                overLogHeading.style.borderBottom = "1px solid var(--border)";
                 overLogHeading.style.paddingBottom = "0.25rem";
                 inningsDiv.appendChild(overLogHeading);
 
@@ -749,6 +843,7 @@ export function updateUI(): void {
 
     if (screenshotModeBtn) screenshotModeBtn.disabled = !gameState.matchStarted;
     if (resetMatchBtn) resetMatchBtn.disabled = !gameState.matchStarted;
+    if (newMatchBtn) newMatchBtn.disabled = false;
 
     if (legbyeBtn) {
         if (gameState.settings.enableLegByes) {
@@ -866,28 +961,33 @@ export function updateUI(): void {
         });
     }
 
-    // Match Status description
+    // Match Status description & Match Over Banner
     if (matchStatusDisplay) {
         if (gameState.match.matchOver) {
+            let winText = "Match Over!";
             if (isChasing && target !== null) {
                 if (live.score >= target) {
                     const wicketsRemaining = Math.max(1, maxWickets - live.wickets);
                     const wicketWord = wicketsRemaining === 1 ? 'wicket' : 'wickets';
-                    matchStatusDisplay.textContent = `Match Over! ${battingTeam.name} won by ${wicketsRemaining} ${wicketWord}!`;
+                    winText = `Match Over! ${battingTeam.name} won by ${wicketsRemaining} ${wicketWord}!`;
                 } else if (live.score === target - 1) {
-                    matchStatusDisplay.textContent = `Match Over! Match Tied!`;
+                    winText = `Match Over! Match Tied!`;
                 } else {
-                    matchStatusDisplay.textContent = `Match Over! ${bowlingTeam.name} won by ${target - 1 - live.score} runs!`;
+                    winText = `Match Over! ${bowlingTeam.name} won by ${target - 1 - live.score} runs!`;
                 }
-            } else {
-                matchStatusDisplay.textContent = "Match Over!";
+            }
+            matchStatusDisplay.textContent = winText;
+            if (matchOverBanner) {
+                matchOverBanner.classList.remove('d-none');
+                if (matchOverText) matchOverText.textContent = winText;
             }
         } else {
             matchStatusDisplay.textContent = `Innings ${gameState.match.currentInnings} | Batting: ${battingTeam ? battingTeam.name : 'Unknown'}`;
+            if (matchOverBanner) matchOverBanner.classList.add('d-none');
         }
     }
 
-    // Render Completed Overs Collapsible List (U1)
+    // Render Completed Overs Collapsible List
     const completedOversSection = document.getElementById('completed-overs-section');
     if (completedOversSection) {
         completedOversSection.innerHTML = '';
@@ -962,18 +1062,24 @@ function checkControlsState(): void {
     const controls = controlsSection.querySelectorAll('button:not(#undo-btn)') as NodeListOf<HTMLButtonElement>;
     const session = getLiveSession();
 
-    // In spectator mode, lock all scoring controls and selections
+    // In spectator mode, lock and hide all scoring controls
     if (session.isLive && session.role === 'SPECTATOR') {
         controls.forEach(btn => btn.disabled = true);
         if (undoBtn) undoBtn.disabled = true;
         if (endInningsBtn) endInningsBtn.disabled = true;
+        if (triggerEndInningsBtn) triggerEndInningsBtn.disabled = true;
         if (resetMatchBtn) resetMatchBtn.disabled = true;
+        if (newMatchBtn) newMatchBtn.disabled = true;
         if (startMatchBtn) startMatchBtn.disabled = true;
         if (batsman1Select) batsman1Select.disabled = true;
         if (batsman2Select) batsman2Select.disabled = true;
         if (bowlerSelect) bowlerSelect.disabled = true;
+        if (selectionWarning) selectionWarning.classList.add('d-none');
+        if (appContainer) appContainer.classList.add('spectator-locked');
         return;
     } else {
+        if (appContainer) appContainer.classList.remove('spectator-locked');
+        if (newMatchBtn) newMatchBtn.disabled = false;
         if (batsman1Select) batsman1Select.disabled = false;
         if (batsman2Select) batsman2Select.disabled = false;
         if (bowlerSelect) bowlerSelect.disabled = false;
@@ -981,6 +1087,8 @@ function checkControlsState(): void {
     
     if (gameState.match.matchOver) {
         controls.forEach(btn => btn.disabled = true);
+        if (triggerEndInningsBtn) triggerEndInningsBtn.disabled = true;
+        if (selectionWarning) selectionWarning.classList.add('d-none');
         return;
     }
 
@@ -999,6 +1107,14 @@ function checkControlsState(): void {
     controls.forEach(btn => {
         btn.disabled = needsSelection;
     });
+
+    if (selectionWarning) {
+        if (needsSelection) {
+            selectionWarning.classList.remove('d-none');
+        } else {
+            selectionWarning.classList.add('d-none');
+        }
+    }
 
     if (batsman1Select) {
         if (!live.currentBatsman1) batsman1Select.classList.add('is-invalid');
@@ -1042,7 +1158,7 @@ export function showAlert(message: string, title = "Alert", callback: (() => voi
 }
 
 export function triggerRunOutModal(): void {
-    if (gameState.match.matchOver) return;
+    if (isSpectator() || gameState.match.matchOver) return;
     const live = gameState.match.liveInnings;
     
     const striker = (live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active)
@@ -1053,8 +1169,15 @@ export function triggerRunOutModal(): void {
     const strikerBtn = document.getElementById('runout-striker-btn') as HTMLButtonElement | null;
     const nonStrikerBtn = document.getElementById('runout-nonstriker-btn') as HTMLButtonElement | null;
     
-    if (strikerBtn) strikerBtn.textContent = `Striker: ${striker}`;
-    if (nonStrikerBtn) nonStrikerBtn.textContent = `Non-Striker: ${nonStriker}`;
+    if (strikerBtn) {
+        strikerBtn.textContent = `Striker: ${striker}`;
+        strikerBtn.classList.add('active');
+    }
+    if (nonStrikerBtn) {
+        nonStrikerBtn.textContent = `Non-Striker: ${nonStriker}`;
+        nonStrikerBtn.classList.remove('active');
+    }
+    pendingRunOutStriker = true;
     
     const modalEl = document.getElementById('runoutModal');
     if (typeof (global as any).confirm === 'function' && typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
@@ -1069,7 +1192,7 @@ export function triggerRunOutModal(): void {
 }
 
 export function triggerExtraRunsModal(deliveryType: string): void {
-    if (gameState.match.matchOver) return;
+    if (isSpectator() || gameState.match.matchOver) return;
     currentDeliveryType = deliveryType;
     selectedExtraRuns = 0;
     
@@ -1077,11 +1200,20 @@ export function triggerExtraRunsModal(deliveryType: string): void {
     if (accrualSection) accrualSection.classList.add('hidden');
     
     const wideLabel = document.getElementById('extraRunsModalLabel') as HTMLElement | null;
+    const promptLabel = document.getElementById('extra-runs-prompt') as HTMLElement | null;
     if (wideLabel) {
         if (deliveryType === 'legbye') {
-            wideLabel.textContent = "Runs scored on LEG BYE?";
+            wideLabel.textContent = "Leg Bye Details";
+            if (promptLabel) promptLabel.textContent = "Additional runs scored on leg bye (0 for standard 1 leg bye):";
         } else if (deliveryType === 'bye') {
-            wideLabel.textContent = "Runs scored on BYE?";
+            wideLabel.textContent = "Bye Details";
+            if (promptLabel) promptLabel.textContent = "Additional runs scored on bye (0 for standard 1 bye):";
+        } else if (deliveryType === 'wide') {
+            wideLabel.textContent = "Wide Ball Details";
+            if (promptLabel) promptLabel.textContent = "Additional runs scored on wide (0 for standard 1 wide):";
+        } else if (deliveryType === 'noball') {
+            wideLabel.textContent = "No Ball Details";
+            if (promptLabel) promptLabel.textContent = "Additional runs scored on no ball:";
         } else {
             wideLabel.textContent = `Runs scored on ${deliveryType.toUpperCase()}?`;
         }
@@ -1115,7 +1247,7 @@ export function triggerExtraRunsModal(deliveryType: string): void {
 }
 
 export function triggerEndInningsModal(): void {
-    if (!gameState.matchStarted || gameState.match.matchOver) return;
+    if (isSpectator() || !gameState.matchStarted || gameState.match.matchOver) return;
 
     if (typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
         const ok = confirm("Are you sure you want to conclude this innings early?");
@@ -1125,7 +1257,7 @@ export function triggerEndInningsModal(): void {
 
     const modalEl = document.getElementById('endInningsModal');
     if (modalEl) {
-        openModal(modalEl, endInningsBtn);
+        openModal(modalEl, endInningsBtn || triggerEndInningsBtn);
     } else {
         const ok = confirm("Are you sure you want to conclude this innings early?");
         if (ok) executeEndInnings();
@@ -1133,9 +1265,28 @@ export function triggerEndInningsModal(): void {
 }
 
 export function executeEndInnings(): void {
+    if (isSpectator()) return;
     closeModal('endInningsModal');
     dispatch({ type: 'FORCE_END_INNINGS' });
     updateUI();
+}
+
+/**
+ * Initiates the New Match user flow.
+ */
+export function handleNewMatchClick(): void {
+    if (isSpectator()) return;
+    if (gameState.matchStarted && !gameState.match.matchOver) {
+        openModal('newMatchModal', newMatchBtn);
+    } else {
+        resetMatch();
+    }
+}
+
+export function executeNewMatch(): void {
+    if (isSpectator()) return;
+    closeModal('newMatchModal');
+    resetMatch();
 }
 
 export function generateTextSummary(): string {
@@ -1221,7 +1372,7 @@ export function updateFeedbackPreview(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260907-003'
+        appVersion: 'v20260908-002'
     });
     feedbackPreviewEl.textContent = markdown;
 }
@@ -1232,7 +1383,7 @@ export async function handleCopyFeedbackReport(): Promise<void> {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260907-003'
+        appVersion: 'v20260908-002'
     });
 
     const success = await copyBugReportToClipboard(markdown);
@@ -1251,7 +1402,7 @@ export function handleOpenGithubIssue(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260907-003'
+        appVersion: 'v20260908-002'
     });
 
     const title = userFeedback ? `Bug: ${userFeedback.substring(0, 50)}...` : undefined;
@@ -1262,29 +1413,32 @@ export function handleOpenGithubIssue(): void {
 }
 
 export function processRunOut(isStriker: boolean): void {
-    if (gameState.match.matchOver) return;
+    if (isSpectator() || gameState.match.matchOver) return;
     closeModal('runoutModal');
     pendingRunOutStriker = isStriker;
     triggerExtraRunsModal('runout');
 }
 
 export function handleBatsmanChange(batsmanNumber: 1 | 2, newName: string): void {
+    if (isSpectator()) return;
     dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: batsmanNumber, name: newName } });
     updateUI();
 }
 
 export function handleBowlerChange(newName: string): void {
+    if (isSpectator()) return;
     dispatch({ type: 'CHANGE_BOWLER', payload: { name: newName } });
     updateUI();
 }
 
 export function startMatch(): void {
+    if (isSpectator()) return;
     if (!oversPerInningsInput || !maxOversPerBowlerInput || !allowSingleBatsmanInput || !enableLegByesInput) return;
 
     const settings = {
         totalInnings: 1,
-        oversPerInnings: parseInt(oversPerInningsInput.value),
-        maxOversPerBowler: parseInt(maxOversPerBowlerInput.value),
+        oversPerInnings: parseInt(oversPerInningsInput.value, 10),
+        maxOversPerBowler: parseInt(maxOversPerBowlerInput.value, 10),
         widePenalty: 1,
         noBallPenalty: 1,
         allowSingleBatsman: allowSingleBatsmanInput.checked,
@@ -1357,6 +1511,7 @@ export function startMatch(): void {
 }
 
 export function executeStartMatch(battingTeamNum: 1 | 2): void {
+    if (isSpectator()) return;
     closeModal('tossModal');
 
     dispatch({ type: 'CHOOSE_TOSS_BATTING', payload: { battingTeamNum } });
@@ -1369,6 +1524,7 @@ export function executeStartMatch(battingTeamNum: 1 | 2): void {
 }
 
 export function resetMatch(): void {
+    if (isSpectator()) return;
     clearState();
     dispatch({ type: 'RESET_MATCH' });
     expandedOvers = [];
@@ -1379,7 +1535,10 @@ export function resetMatch(): void {
     if (settingsSection) settingsSection.classList.remove('hidden');
     
     const flipContainer = document.querySelector('.flip-container');
-    if (flipContainer) flipContainer.classList.add('hidden');
+    if (flipContainer) {
+        flipContainer.classList.add('hidden');
+        flipContainer.classList.remove('flipped');
+    }
     document.body.classList.remove('screenshot-mode');
     
     if (oversPerInningsInput) oversPerInningsInput.value = gameState.settings.oversPerInnings.toString();
@@ -1394,6 +1553,12 @@ export function resetMatch(): void {
 export function shareMatch(): void {
     const url = generatePermalink(gameState);
     
+    if (!navigator.clipboard) {
+        showAlert("Setting URL in address bar.", "Share Match");
+        if (typeof window !== 'undefined') window.history.pushState({}, '', url);
+        return;
+    }
+
     navigator.clipboard.writeText(url).then(() => {
         showAlert("Permalink copied to clipboard!", "Share Match");
     }).catch(err => {
@@ -1406,6 +1571,7 @@ export function shareMatch(): void {
 }
 
 export function undoLastAction(): void {
+    if (isSpectator()) return;
     dispatch({ type: 'UNDO' });
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer && flipContainer.classList.contains('flipped') && !gameState.match.matchOver) {
@@ -1416,21 +1582,25 @@ export function undoLastAction(): void {
 }
 
 export function addRuns(runs: number): void {
+    if (isSpectator()) return;
     dispatch({ type: 'ADD_RUNS', payload: { runs } });
     updateUI();
 }
 
 export function addLegBye(): void {
+    if (isSpectator()) return;
     dispatch({ type: 'ADD_LEG_BYE' });
     updateUI();
 }
 
 export function addWicket(): void {
+    if (isSpectator()) return;
     dispatch({ type: 'ADD_WICKET' });
     updateUI();
 }
 
 export function finalizeDelivery(type: string, extraRuns: number, accrueTo: string): void {
+    if (isSpectator()) return;
     dispatch({ type: 'FINALIZE_DELIVERY', payload: { type, extraRuns, accrueTo, pendingRunOutStriker } });
     updateUI();
 }
@@ -1461,20 +1631,20 @@ export function updateLiveIndicators(): void {
         if (session.isLive) {
             liveSyncBadge.classList.remove('d-none');
             if (session.role === 'SPECTATOR') {
-                liveSyncBadge.textContent = '[LIVE - SPECTATOR]';
-                liveSyncBadge.className = 'badge bg-info-subtle text-info border border-info';
+                liveSyncBadge.textContent = '[SPECTATOR MODE]';
+                liveSyncBadge.className = 'badge status-pill live-synced';
             } else if (session.status === 'SYNCED') {
                 liveSyncBadge.textContent = '[LIVE - SYNCED]';
-                liveSyncBadge.className = 'badge bg-success-subtle text-success border border-success';
+                liveSyncBadge.className = 'badge status-pill live-synced';
             } else if (session.status === 'SYNCING') {
                 liveSyncBadge.textContent = '[SYNCING...]';
-                liveSyncBadge.className = 'badge bg-warning-subtle text-warning border border-warning';
+                liveSyncBadge.className = 'badge status-pill';
             } else if (session.status === 'OFFLINE_RETRY') {
                 liveSyncBadge.textContent = '[OFFLINE - RETRYING]';
-                liveSyncBadge.className = 'badge bg-danger-subtle text-danger border border-danger';
+                liveSyncBadge.className = 'badge status-pill';
             } else {
                 liveSyncBadge.textContent = `[${session.status}]`;
-                liveSyncBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary';
+                liveSyncBadge.className = 'badge status-pill';
             }
         } else {
             liveSyncBadge.classList.add('d-none');
@@ -1504,7 +1674,7 @@ export function triggerLiveModal(): void {
         if (modalLiveSeq) modalLiveSeq.textContent = `Packet #${session.seq}`;
         if (modalLiveStatusBadge) {
             modalLiveStatusBadge.textContent = `[${session.status}]`;
-            modalLiveStatusBadge.className = session.status === 'SYNCED' ? 'badge bg-success' : (session.status === 'OFFLINE_RETRY' ? 'badge bg-danger' : 'badge bg-warning');
+            modalLiveStatusBadge.className = session.status === 'SYNCED' ? 'badge status-pill live-synced' : 'badge status-pill';
         }
     } else {
         if (liveInactiveSection) liveInactiveSection.classList.remove('d-none');
@@ -1524,7 +1694,7 @@ export function handleStartLiveStream(): void {
     if (modalLiveSeq) modalLiveSeq.textContent = 'Packet #1';
     if (modalLiveStatusBadge) {
         modalLiveStatusBadge.textContent = '[SYNCED]';
-        modalLiveStatusBadge.className = 'badge bg-success';
+        modalLiveStatusBadge.className = 'badge status-pill live-synced';
     }
     updateUI();
 }
@@ -1578,4 +1748,3 @@ export function handleSpectatorManualRefresh(): void {
         });
     }
 }
-

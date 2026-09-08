@@ -184,6 +184,9 @@ async function loadModulesAndRun() {
 
     (global as any).resetMatch = uiMod.resetMatch;
     (global as any).startMatch = uiMod.startMatch;
+    (global as any).handleNewMatchClick = uiMod.handleNewMatchClick;
+    (global as any).executeNewMatch = uiMod.executeNewMatch;
+    (global as any).isSpectator = uiMod.isSpectator;
     (global as any).generateSummaryView = uiMod.generateSummaryView;
     (global as any).parseBallLog = uiMod.parseBallLog;
     (global as any).toggleScreenshotMode = uiMod.toggleScreenshotMode;
