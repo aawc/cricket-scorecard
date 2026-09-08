@@ -120,11 +120,18 @@ function createMockElement(id?: string): any {
     __TEST_ENV__: true
 };
 
-(global as any).localStorage = {
-    getItem: () => null,
-    setItem: () => {},
-    removeItem: () => {}
+const localStorageStore: Record<string, string> = {};
+const mockLocalStorage = {
+    getItem: (key: string) => localStorageStore[key] !== undefined ? localStorageStore[key] : null,
+    setItem: (key: string, val: string) => { localStorageStore[key] = String(val); },
+    removeItem: (key: string) => { delete localStorageStore[key]; },
+    clear: () => { Object.keys(localStorageStore).forEach(k => delete localStorageStore[k]); }
 };
+Object.defineProperty(globalThis, 'localStorage', {
+    get: () => mockLocalStorage,
+    configurable: true
+});
+(global as any).window.localStorage = mockLocalStorage;
 
 Object.defineProperty(global, 'navigator', {
     value: {
@@ -205,7 +212,7 @@ async function loadModulesAndRun() {
     (global as any).getGitHubIssueUrl = feedbackMod.getGitHubIssueUrl;
     (global as any).copyBugReportToClipboard = feedbackMod.copyBugReportToClipboard;
 
-    // Live Streaming & 4-Week Sync globals
+    // Live Streaming & 1-Year Sync globals
     const syncMod = await import('../src/sync.js');
     (global as any).startLiveSession = syncMod.startLiveSession;
     (global as any).stopLiveSync = syncMod.stopLiveSync;
@@ -225,7 +232,12 @@ async function loadModulesAndRun() {
     (global as any).getSpectatorUrl = syncMod.getSpectatorUrl;
     (global as any).getUmpireUrl = syncMod.getUmpireUrl;
     (global as any).parseLiveUrlParams = syncMod.parseLiveUrlParams;
+    (global as any).initLiveProviderFromUrlOrStorage = syncMod.initLiveProviderFromUrlOrStorage;
     (global as any).syncStateIfLive = syncMod.syncStateIfLive;
+    (global as any).ONE_YEAR_SECONDS = syncMod.ONE_YEAR_SECONDS;
+    (global as any).ONE_YEAR_MS = syncMod.ONE_YEAR_MS;
+    (global as any).DEFAULT_TTL_SECONDS = syncMod.DEFAULT_TTL_SECONDS;
+    (global as any).DEFAULT_TTL_MS = syncMod.DEFAULT_TTL_MS;
     (global as any).FOUR_WEEKS_SECONDS = syncMod.FOUR_WEEKS_SECONDS;
     (global as any).FOUR_WEEKS_MS = syncMod.FOUR_WEEKS_MS;
 

@@ -37,7 +37,12 @@ declare function getGitHubIssueUrl(reportText: string, customTitle?: string): st
 declare function copyBugReportToClipboard(reportText: string): Promise<boolean>;
 
 declare var MemoryStorageProvider: any;
-declare var RestKVStorageProvider: any;
+declare var CloudflareKVStorageProvider: any;
+declare var GoogleSheetsStorageProvider: any;
+declare var ONE_YEAR_SECONDS: number;
+declare var ONE_YEAR_MS: number;
+declare var DEFAULT_TTL_SECONDS: number;
+declare var DEFAULT_TTL_MS: number;
 declare var FOUR_WEEKS_SECONDS: number;
 declare var FOUR_WEEKS_MS: number;
 declare type LiveStorageProvider = any;
@@ -46,6 +51,8 @@ declare function generateWriteKey(): string;
 declare function hashWriteKey(key: string): string;
 declare function getSpectatorUrl(id: string): string;
 declare function getUmpireUrl(id: string, key: string): string;
+declare function parseLiveUrlParams(): { matchId: string | null; writeKey: string | null };
+declare function initLiveProviderFromUrlOrStorage(): void;
 declare function createLiveMatchPacket(matchId: string, writeKey: string, seq: number, state: any, createdAt?: number): any;
 declare function setLiveStorageProvider(provider: any): void;
 declare function getLiveStorageProvider(): any;
@@ -55,7 +62,6 @@ declare function joinSpectatorSession(matchId: string, onUpdate: (state: any) =>
 declare function getLiveSession(): any;
 declare function updateLiveSession(partial: any): void;
 declare function syncStateIfLive(state: any, immediate?: boolean): Promise<boolean>;
-declare function parseLiveUrlParams(): { matchId: string | null; writeKey: string | null };
 declare function executeStartMatch(battingTeamNum: number): void;
 declare function handleStartLiveStream(): void;
 declare function handleStopLiveStream(): void;
@@ -616,12 +622,7 @@ const badState = {
     }
 };
 
-global.localStorage.getItem = (key: any) => {
-    if (key === 'cricketScorecardState') {
-        return JSON.stringify(badState);
-    }
-    return null;
-};
+(global as any).window.localStorage.setItem('cricketScorecardState', JSON.stringify(badState));
 
 loadFromLocalStorage();
 
@@ -634,8 +635,8 @@ if (gameState.match.team2.innings[0].score !== 11) {
     process.exit(1);
 }
 
-// Restore localStorage mock
-global.localStorage.getItem = (key: any) => null;
+// Restore localStorage
+(global as any).window.localStorage.removeItem('cricketScorecardState');
 
 // Test 23: Match ends in a Tie at max overs limit
 resetTestState();
@@ -699,12 +700,7 @@ gameState.match.liveInnings.score = 26;
 gameState.match.liveInnings.balls = 11;
 
 const badStateString = JSON.stringify(gameState);
-global.localStorage.getItem = (key: any) => {
-    if (key === 'cricketScorecardState') {
-        return badStateString;
-    }
-    return null;
-};
+(global as any).window.localStorage.setItem('cricketScorecardState', badStateString);
 
 loadFromLocalStorage();
 
@@ -729,7 +725,7 @@ if (gameState.match.team2.innings.length !== 1) {
     process.exit(1);
 }
 
-global.localStorage.getItem = (key: any) => null;
+(global as any).window.localStorage.removeItem('cricketScorecardState');
 
 // Test 26: Healing of bloated overLog on load
 resetTestState();
@@ -743,12 +739,7 @@ gameState.match.liveInnings.currentBowler = "B1";
 gameState.match.liveInnings.bowlers = { "B1": { runs: 32, balls: 13, wickets: 0 } };
 
 const corruptStateString = JSON.stringify(gameState);
-global.localStorage.getItem = (key: any) => {
-    if (key === 'cricketScorecardState') {
-        return corruptStateString;
-    }
-    return null;
-};
+(global as any).window.localStorage.setItem('cricketScorecardState', corruptStateString);
 
 loadFromLocalStorage();
 
@@ -774,7 +765,7 @@ if (live.balls !== 13) {
     process.exit(1);
 }
 
-global.localStorage.getItem = (key: any) => null;
+(global as any).window.localStorage.removeItem('cricketScorecardState');
 
 // Test 27: startMatch validation failure (not enough players)
 resetTestState();
@@ -851,12 +842,7 @@ gameState.match.team1.players = ["T1P1", "T1P2"];
 gameState.match.team2.players = ["T2P1", "T2P2"];
 gameState.settings.oversPerInnings = 5;
 
-let lsRemoved = false;
-global.localStorage.removeItem = (key: any) => {
-    if (key === 'cricketScorecardState') {
-        lsRemoved = true;
-    }
-};
+(global as any).window.localStorage.setItem('cricketScorecardState', JSON.stringify(gameState));
 
 resetMatch();
 
@@ -864,7 +850,7 @@ if (gameState.matchStarted) {
     console.error("Test 29 Failed: Match should be marked as not started after reset");
     process.exit(1);
 }
-if (!lsRemoved) {
+if ((global as any).window.localStorage.getItem('cricketScorecardState') !== null) {
     console.error("Test 29 Failed: LocalStorage state should have been removed");
     process.exit(1);
 }
@@ -880,8 +866,6 @@ if (gameState.settings.oversPerInnings !== 5) {
     console.error("Test 29 Failed: Settings should have been preserved");
     process.exit(1);
 }
-
-global.localStorage.removeItem = () => {};
 
 // Test 30: Leg Byes toggle behavior
 resetTestState();
@@ -912,8 +896,6 @@ if (!consoleErrorCalled || !consoleErrorMsg.includes("Leg byes are disabled")) {
     console.error("Test 30 Failed: Expected error log not found, got:", consoleErrorMsg);
     process.exit(1);
 }
-
-global.localStorage.getItem = (key: any) => null;
 
 // Test 31: Permalink State Loader phase and history reconstruction
 resetTestState();
@@ -1687,14 +1669,14 @@ if (!umpireUrl.includes(`?live=${testMatchId}`) || !umpireUrl.includes(`key=${te
     process.exit(1);
 }
 
-// Test 55: 4-Week TTL and Packet Serialization
+// Test 55: 1-Year TTL and Packet Serialization
 console.log("Running Test 55...");
-if (FOUR_WEEKS_SECONDS !== 28 * 24 * 60 * 60 || FOUR_WEEKS_SECONDS !== 2419200) {
-    console.error(`Test 55 Failed: FOUR_WEEKS_SECONDS must be exactly 2,419,200, got ${FOUR_WEEKS_SECONDS}`);
+if (ONE_YEAR_SECONDS !== 365 * 24 * 60 * 60 || ONE_YEAR_SECONDS !== 31536000) {
+    console.error(`Test 55 Failed: ONE_YEAR_SECONDS must be exactly 31,536,000, got ${ONE_YEAR_SECONDS}`);
     process.exit(1);
 }
-if (FOUR_WEEKS_MS !== 2419200000) {
-    console.error(`Test 55 Failed: FOUR_WEEKS_MS must be 2,419,200,000, got ${FOUR_WEEKS_MS}`);
+if (ONE_YEAR_MS !== 31536000000) {
+    console.error(`Test 55 Failed: ONE_YEAR_MS must be 31,536,000,000, got ${ONE_YEAR_MS}`);
     process.exit(1);
 }
 const baseCreatedTime = 1700000000000;
@@ -1707,8 +1689,8 @@ if (testPacket.matchId !== 'm_live1' || testPacket.seq !== 1) {
     console.error(`Test 55 Failed: Packet metadata mismatch: ${JSON.stringify(testPacket)}`);
     process.exit(1);
 }
-if (testPacket.ttlSeconds !== 2419200 || testPacket.expiresAt !== baseCreatedTime + 2419200000) {
-    console.error(`Test 55 Failed: 4-week TTL calculation incorrect in packet: expiresAt=${testPacket.expiresAt}`);
+if (testPacket.ttlSeconds !== 31536000 || testPacket.expiresAt !== baseCreatedTime + 31536000000) {
+    console.error(`Test 55 Failed: 1-year TTL calculation incorrect in packet: expiresAt=${testPacket.expiresAt}`);
     process.exit(1);
 }
 if (testPacket.writeKeyHash !== hashWriteKey('k_secret1')) {
@@ -1716,7 +1698,7 @@ if (testPacket.writeKeyHash !== hashWriteKey('k_secret1')) {
     process.exit(1);
 }
 
-// Test 56: Storage Provider - Save, Fetch, Write Authorization, and 4-Week Expiration
+// Test 56: Storage Provider - Save, Fetch, Write Authorization, and 1-Year Expiration
 console.log("Running Test 56...");
 (async () => {
     const memProvider = new MemoryStorageProvider();
@@ -1750,12 +1732,12 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
-    // 4-Week Expiration test
-    const expiredPacket = createLiveMatchPacket('m_expired', 'k_exp', 1, gameState, Date.now() - 30 * 24 * 60 * 60 * 1000);
+    // 1-Year Expiration test
+    const expiredPacket = createLiveMatchPacket('m_expired', 'k_exp', 1, gameState, Date.now() - 370 * 24 * 60 * 60 * 1000);
     await memProvider.savePacket('m_expired', 'k_exp', expiredPacket);
     const expiredRes = await memProvider.fetchPacket('m_expired');
     if (expiredRes.success || !expiredRes.expired) {
-        console.error("Test 56 Failed: Expected expired: true for packet older than 4 weeks");
+        console.error("Test 56 Failed: Expected expired: true for packet older than 1 year");
         process.exit(1);
     }
 })().then(async () => {
@@ -1947,6 +1929,64 @@ console.log("Running Test 56...");
     const permalink = generatePermalink(sampleState);
     if (!permalink.includes('?s=')) {
         console.error(`Test 66 Failed: Expected compressed permalink URL with ?s=, got ${permalink}`);
+        process.exit(1);
+    }
+
+    // Test 67: Cloudflare Workers KV and Google Sheets Storage Provider Switching
+    console.log("Running Test 67...");
+    const cfProvider = new CloudflareKVStorageProvider('https://custom-cf-worker.example.workers.dev/api');
+    setLiveStorageProvider(cfProvider);
+    if (getLiveStorageProvider() !== cfProvider) {
+        console.error("Test 67 Failed: setLiveStorageProvider failed to set CloudflareKVStorageProvider");
+        process.exit(1);
+    }
+
+    const gsProvider = new GoogleSheetsStorageProvider('https://script.google.com/macros/s/AKfycbz_test/exec');
+    setLiveStorageProvider(gsProvider);
+    if (getLiveStorageProvider() !== gsProvider) {
+        console.error("Test 67 Failed: setLiveStorageProvider failed to set GoogleSheetsStorageProvider");
+        process.exit(1);
+    }
+
+    // Test dynamic provider initialization via URL parameters
+    (global as any).window.location.search = '?endpoint=https://script.google.com/macros/s/AKfycbz_url/exec';
+    initLiveProviderFromUrlOrStorage();
+    if (!(getLiveStorageProvider() instanceof GoogleSheetsStorageProvider)) {
+        console.error("Test 67 Failed: initLiveProviderFromUrlOrStorage failed to detect GoogleSheetsStorageProvider from URL parameter");
+        process.exit(1);
+    }
+
+    (global as any).window.location.search = '?endpoint=https://my-edge-kv.workers.dev/api/';
+    initLiveProviderFromUrlOrStorage();
+    if (!(getLiveStorageProvider() instanceof CloudflareKVStorageProvider)) {
+        console.error("Test 67 Failed: initLiveProviderFromUrlOrStorage failed to detect CloudflareKVStorageProvider from URL parameter");
+        process.exit(1);
+    }
+
+    // Test alias ?backend= parameter
+    (global as any).window.location.search = '?backend=https://script.google.com/macros/s/AKfycbz_alias/exec';
+    initLiveProviderFromUrlOrStorage();
+    if (!(getLiveStorageProvider() instanceof GoogleSheetsStorageProvider)) {
+        console.error("Test 67 Failed: initLiveProviderFromUrlOrStorage failed to detect GoogleSheetsStorageProvider from ?backend= alias");
+        process.exit(1);
+    }
+
+    // Test localStorage fallback when search query is empty
+    (global as any).window.location.search = '';
+    setLiveStorageProvider(new CloudflareKVStorageProvider('https://default-cf.workers.dev/api/'));
+    (global as any).window.localStorage.setItem('custom_live_endpoint', 'https://script.google.com/macros/s/AKfycbz_storage/exec');
+    initLiveProviderFromUrlOrStorage();
+    if (!(getLiveStorageProvider() instanceof GoogleSheetsStorageProvider)) {
+        console.error("Test 67 Failed: initLiveProviderFromUrlOrStorage failed to restore GoogleSheetsStorageProvider from localStorage");
+        process.exit(1);
+    }
+
+    setLiveStorageProvider(new GoogleSheetsStorageProvider('https://default-gs.script.google.com/exec'));
+    (global as any).window.localStorage.setItem('custom_live_endpoint', 'https://storage-cf.workers.dev/api/');
+    initLiveProviderFromUrlOrStorage();
+    const currentProvider = getLiveStorageProvider();
+    if (!(currentProvider instanceof CloudflareKVStorageProvider)) {
+        console.error("Test 67 Failed: initLiveProviderFromUrlOrStorage failed to restore CloudflareKVStorageProvider from localStorage. Got:", currentProvider);
         process.exit(1);
     }
 
