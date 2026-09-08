@@ -1,0 +1,23 @@
+name: Feature Request
+description: Suggest an enhancement, new cricket rule, or UX improvement
+title: "[FEAT]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for proposing a new feature or enhancement for Cricket Scorecard PWA.
+  - type: textarea
+    id: feature-description
+    attributes:
+      label: Proposed Feature / Enhancement
+      description: Clear and concise description of the feature and its value to scorers or spectators.
+    validations:
+      required: true
+  - type: textarea
+    id: user-workflow
+    attributes:
+      label: Expected Workflow & Rules
+      description: Explain how users or scorers will interact with this feature.
+    validations:
+      required: true

@@ -1,0 +1,64 @@
+name: Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release Tag (e.g. v2026.09.001)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Run Test Suites
+        run: npm test
+
+      - name: Build Production Assets
+        run: npm run build
+
+      - name: Extract Release Notes
+        id: release_notes
+        run: |
+          TAG_NAME="${{ github.event.inputs.tag || github.ref_name }}"
+          node scripts/extract-release-notes.js --tag "$TAG_NAME" --output RELEASE_NOTES.md
+          echo "notes_path=RELEASE_NOTES.md" >> "$GITHUB_OUTPUT"
+
+      - name: Package Release Distribution
+        run: |
+          TAG_NAME="${{ github.event.inputs.tag || github.ref_name }}"
+          cd dist && zip -r "../cricket-scorecard-dist-${TAG_NAME}.zip" . && cd ..
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: Release ${{ github.event.inputs.tag || github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            cricket-scorecard-dist-${{ github.event.inputs.tag || github.ref_name }}.zip
+          draft: false
+          prerelease: false
+          generate_release_notes: true
