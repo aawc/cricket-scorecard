@@ -14,11 +14,14 @@ The application is structured as a TypeScript Progressive Web App, utilizing Vit
   - `src/state.ts`: Central game state store coordinator and undo history wrapper.
   - `src/storage.ts`: LZString state compression/decompression and storage minification logic.
   - `src/reducer.ts`: Pure reducer state machine managing match state calculations, strike rotations, and validation.
+  - `src/sync.ts`: Real-time multi-reader live state sync engine, storage provider abstraction, write-token authorization, and 4-week TTL management.
+  - `src/modal.ts`: Universal zero-dependency modal controller and W3C WAI-ARIA focus management.
+  - `src/feedback.ts`: Bug reporting engine and diagnostic Markdown generator.
   - `src/ui.ts`: Cached DOM selectors, event listeners, and UI rendering bindings.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
 - **PWA Capabilities**: Service Worker (`sw.js`) compiled into `dist/` root, caching static assets for offline capability; Web App Manifest (`manifest.json`) for installation.
 - **State Persistence**: `localStorage` to save match state across reloads.
-- **State Sharing**: URL-based sharing using `LZString` compression for compact permalinks.
+- **State Sharing**: URL-based sharing using `LZString` compression for compact permalinks, plus real-time cloud live streaming with 4-week retention.
 - **Testing**: Node.js test runner using `ts-node` to run TypeScript assertions (`test/test_cases.ts`) in a mock DOM environment.
 
 ---
@@ -283,6 +286,19 @@ To track history and progress, the following major refactorings have been succes
     *   Added header "Feedback / Bug" button and footer shortcut in [`index.html:L24`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L24) and [`src/ui.ts:L1088-L1145`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1088-L1145).
     *   Added automated unit tests 51-53 in [`test/test_cases.ts:L1500-L1625`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1500-L1625).
 
+7.  **Real-Time Multi-Reader Live State Sync & 4-Week Retention**:
+    *   **Remote Storage Hosting Endpoint**: Live match states are stored in a serverless REST Key-Value store via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L93) connecting to Cloudflare Workers KV endpoints (`https://cricket-scorecard-live.workers.dev/api/match/{matchId}`), with turnkey Google Apps Script support via [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L150).
+    *   **Single-Writer / Multi-Reader Model**: Implemented a zero-cost cloud synchronization service ([`LiveSyncService`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L226)) in [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts) supporting 1 umpire author and N parallel spectators.
+    *   **Cryptographic Role Isolation**: Umpire holds a private `writeKey` (`?live=<matchId>&key=<writeKey>`) stored in `localStorage`, while spectators receive a read-only link (`?live=<matchId>`). Write operations are validated via [`hashWriteKey()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L33).
+    *   **4-Week Retention TTL**: Transports state packets with a 28-day (2,419,200 seconds / [`FOUR_WEEKS_SECONDS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L4)) expiration TTL enforced both server-side via HTTP query parameters and client-side via metadata timestamps (`expiresAt`).
+    *   **Adaptive Polling & Visibility Optimization**: Spectators poll adaptively (3.5s active via [`ACTIVE_POLL_INTERVAL_MS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L6), 15s when tab is backgrounded via [`BACKGROUND_POLL_INTERVAL_MS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L7)).
+    *   **Offline Tolerance & In-Memory Fallback**: Offline actions buffer in an in-memory and `localStorage` dirty queue, automatically syncing upon network restoration with monotonic sequence verification (`seq`). Automated tests utilize [`MemoryStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L53).
+    *   **Spectator UX & Accessibility**: Read-only Spectator Mode locks scoring controls, renders a top live banner with connection status badges (`[LIVE - SYNCED]`, `[OFFLINE - RETRYING]`, `[SPECTATOR MODE]`), and permits theme toggling and full scorecard inspection.
+
+8.  **Universal Zero-Dependency Modal Controller & WAI-ARIA Focus Management**:
+    *   Implemented [`src/modal.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts) providing [`openModal()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L30) and [`closeModal()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89) with native backdrop lifecycle management, keyboard/click dismissal, and automatic fallback when Bootstrap CDN fails.
+    *   Guarantees W3C WAI-ARIA accessibility by actively blurring focused descendants before applying `aria-hidden="true"` and restoring focus to triggering elements upon dismissal.
+
 ---
 
 ## 9. Future Architectural Roadmap
@@ -293,9 +309,8 @@ To transition this project from a prototype implementation to a professional, in
     *   Currently, the UI is updated manually by traversing the DOM tree in `updateUI()`.
     *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Signals) that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
-2.  **Remote Storage Sync (Cloud Persistence)** - *Status: Active Exploration (Design Phase)*:
-    *   Currently, the application relies strictly on local browser `localStorage` and permalink sharing. If the user clears browser data, match history is lost.
-    *   **Goal**: Introduce an optional remote storage adapter (e.g. Google Sheets integration, collaborative GitHub Gists, or cloud backup drives) to sync match data cleanly.
+2.  **Remote Storage Sync (Cloud Persistence)** - *Status: [IMPLEMENTED] (Production Ready)*:
+    *   Zero-cost live streaming and remote 4-week state persistence implemented via [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts) and [`LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/LIVE_SYNC_DESIGN.md).
 
 ---
 
