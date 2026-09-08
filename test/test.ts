@@ -12,66 +12,75 @@ function createClassListMock(elem: any): any {
     };
 }
 
+function createMockElement(id?: string): any {
+    const attributes: Record<string, string> = {};
+    const elem: any = {
+        id: id || '',
+        value: '',
+        textContent: '',
+        _innerHTML: '',
+        get innerHTML() { return this._innerHTML; },
+        set innerHTML(val: string) {
+            this._innerHTML = val;
+            if (val === '') {
+                this.appendedChildren = [];
+            }
+        },
+        classes: new Set<string>(),
+        appendedChildren: [] as any[],
+        children: [] as any[],
+        dataset: {},
+        style: {},
+        isConnected: true,
+        appendChild: function(child: any) {
+            this.appendedChildren.push(child);
+            this.children.push(child);
+        },
+        remove: function() {},
+        setAttribute: function(k: string, v: string) {
+            attributes[k] = v;
+        },
+        getAttribute: function(k: string) {
+            return attributes[k] !== undefined ? attributes[k] : null;
+        },
+        removeAttribute: function(k: string) {
+            delete attributes[k];
+        },
+        contains: function(target: any) {
+            return this.appendedChildren.includes(target) || this.children.includes(target) || this === target;
+        },
+        closest: function(selector: string) {
+            return null;
+        },
+        focus: function() {},
+        blur: function() {},
+        addEventListener: function() {},
+        querySelector: function(selector: string) {
+            return createMockElement();
+        },
+        querySelectorAll: function(selector: string) {
+            if (selector === '.roster-item') return this.children;
+            return [];
+        },
+        parentElement: {
+            classList: {
+                add: () => {},
+                remove: () => {},
+                contains: () => false
+            }
+        }
+    };
+    elem.classList = createClassListMock(elem);
+    return elem;
+}
+
 (global as any).document = {
     createElement: function(tagName: string) {
-        const elem: any = {
-            value: '',
-            textContent: '',
-            innerHTML: '',
-            classes: new Set<string>(),
-            appendedChildren: [] as any[],
-            appendChild: function(child: any) { this.appendedChildren.push(child); },
-            remove: () => {},
-            querySelector: () => ({ addEventListener: () => {}, textContent: '', remove: () => {}, classList: { add: () => {}, remove: () => {} } }),
-            children: [],
-            querySelectorAll: function(selector: string) {
-                if (selector === '.roster-item') return this.children;
-                return [];
-            },
-            addEventListener: () => {},
-            dataset: {},
-            style: {}
-        };
-        elem.classList = createClassListMock(elem);
-        return elem;
+        return createMockElement();
     },
     getElementById: function(id: string) {
         if (!elements[id]) {
-            const elem: any = {
-                value: '',
-                textContent: '',
-                classes: new Set<string>(),
-                appendedChildren: [] as any[],
-                appendChild: function(child: any) { this.appendedChildren.push(child); },
-                _innerHTML: '',
-                get innerHTML() { return this._innerHTML; },
-                set innerHTML(val: string) {
-                    this._innerHTML = val;
-                    if (val === '') {
-                        this.appendedChildren = [];
-                    }
-                },
-                querySelector: () => ({ addEventListener: () => {}, textContent: '', classList: { add: () => {}, remove: () => {} }, dataset: {} }),
-                children: [] as any[],
-                querySelectorAll: function(selector: string) {
-                    if (selector === '.roster-item') {
-                        return this.children;
-                    }
-                    return [];
-                },
-                addEventListener: () => {},
-                dataset: {},
-                style: {},
-                parentElement: {
-                    classList: {
-                        add: () => {},
-                        remove: () => {},
-                        contains: () => false
-                    }
-                }
-            };
-            elem.classList = createClassListMock(elem);
-            elements[id] = elem;
+            elements[id] = createMockElement(id);
         }
         return elements[id];
     },
@@ -79,17 +88,11 @@ function createClassListMock(elem: any): any {
     querySelector: function(selector: string) {
         if (selector === '.flip-container') {
              if (!elements['flip-container']) {
-                 const elem: any = {
-                     classes: new Set<string>()
-                 };
-                 elem.classList = createClassListMock(elem);
-                 elements['flip-container'] = elem;
+                 elements['flip-container'] = createMockElement('flip-container');
              }
              return elements['flip-container'];
         }
-        return {
-            classList: { add: () => {}, remove: () => {}, contains: () => false }
-        };
+        return createMockElement();
     },
     querySelectorAll: function(selector: string) {
         return [];
@@ -104,14 +107,17 @@ function createClassListMock(elem: any): any {
             remove: function(c: string) { (global as any).document.body.classes.delete(c); },
             contains: function(c: string) { return (global as any).document.body.classes.has(c); }
         },
-        classes: new Set<string>()
+        classes: new Set<string>(),
+        appendChild: function(c: any) {},
+        contains: function(t: any) { return true; }
     }
 };
 
 (global as any).window = {
     location: { search: '', pathname: '', origin: '' },
     history: { replaceState: () => {}, pushState: () => {} },
-    addEventListener: () => {}
+    addEventListener: () => {},
+    __TEST_ENV__: true
 };
 
 (global as any).localStorage = {
@@ -182,7 +188,14 @@ async function loadModulesAndRun() {
     (global as any).handleBowlerChange = uiMod.handleBowlerChange;
     (global as any).generateTextSummary = uiMod.generateTextSummary;
     (global as any).executeEndInnings = uiMod.executeEndInnings;
+    (global as any).executeStartMatch = uiMod.executeStartMatch;
+    (global as any).openBulkImportModal = uiMod.openBulkImportModal;
+    (global as any).handleBulkImport = uiMod.handleBulkImport;
     (global as any).dispatch = stateMod.dispatch;
+
+    const modalMod = await import('../src/modal.js');
+    (global as any).openModal = modalMod.openModal;
+    (global as any).closeModal = modalMod.closeModal;
 
     // Feedback & Bug Reporting globals
     (global as any).generateBugReportMarkdown = feedbackMod.generateBugReportMarkdown;
@@ -191,6 +204,37 @@ async function loadModulesAndRun() {
     (global as any).clearRuntimeErrors = feedbackMod.clearRuntimeErrors;
     (global as any).getGitHubIssueUrl = feedbackMod.getGitHubIssueUrl;
     (global as any).copyBugReportToClipboard = feedbackMod.copyBugReportToClipboard;
+
+    // Live Streaming & 4-Week Sync globals
+    const syncMod = await import('../src/sync.js');
+    (global as any).startLiveSession = syncMod.startLiveSession;
+    (global as any).stopLiveSync = syncMod.stopLiveSync;
+    (global as any).joinSpectatorSession = syncMod.joinSpectatorSession;
+    (global as any).getLiveSession = syncMod.getLiveSession;
+    (global as any).updateLiveSession = syncMod.updateLiveSession;
+    (global as any).createLiveMatchPacket = syncMod.createLiveMatchPacket;
+    (global as any).setLiveStorageProvider = syncMod.setLiveStorageProvider;
+    (global as any).getLiveStorageProvider = syncMod.getLiveStorageProvider;
+    (global as any).MemoryStorageProvider = syncMod.MemoryStorageProvider;
+    (global as any).CloudflareKVStorageProvider = syncMod.CloudflareKVStorageProvider;
+    (global as any).GoogleSheetsStorageProvider = syncMod.GoogleSheetsStorageProvider;
+    (global as any).RestKVStorageProvider = syncMod.RestKVStorageProvider;
+    (global as any).generateMatchId = syncMod.generateMatchId;
+    (global as any).generateWriteKey = syncMod.generateWriteKey;
+    (global as any).hashWriteKey = syncMod.hashWriteKey;
+    (global as any).getSpectatorUrl = syncMod.getSpectatorUrl;
+    (global as any).getUmpireUrl = syncMod.getUmpireUrl;
+    (global as any).parseLiveUrlParams = syncMod.parseLiveUrlParams;
+    (global as any).syncStateIfLive = syncMod.syncStateIfLive;
+    (global as any).FOUR_WEEKS_SECONDS = syncMod.FOUR_WEEKS_SECONDS;
+    (global as any).FOUR_WEEKS_MS = syncMod.FOUR_WEEKS_MS;
+
+    (global as any).triggerLiveModal = uiMod.triggerLiveModal;
+    (global as any).handleStartLiveStream = uiMod.handleStartLiveStream;
+    (global as any).handleStopLiveStream = uiMod.handleStopLiveStream;
+    (global as any).handleCopySpectatorUrl = uiMod.handleCopySpectatorUrl;
+    (global as any).handleCopyUmpireUrl = uiMod.handleCopyUmpireUrl;
+    (global as any).updateLiveIndicators = uiMod.updateLiveIndicators;
 
     // Run tests - dynamic import for ESM compatibility
     await import('./test_cases.js');

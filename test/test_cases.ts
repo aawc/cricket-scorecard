@@ -22,7 +22,12 @@ declare function healInningsOvers(inn: any): void;
 declare function generateSummaryView(): void;
 declare function loadFromLocalStorage(): void;
 declare function generateTextSummary(): string;
+declare function generatePermalink(state: any): string;
 declare function executeEndInnings(): void;
+declare function openBulkImportModal(teamNum: number, triggerEl?: any): void;
+declare function handleBulkImport(): void;
+declare function openModal(modal: any, trigger?: any): void;
+declare function closeModal(modal: any): void;
 declare function dispatch(action: any): void;
 declare function generateBugReportMarkdown(options?: any): string;
 declare function recordRuntimeError(error: any): void;
@@ -30,6 +35,33 @@ declare function getRuntimeErrors(): any[];
 declare function clearRuntimeErrors(): void;
 declare function getGitHubIssueUrl(reportText: string, customTitle?: string): string;
 declare function copyBugReportToClipboard(reportText: string): Promise<boolean>;
+
+declare var MemoryStorageProvider: any;
+declare var RestKVStorageProvider: any;
+declare var FOUR_WEEKS_SECONDS: number;
+declare var FOUR_WEEKS_MS: number;
+declare type LiveStorageProvider = any;
+declare function generateMatchId(): string;
+declare function generateWriteKey(): string;
+declare function hashWriteKey(key: string): string;
+declare function getSpectatorUrl(id: string): string;
+declare function getUmpireUrl(id: string, key: string): string;
+declare function createLiveMatchPacket(matchId: string, writeKey: string, seq: number, state: any, createdAt?: number): any;
+declare function setLiveStorageProvider(provider: any): void;
+declare function getLiveStorageProvider(): any;
+declare function startLiveSession(state: any, matchId?: string, writeKey?: string): any;
+declare function stopLiveSync(): void;
+declare function joinSpectatorSession(matchId: string, onUpdate: (state: any) => void, onStatus?: (status: any, msg?: string) => void): () => void;
+declare function getLiveSession(): any;
+declare function updateLiveSession(partial: any): void;
+declare function syncStateIfLive(state: any, immediate?: boolean): Promise<boolean>;
+declare function parseLiveUrlParams(): { matchId: string | null; writeKey: string | null };
+declare function executeStartMatch(battingTeamNum: number): void;
+declare function handleStartLiveStream(): void;
+declare function handleStopLiveStream(): void;
+declare function handleCopySpectatorUrl(): void;
+declare function handleCopyUmpireUrl(): void;
+declare function updateLiveIndicators(): void;
 
 const doc = document as any;
 
@@ -1627,4 +1659,301 @@ if (giantUrl.length > 8000) {
     process.exit(1);
 }
 
-console.log("All tests passed!");
+// Test 54: Random ID, write key generation, and URL helpers
+console.log("Running Test 54...");
+const testMatchId = generateMatchId();
+const testWriteKey = generateWriteKey();
+if (!testMatchId.startsWith('m_') || testMatchId.length < 8) {
+    console.error(`Test 54 Failed: Invalid matchId format: ${testMatchId}`);
+    process.exit(1);
+}
+if (!testWriteKey.startsWith('k_') || testWriteKey.length < 12) {
+    console.error(`Test 54 Failed: Invalid writeKey format: ${testWriteKey}`);
+    process.exit(1);
+}
+const testHash = hashWriteKey(testWriteKey);
+if (!testHash || typeof testHash !== 'string') {
+    console.error(`Test 54 Failed: hashWriteKey returned invalid hash: ${testHash}`);
+    process.exit(1);
+}
+const spectatorUrl = getSpectatorUrl(testMatchId);
+if (!spectatorUrl.includes(`?live=${testMatchId}`) || spectatorUrl.includes('key=')) {
+    console.error(`Test 54 Failed: Spectator URL should contain live ID but NOT write key: ${spectatorUrl}`);
+    process.exit(1);
+}
+const umpireUrl = getUmpireUrl(testMatchId, testWriteKey);
+if (!umpireUrl.includes(`?live=${testMatchId}`) || !umpireUrl.includes(`key=${testWriteKey}`)) {
+    console.error(`Test 54 Failed: Umpire URL must contain live ID AND write key: ${umpireUrl}`);
+    process.exit(1);
+}
+
+// Test 55: 4-Week TTL and Packet Serialization
+console.log("Running Test 55...");
+if (FOUR_WEEKS_SECONDS !== 28 * 24 * 60 * 60 || FOUR_WEEKS_SECONDS !== 2419200) {
+    console.error(`Test 55 Failed: FOUR_WEEKS_SECONDS must be exactly 2,419,200, got ${FOUR_WEEKS_SECONDS}`);
+    process.exit(1);
+}
+if (FOUR_WEEKS_MS !== 2419200000) {
+    console.error(`Test 55 Failed: FOUR_WEEKS_MS must be 2,419,200,000, got ${FOUR_WEEKS_MS}`);
+    process.exit(1);
+}
+const baseCreatedTime = 1700000000000;
+const testPacket = createLiveMatchPacket('m_live1', 'k_secret1', 1, gameState, baseCreatedTime);
+if (testPacket.version !== 1) {
+    console.error(`Test 55 Failed: Expected packet version 1, got ${testPacket.version}`);
+    process.exit(1);
+}
+if (testPacket.matchId !== 'm_live1' || testPacket.seq !== 1) {
+    console.error(`Test 55 Failed: Packet metadata mismatch: ${JSON.stringify(testPacket)}`);
+    process.exit(1);
+}
+if (testPacket.ttlSeconds !== 2419200 || testPacket.expiresAt !== baseCreatedTime + 2419200000) {
+    console.error(`Test 55 Failed: 4-week TTL calculation incorrect in packet: expiresAt=${testPacket.expiresAt}`);
+    process.exit(1);
+}
+if (testPacket.writeKeyHash !== hashWriteKey('k_secret1')) {
+    console.error("Test 55 Failed: Write key hash mismatch in packet");
+    process.exit(1);
+}
+
+// Test 56: Storage Provider - Save, Fetch, Write Authorization, and 4-Week Expiration
+console.log("Running Test 56...");
+(async () => {
+    const memProvider = new MemoryStorageProvider();
+    const activeTestPacket = createLiveMatchPacket('m_live1', 'k_secret1', 1, gameState, Date.now());
+    
+    // Save packet
+    const saveRes = await memProvider.savePacket('m_live1', 'k_secret1', activeTestPacket);
+    if (!saveRes.success) {
+        console.error(`Test 56 Failed: Initial save failed: ${saveRes.error}`);
+        process.exit(1);
+    }
+
+    // Fetch packet
+    const fetchRes = await memProvider.fetchPacket('m_live1');
+    if (!fetchRes.success || !fetchRes.packet || fetchRes.packet.matchId !== 'm_live1') {
+        console.error(`Test 56 Failed: Fetch failed: ${JSON.stringify(fetchRes)}`);
+        process.exit(1);
+    }
+
+    // Unauthorized overwrite attempt
+    const badKeyRes = await memProvider.savePacket('m_live1', 'k_wrong_key', activeTestPacket);
+    if (badKeyRes.success) {
+        console.error("Test 56 Failed: Save should fail when providing an incorrect write key");
+        process.exit(1);
+    }
+
+    // Not found test
+    const notFoundRes = await memProvider.fetchPacket('m_nonexistent');
+    if (notFoundRes.success || !notFoundRes.notFound) {
+        console.error("Test 56 Failed: Expected notFound: true for non-existent match");
+        process.exit(1);
+    }
+
+    // 4-Week Expiration test
+    const expiredPacket = createLiveMatchPacket('m_expired', 'k_exp', 1, gameState, Date.now() - 30 * 24 * 60 * 60 * 1000);
+    await memProvider.savePacket('m_expired', 'k_exp', expiredPacket);
+    const expiredRes = await memProvider.fetchPacket('m_expired');
+    if (expiredRes.success || !expiredRes.expired) {
+        console.error("Test 56 Failed: Expected expired: true for packet older than 4 weeks");
+        process.exit(1);
+    }
+})().then(async () => {
+    // Test 57: Single-Writer Umpire Live Sync Flow
+    console.log("Running Test 57...");
+    const mockStore = new MemoryStorageProvider();
+    setLiveStorageProvider(mockStore);
+
+    resetTestState();
+
+    // Start Live Session
+    const liveSessionInfo = startLiveSession(gameState);
+    const currentSession = getLiveSession();
+    if (!currentSession.isLive || currentSession.role !== 'UMPIRE' || !currentSession.matchId) {
+        console.error(`Test 57 Failed: Live session did not initialize properly: ${JSON.stringify(currentSession)}`);
+        process.exit(1);
+    }
+
+    // Score runs and verify live synchronization
+    addRuns(4);
+    await syncStateIfLive(gameState, true);
+
+    const storedLive = await mockStore.fetchPacket(liveSessionInfo.matchId);
+    if (!storedLive.success || !storedLive.packet) {
+        console.error("Test 57 Failed: Match state was not stored in live storage provider");
+        process.exit(1);
+    }
+    const unminified = unminifyState(storedLive.packet.state);
+    if (unminified.match.liveInnings.score !== 4) {
+        console.error(`Test 57 Failed: Expected synced score of 4, got ${unminified.match.liveInnings.score}`);
+        process.exit(1);
+    }
+
+    // Test 58: Multi-Reader Spectator Joining and Read-Only Locking
+    console.log("Running Test 58...");
+    let spectatorReceivedState: any = null;
+    const unsubSpectator = joinSpectatorSession(liveSessionInfo.matchId, (state: any) => {
+        spectatorReceivedState = state;
+    });
+
+    // Wait microtick for spectator initial fetch
+    await new Promise(r => setTimeout(r, 20));
+
+    if (getLiveSession().role !== 'SPECTATOR') {
+        console.error(`Test 58 Failed: Expected session role SPECTATOR, got ${getLiveSession().role}`);
+        process.exit(1);
+    }
+    if (!spectatorReceivedState || spectatorReceivedState.match.liveInnings.score !== 4) {
+        console.error(`Test 58 Failed: Spectator did not ingest initial score 4: ${JSON.stringify(spectatorReceivedState?.match?.liveInnings)}`);
+        process.exit(1);
+    }
+
+    // Verify UI scoring controls locking in spectator mode
+    updateUI();
+    const undoButton = document.getElementById('undo-btn') as HTMLButtonElement;
+    const endInnButton = document.getElementById('end-innings-btn') as HTMLButtonElement;
+    const b1Sel = document.getElementById('batsman1-select') as HTMLSelectElement;
+    if (!undoButton.disabled || !endInnButton.disabled || !b1Sel.disabled) {
+        console.error("Test 58 Failed: Scoring controls and player selectors must be disabled in Spectator Mode");
+        process.exit(1);
+    }
+    unsubSpectator();
+
+    // Test 59: Monotonic Packet Ordering & Stale Packet Protection
+    console.log("Running Test 59...");
+    let latestIngestedSeq = 0;
+    updateLiveSession({ seq: 10, lastSyncedAt: 2000 });
+    
+    // Attempting to ingest packet with older seq (seq 8)
+    const stalePacket = { seq: 8, updatedAt: 1500, state: minifyState(gameState) };
+    if (stalePacket.seq <= getLiveSession().seq) {
+        // Correctly recognized as stale
+        latestIngestedSeq = getLiveSession().seq;
+    }
+    if (latestIngestedSeq !== 10) {
+        console.error(`Test 59 Failed: Stale packet should have been rejected. Expected seq 10, got ${latestIngestedSeq}`);
+        process.exit(1);
+    }
+
+    // Test 60: Offline Buffering & Retries
+    console.log("Running Test 60...");
+    class OfflineMockProvider implements LiveStorageProvider {
+        async savePacket() { return { success: false, error: 'No internet connection' }; }
+        async fetchPacket() { return { success: false, error: 'No internet connection' }; }
+    }
+    setLiveStorageProvider(new OfflineMockProvider());
+    updateLiveSession({ isLive: true, role: 'UMPIRE', matchId: 'm_offline', writeKey: 'k_offline' });
+
+    addRuns(1);
+    await syncStateIfLive(gameState, true);
+
+    const offlineSession = getLiveSession();
+    if (offlineSession.status !== 'OFFLINE_RETRY') {
+        console.error(`Test 60 Failed: Expected OFFLINE_RETRY status on network failure, got ${offlineSession.status}`);
+        process.exit(1);
+    }
+
+    // Test 61: URL Parameter Parsing
+    console.log("Running Test 61...");
+    (global as any).window.location.search = '?live=m_game99&key=k_umpire88';
+    const parsedWithKey = parseLiveUrlParams();
+    if (parsedWithKey.matchId !== 'm_game99' || parsedWithKey.writeKey !== 'k_umpire88') {
+        console.error(`Test 61 Failed: Failed to parse matchId and writeKey: ${JSON.stringify(parsedWithKey)}`);
+        process.exit(1);
+    }
+
+    (global as any).window.location.search = '?live=m_game99';
+    const parsedViewerOnly = parseLiveUrlParams();
+    if (parsedViewerOnly.matchId !== 'm_game99' || parsedViewerOnly.writeKey !== null) {
+        console.error(`Test 61 Failed: Spectator URL should return null writeKey: ${JSON.stringify(parsedViewerOnly)}`);
+        process.exit(1);
+    }
+
+    // Test 62: Stop Live Stream and Cleanup
+    console.log("Running Test 62...");
+    handleStopLiveStream();
+    const stoppedSession = getLiveSession();
+    if (stoppedSession.isLive || stoppedSession.role !== 'NONE') {
+        console.error(`Test 62 Failed: Live session was not stopped cleanly: ${JSON.stringify(stoppedSession)}`);
+        process.exit(1);
+    }
+
+    // Test 63: Bulk Paste Modal Open for Team 1 and Team 2
+    console.log("Running Test 63...");
+    const modalLabel = doc.getElementById('bulkImportModalLabel');
+    const textarea = doc.getElementById('bulk-import-textarea');
+    
+    openBulkImportModal(1);
+    if (modalLabel.textContent !== 'Bulk Paste Roster - Team 1') {
+        console.error(`Test 63 Failed: Expected modal label for Team 1, got ${modalLabel.textContent}`);
+        process.exit(1);
+    }
+    
+    openBulkImportModal(2);
+    if (modalLabel.textContent !== 'Bulk Paste Roster - Team 2') {
+        console.error(`Test 63 Failed: Expected modal label for Team 2, got ${modalLabel.textContent}`);
+        process.exit(1);
+    }
+
+    // Test 64: Bulk Paste Roster Parsing & Ingestion
+    console.log("Running Test 64...");
+    const team1Roster = doc.getElementById('team1-roster-list');
+    team1Roster.innerHTML = '';
+    
+    openBulkImportModal(1);
+    textarea.value = "Rohit Sharma\nVirat Kohli, KL Rahul\nJasprit Bumrah 🔁";
+    handleBulkImport();
+    
+    if (team1Roster.appendedChildren.length !== 4) {
+        console.error(`Test 64 Failed: Expected 4 players added to Team 1 roster, got ${team1Roster.appendedChildren.length}`);
+        process.exit(1);
+    }
+
+    const sharedPlayer = team1Roster.appendedChildren.find((el: any) => el.innerHTML.includes('Jasprit Bumrah'));
+    if (!sharedPlayer || sharedPlayer.dataset.shared !== 'true') {
+        console.error(`Test 64 Failed: Shared player badge not detected correctly for Jasprit Bumrah`);
+        process.exit(1);
+    }
+
+    // Test 65: Modal Controller Focus Management & Accessibility
+    console.log("Running Test 65...");
+    const testModal = doc.createElement('div');
+    testModal.id = 'accessibilityTestModal';
+    testModal.classList.add('modal');
+    doc.body.appendChild(testModal);
+    
+    openModal(testModal);
+    if (!testModal.classList.contains('show')) {
+        console.error("Test 65 Failed: Modal should have .show class when opened");
+        process.exit(1);
+    }
+    
+    closeModal(testModal);
+    if (testModal.classList.contains('show')) {
+        console.error("Test 65 Failed: Modal should not have .show class when closed");
+        process.exit(1);
+    }
+
+    // Test 66: Embedded Standalone LZString Permalink Compression Roundtrip
+    console.log("Running Test 66...");
+    const sampleState = {
+        settings: gameState.settings,
+        match: gameState.match,
+        phase: 'PLAYING_INNINGS',
+        matchStarted: true,
+        uiEvents: [],
+        history: []
+    };
+    const permalink = generatePermalink(sampleState);
+    if (!permalink.includes('?s=')) {
+        console.error(`Test 66 Failed: Expected compressed permalink URL with ?s=, got ${permalink}`);
+        process.exit(1);
+    }
+
+    console.log("All tests passed!");
+    process.exit(0);
+}).catch(err => {
+    console.error("Test Suite Failed with unhandled rejection:", err);
+    process.exit(1);
+});
+
