@@ -43,7 +43,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
 - **Permalink Sharing & Live State Streaming (1-Year Retention)**:
     - **Permalink Compression**: Compress and minify match state using client-side LZString compression and key aliasing (`?s=`), ensuring shareable URLs remain highly compact while preserving support for legacy uncompressed links (`?state=`).
-    - **Zero-Cost Live Streaming & Cloud Hosting**: Broadcast match scores live in real time to unlimited parallel spectators at 100% zero cost ($0.00). Match state packets are hosted on serverless Cloudflare Workers KV edge storage (`https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`) or Google Apps Script (`google-apps-script/Code.gs`) with zero user fees.
+    - **Zero-Cost Live Streaming & Cloud Hosting**: Broadcast match scores live in real time to unlimited parallel spectators at 100% zero cost ($0.00). Match state packets are hosted on serverless Cloudflare Workers KV edge storage (`https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`) or Google Apps Script ([`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1)) with zero user fees.
     - **1-Year Data Retention**: Match states are stored in remote cloud storage with a 1-year TTL (31,536,000 seconds / `ONE_YEAR_SECONDS`) for historical and post-match review.
     - **Role Isolation**: The umpire holds a private write key (`?live=<matchId>&key=<writeKey>`) stored in `localStorage`, while spectators receive a read-only link (`?live=<matchId>`) locking scoring controls and auto-polling updates.
     - **Offline Queue & Reconnection**: Scores entered while offline on the field buffer locally in `localStorage` and flush automatically with monotonic sequence numbering upon network restoration.
@@ -73,7 +73,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 
 ## Standing Instructions for Development
 - Keep `PROMPT.md`, `README.md`, `GEMINI.md`, and `CONTRIBUTING.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
-- Keep `DESIGN.md` updated with the current implementation details (data structures, control flow, decisions) as the codebase evolves.
+- Keep [`docs/architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1) updated with the current implementation details (data structures, control flow, decisions) as the codebase evolves.
 - Keep `SECURITY.md` updated with project security policies and reporting guidelines as architectural or dependency changes occur.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
@@ -82,4 +82,5 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - Always maintain single-source-of-truth versioning in [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1) and synchronize across `package.json`, `public/sw.js`, and `index.html`.
 - Always write automated unit test assertions in `test/test_cases.ts` for all new features and bug fixes to prevent regressions.
 - Always run automated unit tests (`npm test`) on each edit without requesting confirmation from the user.
+- **Directory Structure Rule**: Adhere strictly to the repository directory layout specified in [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1). All serverless backends belong in `backend/`, documentation belongs in `docs/`, and client logic belongs in `src/`.
 - Follow colorblind accessibility standards: use high contrast (Blue `#0072B2` vs Orange `#D55E00`) and explicit text status indicators (`[PASS]`, `[FAIL]`, `[FEAT]`, `[FIX]`, `[DOCS]`, `[TEST]`).

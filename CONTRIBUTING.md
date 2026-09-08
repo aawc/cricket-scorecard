@@ -43,6 +43,15 @@ The Cricket Scorecard is built as a zero-cost, offline-first Progressive Web App
 
 ---
 
+### Directory Structure Governance Standard
+All contributors MUST follow the authoritative directory layout defined in [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1):
+- Client code in `src/`
+- Cloud & serverless backends in `backend/`
+- Detailed documentation in `docs/`
+- Build & automation scripts in `scripts/`
+- Tests in `test/`
+- Root directory contains strictly essential project configurations.
+
 ## 2. Local Development Setup
 
 ### Prerequisites
@@ -53,7 +62,7 @@ The Cricket Scorecard is built as a zero-cost, offline-first Progressive Web App
 ### Key Commands
 
 ```bash
-# 1. Run automated unit test suite (77+ tests)
+# 1. Run automated unit test suite (79 tests)
 npm test
 
 # 2. Start local Vite development server
@@ -113,9 +122,9 @@ npm test
 ```
 
 ### Step 5: Documenting the Fix
-1. **Update `BUG_REPORT.md`**: Record the root cause analysis, reproduction steps, and resolved status.
-2. **Update `IMPROVEMENTS_AND_ISSUES_REPORT.md`**: Log the resolution under the active milestone.
-3. **Update `DESIGN.md` / `README.md` / `PROMPT.md` / `GEMINI.md`**: Update documentation if architecture, data structures, or rules changed.
+1. **Update [`docs/reports/BUG_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/reports/BUG_REPORT.md#L1)**: Record the root cause analysis, reproduction steps, and resolved status.
+2. **Update [`docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md#L1)**: Log the resolution under the active milestone.
+3. **Update [`docs/architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1) / `README.md` / `PROMPT.md` / `GEMINI.md`**: Update documentation if architecture, data structures, or rules changed.
 
 ---
 
@@ -134,7 +143,7 @@ npm test
 4. **Unit Test Coverage**:
    - Write comprehensive assertions in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1).
 5. **Documentation**:
-   - Update `README.md`, `DESIGN.md`, `PROMPT.md`, and `GEMINI.md`.
+   - Update `README.md`, [`docs/architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1), `PROMPT.md`, and `GEMINI.md`.
 
 ---
 

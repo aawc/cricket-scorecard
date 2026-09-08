@@ -6,7 +6,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-Fully functional, overhauled, and verified. Standardized Release Management & dynamic semantic tagging (`v$yyyy.$mm.$nnn`), automated repository tag generation & push pipeline, persistent application footer with interactive release badge, integrated release notes modal with categorized commit history & highlights, modern minimalist UX redesign, real-time multi-reader live state streaming with 1-year zero-cost cloud retention, strict spectator-mode controls lockout, dedicated Start New Match workflow, fixed & streamlined delivery controls (Wide, No Ball, Run Out, Byes), advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 77 automated tests passing.
+Fully functional, overhauled, and verified. Standardized Release Management & dynamic semantic tagging (`v$yyyy.$mm.$nnn`), automated repository tag generation & push pipeline, persistent application footer with interactive release badge, integrated release notes modal with categorized commit history & highlights, modern minimalist UX redesign, real-time multi-reader live state streaming with 1-year zero-cost cloud retention, strict spectator-mode controls lockout, dedicated Start New Match workflow, fixed & streamlined delivery controls (Wide, No Ball, Run Out, Byes), advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 79 automated tests passing.
 
 ## Features (Implemented)
 
@@ -21,7 +21,7 @@ Fully functional, overhauled, and verified. Standardized Release Management & dy
 - **Universal Zero-Dependency Modal System & WAI-ARIA Focus Guardrail**: Robust native modal open/close controller with automated backdrop lifecycle, keyboard/click dismissal, automatic fallback when external CDNs fail, and strict W3C WAI-ARIA focus management (active element blurring before `aria-hidden` and focus restoration).
 - **Embedded URI State Compression**: Standalone TypeScript LZString compression for ultra-compact permalinks (`?s=`) and storage minification with zero external runtime dependencies.
 - **Real-Time Live Streaming & Multi-Reader Sync**: Stream live match scores to unlimited parallel spectators at 100% zero cost ($0.00). Spectators view updates in real-time in read-only Spectator Mode without disrupting scoring.
-- **Serverless Cloud Storage Hosting**: Live match state packets are hosted remotely on high-performance Cloudflare Workers KV edge storage (`cloudflare/worker.js`) or Google Apps Script (`google-apps-script/Code.gs`) with zero hosting costs ($0.00).
+- **Serverless Cloud Storage Hosting**: Live match state packets are hosted remotely on high-performance Cloudflare Workers KV edge storage ([`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)) or Google Apps Script ([`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1)) with zero hosting costs ($0.00).
 - **1-Year Remote Retention (365-day TTL)**: Match state is persisted remotely for 1 year (31,536,000 seconds / 365 days) with automatic server-side eviction and client-side timestamp validation.
 - **Cryptographic Role Separation**: Umpire holds private write credentials (`?live=<id>&key=<key>`) stored in `localStorage`, while spectators receive clean read-only links (`?live=<id>`).
 - **Offline Resilience & Network Recovery**: Offline deliveries are queued in `localStorage` and automatically synchronized upon network restoration using monotonic sequence numbering.
@@ -42,7 +42,19 @@ Fully functional, overhauled, and verified. Standardized Release Management & dy
 - **Full Scorecard mode**: Clean monospace match summary featuring individual batsman 4s/6s/SR, bowler maidens/econ, wide and no-ball tallies, and Fall of Wickets summary.
 - **Undo functionality**: Instant rollback for scoring corrections.
 - **Web App Manifest & Service Worker**: Offline PWA installation support.
-- **Automated Tests**: Comprehensive test suite with 77 unit tests covering all scoring rules, live sync, spectator restrictions, release management, and edge cases.
+- **Automated Tests**: Comprehensive test suite with 79 unit tests covering all scoring rules, live sync, spectator restrictions, release management, and edge cases.
+
+## Repository Layout & Architectural Standard
+
+This project follows an enterprise modular directory organization system:
+
+- **[`src/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src#L1)**: Modular TypeScript client source code (state machine, UI controller, modal manager, live sync, storage compression, and semantic versioning).
+- **[`backend/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend#L1)**: Serverless cloud backends and edge streaming integrations ([`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare#L1) and [`backend/google-apps-script/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script#L1)).
+- **[`docs/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs#L1)**: Comprehensive documentation repository. See [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) for governance rules and [`docs/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/README.md#L1) for the index.
+- **[`scripts/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts#L1)**: Build, release automation (`npm run release`), service worker compiler, and release notes extractors.
+- **[`.github/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/.github#L1)**: GitHub Actions CI/CD workflows (`ci.yml`, `release.yml`, `deploy.yml`) and issue templates.
+- **[`public/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public#L1)**: Static assets, icons, manifest, and service worker shell.
+- **[`test/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test#L1)**: Automated unit and regression test suites.
 
 ## Local Development & Release Commands
 

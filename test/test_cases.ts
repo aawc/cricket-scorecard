@@ -2440,6 +2440,49 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
+    // Test 79: Directory Structure Governance & Release Automation Assets
+    console.log("Running Test 79 (Directory Structure Governance & Release Automation)...");
+    const fs = await import("fs");
+    const path = await import("path");
+    const requiredFiles = [
+        "backend/README.md",
+        "backend/cloudflare/worker.js",
+        "backend/cloudflare/wrangler.toml",
+        "backend/google-apps-script/Code.gs",
+        "docs/README.md",
+        "docs/DIRECTORY_STRUCTURE.md",
+        "docs/architecture/DESIGN.md",
+        "docs/architecture/LIVE_SYNC_DESIGN.md",
+        "docs/deployment/DEPLOYMENT_AND_BACKEND_SETUP.md",
+        "docs/reports/BUG_REPORT.md",
+        "docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md",
+        "docs/guides/BUG_REPORTING.md",
+        "docs/assets/FAVICON.md",
+        ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/deploy.yml",
+        ".github/ISSUE_TEMPLATE/bug_report.yml",
+        ".github/ISSUE_TEMPLATE/feature_request.yml",
+        "scripts/extract-release-notes.js",
+        "scripts/release.js"
+    ];
+
+    for (const relPath of requiredFiles) {
+        const fullPath = path.resolve(process.cwd(), relPath);
+        if (!fs.existsSync(fullPath)) {
+            console.error(`Test 79 Failed: Required governance file ${relPath} does not exist at ${fullPath}`);
+            process.exit(1);
+        }
+    }
+
+    // Verify extract-release-notes.js produces valid markdown containing APP_VERSION
+    const { execSync } = await import("child_process");
+    const notesOutput = execSync("node scripts/extract-release-notes.js", { encoding: "utf8" });
+    if (!notesOutput.includes((global as any).APP_VERSION) || !notesOutput.includes("Key Highlights") || !notesOutput.includes("Changes & Improvements")) {
+        console.error(`Test 79 Failed: scripts/extract-release-notes.js did not produce valid release notes. Output:\n${notesOutput}`);
+        process.exit(1);
+    }
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {

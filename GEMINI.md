@@ -50,9 +50,14 @@ The codebase is organized into modular TypeScript units under `src/`:
 5. **No GitHub Alert Syntax**:
    - Do NOT use GitHub alert boxes (`> [!NOTE]`, `> [!WARNING]`) as they break when syncing with Google Docs.
 6. **Documentation Synchronization**:
-   - Keep `README.md`, `PROMPT.md`, `GEMINI.md`, `DESIGN.md`, `BUG_REPORT.md`, and `IMPROVEMENTS_AND_ISSUES_REPORT.md` in sync whenever code or features change.
+   - Keep `README.md`, `PROMPT.md`, `GEMINI.md`, [`docs/architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1), [`docs/reports/BUG_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/reports/BUG_REPORT.md#L1), [`docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md#L1), and [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) in sync whenever code or features change.
 7. **Tag Hygiene**:
    - Omit internal tracking tags (e.g., `TAG=agy`, `CONV=<id>`) from commit messages and documentation in this workspace.
+
+---
+
+8. **Strict Directory Structure Compliance**:
+   - All code, documentation, and cloud integrations MUST adhere to [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1). Never create ad-hoc root folders or loose files.
 
 ---
 
