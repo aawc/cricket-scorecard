@@ -71,6 +71,34 @@ export interface Settings {
 
 export type MatchPhase = 'SETUP' | 'TOSS' | 'PLAYING_INNINGS' | 'INNINGS_BREAK' | 'MATCH_OVER';
 
+export type LiveRole = 'UMPIRE' | 'SPECTATOR' | 'NONE';
+
+export type LiveSyncStatus = 'DISCONNECTED' | 'CONNECTING' | 'SYNCED' | 'SYNCING' | 'OFFLINE_RETRY' | 'ERROR';
+
+export interface LiveMatchPacket {
+  version: 1;
+  matchId: string;
+  seq: number;
+  updatedAt: number;
+  createdAt: number;
+  expiresAt: number;
+  ttlSeconds: number;
+  writeKeyHash: string;
+  state: any;
+}
+
+export interface LiveSessionState {
+  matchId: string | null;
+  isLive: boolean;
+  role: LiveRole;
+  writeKey?: string | null;
+  seq: number;
+  status: LiveSyncStatus;
+  lastSyncedAt: number | null;
+  lastError?: string | null;
+  expiresAt?: number | null;
+}
+
 export interface GameState {
   settings: Settings;
   match: {
@@ -86,6 +114,7 @@ export interface GameState {
   phase: MatchPhase;
   uiEvents: any[];
   history: any[];
+  live?: LiveSessionState;
 }
 
 export type Action =

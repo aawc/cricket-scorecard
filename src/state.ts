@@ -1,6 +1,7 @@
 import { reducer } from './reducer.js';
 import { saveState } from './storage.js';
 import { GameState, Action } from './types.js';
+import { syncStateIfLive } from './sync.js';
 
 export let gameState: GameState = {
     settings: {
@@ -73,4 +74,8 @@ export function dispatch(action: Action): void {
     const nextState = reducer(gameState, action);
     setGameState(nextState);
     saveState(gameState);
+
+    // Auto-sync live state if live session is active
+    syncStateIfLive(gameState);
 }
+
