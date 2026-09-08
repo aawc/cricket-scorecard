@@ -2,6 +2,17 @@ import { gameState, dispatch, setGameState } from './state.js';
 import { saveState, loadState, generatePermalink, clearState } from './storage.js';
 import { GameState, LiveInnings, Team } from './types.js';
 import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl } from './feedback.js';
+import { openModal, closeModal, initModalSystem, registerModalHiddenCallback } from './modal.js';
+import {
+    startLiveSession,
+    stopLiveSync,
+    joinSpectatorSession,
+    getLiveSession,
+    subscribeLiveSession,
+    parseLiveUrlParams,
+    getSpectatorUrl,
+    getUmpireUrl
+} from './sync.js';
 
 // DOM Elements
 const settingsSection = document.getElementById('settings-section') as HTMLElement | null;
@@ -13,6 +24,7 @@ const confirmEndInningsBtn = document.getElementById('confirm-end-innings-btn') 
 const resetMatchBtn = document.getElementById('reset-match-btn') as HTMLButtonElement | null;
 const exitScreenshotModeBtn = document.getElementById('exit-screenshot-mode-btn') as HTMLButtonElement | null;
 const shareMatchBtn = document.getElementById('share-match-btn') as HTMLButtonElement | null;
+const liveStreamBtn = document.getElementById('live-stream-btn') as HTMLButtonElement | null;
 const feedbackBtn = document.getElementById('feedback-btn') as HTMLButtonElement | null;
 const footerFeedbackLink = document.getElementById('footer-feedback-link') as HTMLButtonElement | null;
 const copySummaryTextBtn = document.getElementById('copy-summary-text-btn') as HTMLButtonElement | null;
@@ -68,12 +80,6 @@ const byeBtn = document.getElementById('bye-btn') as HTMLButtonElement | null;
 const legbyeBtn = document.getElementById('legbye-btn') as HTMLButtonElement | null;
 const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement | null;
 
-let runoutModalInstance: any = null;
-let extraRunsModalInstance: any = null;
-let tossModalInstance: any = null;
-let endInningsModalInstance: any = null;
-let feedbackModalInstance: any = null;
-let alertModalInstance: any = null;
 let alertCallback: (() => void) | null = null;
 
 const feedbackModalEl = document.getElementById('feedbackModal') as HTMLElement | null;
@@ -84,6 +90,28 @@ const feedbackToastEl = document.getElementById('feedback-toast') as HTMLElement
 const copyFeedbackReportBtn = document.getElementById('copy-feedback-report-btn') as HTMLButtonElement | null;
 const openGithubIssueBtn = document.getElementById('open-github-issue-btn') as HTMLButtonElement | null;
 
+// Live Stream Elements
+const liveModalEl = document.getElementById('liveModal') as HTMLElement | null;
+const startLiveBtn = document.getElementById('start-live-btn') as HTMLButtonElement | null;
+const stopLiveBtn = document.getElementById('stop-live-btn') as HTMLButtonElement | null;
+const copySpectatorUrlBtn = document.getElementById('copy-spectator-url-btn') as HTMLButtonElement | null;
+const copyUmpireUrlBtn = document.getElementById('copy-umpire-url-btn') as HTMLButtonElement | null;
+const spectatorUrlInput = document.getElementById('spectator-url-input') as HTMLInputElement | null;
+const umpireUrlInput = document.getElementById('umpire-url-input') as HTMLInputElement | null;
+const liveInactiveSection = document.getElementById('live-inactive-section') as HTMLElement | null;
+const liveActiveSection = document.getElementById('live-active-section') as HTMLElement | null;
+const modalLiveStatusBadge = document.getElementById('modal-live-status-badge') as HTMLElement | null;
+const modalLiveSeq = document.getElementById('modal-live-seq') as HTMLElement | null;
+const modalLiveExpires = document.getElementById('modal-live-expires') as HTMLElement | null;
+const liveModalToast = document.getElementById('live-modal-toast') as HTMLElement | null;
+
+const spectatorBanner = document.getElementById('spectator-banner') as HTMLElement | null;
+const spectatorStatusBadge = document.getElementById('spectator-status-badge') as HTMLElement | null;
+const spectatorStatusText = document.getElementById('spectator-status-text') as HTMLElement | null;
+const spectatorLastUpdate = document.getElementById('spectator-last-update') as HTMLElement | null;
+const spectatorRefreshBtn = document.getElementById('spectator-refresh-btn') as HTMLButtonElement | null;
+const liveSyncBadge = document.getElementById('live-sync-badge') as HTMLElement | null;
+
 let currentDeliveryType: string | null = null;
 let selectedExtraRuns = 0;
 let pendingRunOutStriker = true;
@@ -91,6 +119,7 @@ let activeBulkImportTeam: 1 | 2 = 1;
 let expandedOvers: number[] = []; // Tracks expanded over indices in U1 UI
 
 export function initUI(): void {
+    initModalSystem();
     setupEventListeners();
     initSortable();
     renderRosters();
@@ -117,6 +146,35 @@ export function initUI(): void {
         showAlert(e.message, "Error");
         if (settingsSection) settingsSection.classList.remove('hidden');
     }
+
+    // Subscribe to live session updates for status badge synchronization
+    subscribeLiveSession(() => {
+        updateLiveIndicators();
+    });
+
+    // Check for Live Match URL parameters (?live=<id>&key=<key> or ?live=<id>)
+    const liveParams = parseLiveUrlParams();
+    if (liveParams.matchId) {
+        if (liveParams.writeKey) {
+            // Umpire resuming scoring session
+            startLiveSession(gameState, liveParams.matchId, liveParams.writeKey);
+        } else {
+            // Spectator mode: Join match stream in read-only observation mode
+            joinSpectatorSession(liveParams.matchId, (updatedState) => {
+                setGameState(updatedState);
+                if (gameState.matchStarted) {
+                    if (settingsSection) settingsSection.classList.add('hidden');
+                    const flipContainer = document.querySelector('.flip-container');
+                    if (flipContainer) flipContainer.classList.remove('hidden');
+                }
+                updateUI();
+            }, (status, errorMsg) => {
+                if (status === 'ERROR') {
+                    showAlert(errorMsg || 'Failed to connect to live match stream.', 'Live Stream Notice');
+                }
+            });
+        }
+    }
     
     updateUI();
 }
@@ -129,6 +187,7 @@ function setupEventListeners(): void {
     if (confirmEndInningsBtn) confirmEndInningsBtn.addEventListener('click', executeEndInnings);
     if (resetMatchBtn) resetMatchBtn.addEventListener('click', resetMatch);
     if (shareMatchBtn) shareMatchBtn.addEventListener('click', shareMatch);
+    if (liveStreamBtn) liveStreamBtn.addEventListener('click', triggerLiveModal);
     if (copySummaryTextBtn) copySummaryTextBtn.addEventListener('click', copyTextScorecard);
     if (feedbackBtn) feedbackBtn.addEventListener('click', triggerFeedbackModal);
     if (footerFeedbackLink) footerFeedbackLink.addEventListener('click', (e) => {
@@ -140,14 +199,36 @@ function setupEventListeners(): void {
     if (copyFeedbackReportBtn) copyFeedbackReportBtn.addEventListener('click', handleCopyFeedbackReport);
     if (openGithubIssueBtn) openGithubIssueBtn.addEventListener('click', handleOpenGithubIssue);
 
+    // Live Stream event handlers
+    if (startLiveBtn) startLiveBtn.addEventListener('click', handleStartLiveStream);
+    if (stopLiveBtn) stopLiveBtn.addEventListener('click', handleStopLiveStream);
+    if (copySpectatorUrlBtn) copySpectatorUrlBtn.addEventListener('click', handleCopySpectatorUrl);
+    if (copyUmpireUrlBtn) copyUmpireUrlBtn.addEventListener('click', handleCopyUmpireUrl);
+    if (spectatorRefreshBtn) spectatorRefreshBtn.addEventListener('click', handleSpectatorManualRefresh);
+
     if (team1AddBtn) team1AddBtn.addEventListener('click', () => handleQuickAdd(1));
     if (team2AddBtn) team2AddBtn.addEventListener('click', () => handleQuickAdd(2));
     if (team1QuickAdd) team1QuickAdd.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleQuickAdd(1); });
     if (team2QuickAdd) team2QuickAdd.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleQuickAdd(2); });
 
-    if (team1BulkBtn) team1BulkBtn.addEventListener('click', () => { activeBulkImportTeam = 1; });
-    if (team2BulkBtn) team2BulkBtn.addEventListener('click', () => { activeBulkImportTeam = 2; });
-    if (executeBulkImportBtn) executeBulkImportBtn.addEventListener('click', handleBulkImport);
+    if (team1BulkBtn) {
+        team1BulkBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openBulkImportModal(1, team1BulkBtn);
+        });
+    }
+    if (team2BulkBtn) {
+        team2BulkBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            openBulkImportModal(2, team2BulkBtn);
+        });
+    }
+    if (executeBulkImportBtn) {
+        executeBulkImportBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            handleBulkImport();
+        });
+    }
 
     if (tossTeam1Btn) tossTeam1Btn.addEventListener('click', () => executeStartMatch(1));
     if (tossTeam2Btn) tossTeam2Btn.addEventListener('click', () => executeStartMatch(2));
@@ -181,16 +262,16 @@ function setupEventListeners(): void {
             selectedExtraRuns = v ? parseInt(v) : 0;
 
             if (selectedExtraRuns === 0) {
-                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                closeModal('extraRunsModal');
                 finalizeDelivery(currentDeliveryType!, 0, 'byes');
             } else if (currentDeliveryType === 'wide') {
-                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                closeModal('extraRunsModal');
                 finalizeDelivery('wide', selectedExtraRuns, 'byes');
             } else if (currentDeliveryType === 'bye') {
-                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                closeModal('extraRunsModal');
                 finalizeDelivery('bye', selectedExtraRuns, 'byes');
             } else if (currentDeliveryType === 'legbye') {
-                if (extraRunsModalInstance) extraRunsModalInstance.hide();
+                closeModal('extraRunsModal');
                 finalizeDelivery('legbye', selectedExtraRuns, 'byes');
             } else {
                 if (accrualSection) accrualSection.classList.remove('hidden');
@@ -199,10 +280,12 @@ function setupEventListeners(): void {
     });
 
     if (accrueBatsmanBtn) accrueBatsmanBtn.addEventListener('click', () => {
+        closeModal('extraRunsModal');
         finalizeDelivery(currentDeliveryType!, selectedExtraRuns, 'batsman');
     });
 
     if (accrueByesBtn) accrueByesBtn.addEventListener('click', () => {
+        closeModal('extraRunsModal');
         finalizeDelivery(currentDeliveryType!, selectedExtraRuns, 'byes');
     });
 
@@ -355,48 +438,63 @@ function handleQuickAdd(teamNum: number): void {
     updateLineupNumbers();
 }
 
-function handleBulkImport(): void {
+export function openBulkImportModal(teamNum: 1 | 2, triggerEl?: HTMLElement | null): void {
+    activeBulkImportTeam = teamNum;
+    const label = document.getElementById('bulkImportModalLabel');
+    if (label) {
+        label.textContent = `Bulk Paste Roster - Team ${teamNum}`;
+    }
+    if (bulkImportTextarea) {
+        bulkImportTextarea.value = '';
+    }
+    const trigger = triggerEl || (teamNum === 1 ? team1BulkBtn : team2BulkBtn);
+    openModal('bulkImportModal', trigger);
+}
+
+export function handleBulkImport(): void {
     if (!bulkImportTextarea) return;
     const text = bulkImportTextarea.value;
     const names = text.split(/[\n,]+/).map(n => n.trim()).filter(n => n.length > 0);
     const roster = activeBulkImportTeam === 1 ? team1RosterList : team2RosterList;
 
-    if (!roster) return;
+    if (roster && names.length > 0) {
+        names.forEach(name => {
+            let isShared = false;
+            let cleanName = name;
+            if (name.endsWith(' 🔁')) {
+                cleanName = name.replace(' 🔁', '').trim();
+                isShared = true;
+            }
 
-    names.forEach(name => {
-        let isShared = false;
-        let cleanName = name;
-        if (name.endsWith(' 🔁')) {
-            cleanName = name.replace(' 🔁', '').trim();
-            isShared = true;
-        }
+            const li = document.createElement('li');
+            li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item');
+            li.dataset.shared = isShared ? "true" : "false";
+            li.innerHTML = `
+                <div class="d-flex align-items-center flex-grow-1">
+                    <span class="drag-handle me-2 text-muted">☰</span>
+                    <span class="lineup-number me-2 text-muted fw-bold"></span>
+                    <span class="player-name">${cleanName}</span>
+                </div>
+                <div>
+                    ${isShared ? '<span class="badge bg-info me-1">🔁</span>' : ''}
+                    <button type="button" class="btn-close btn-sm p-1 delete-player-btn" aria-label="Delete"></button>
+                </div>
+            `;
+            const deleteBtn = li.querySelector('.delete-player-btn') as HTMLButtonElement | null;
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', () => {
+                    li.remove();
+                    updateLineupNumbers();
+                });
+            }
+            roster.appendChild(li);
+        });
 
-        const li = document.createElement('li');
-        li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center', 'roster-item');
-        li.dataset.shared = isShared ? "true" : "false";
-        li.innerHTML = `
-            <div class="d-flex align-items-center flex-grow-1">
-                <span class="drag-handle me-2 text-muted">☰</span>
-                <span class="lineup-number me-2 text-muted fw-bold"></span>
-                <span class="player-name">${cleanName}</span>
-            </div>
-            <div>
-                ${isShared ? '<span class="badge bg-info me-1">🔁</span>' : ''}
-                <button type="button" class="btn-close btn-sm p-1 delete-player-btn" aria-label="Delete"></button>
-            </div>
-        `;
-        const deleteBtn = li.querySelector('.delete-player-btn') as HTMLButtonElement | null;
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', () => {
-                li.remove();
-                updateLineupNumbers();
-            });
-        }
-        roster.appendChild(li);
-    });
+        bulkImportTextarea.value = '';
+        updateLineupNumbers();
+    }
 
-    bulkImportTextarea.value = '';
-    updateLineupNumbers();
+    closeModal('bulkImportModal');
 }
 
 export function toggleScreenshotMode(): void {
@@ -854,6 +952,7 @@ export function updateUI(): void {
         tossTeam1Btn.textContent = `${gameState.match.team1.name || 'Team 1'} Batting`;
         tossTeam2Btn.textContent = `${gameState.match.team2.name || 'Team 2'} Batting`;
     }
+    updateLiveIndicators();
     handleUIEvents();
 }
 
@@ -861,6 +960,24 @@ function checkControlsState(): void {
     if (!controlsSection) return;
     const live = gameState.match.liveInnings;
     const controls = controlsSection.querySelectorAll('button:not(#undo-btn)') as NodeListOf<HTMLButtonElement>;
+    const session = getLiveSession();
+
+    // In spectator mode, lock all scoring controls and selections
+    if (session.isLive && session.role === 'SPECTATOR') {
+        controls.forEach(btn => btn.disabled = true);
+        if (undoBtn) undoBtn.disabled = true;
+        if (endInningsBtn) endInningsBtn.disabled = true;
+        if (resetMatchBtn) resetMatchBtn.disabled = true;
+        if (startMatchBtn) startMatchBtn.disabled = true;
+        if (batsman1Select) batsman1Select.disabled = true;
+        if (batsman2Select) batsman2Select.disabled = true;
+        if (bowlerSelect) bowlerSelect.disabled = true;
+        return;
+    } else {
+        if (batsman1Select) batsman1Select.disabled = false;
+        if (batsman2Select) batsman2Select.disabled = false;
+        if (bowlerSelect) bowlerSelect.disabled = false;
+    }
     
     if (gameState.match.matchOver) {
         controls.forEach(btn => btn.disabled = true);
@@ -906,20 +1023,18 @@ export function showAlert(message: string, title = "Alert", callback: (() => voi
     
     alertCallback = callback;
     
-    if (typeof bootstrap !== 'undefined') {
-        const modalEl = document.getElementById('alertDialogModal');
-        if (!alertModalInstance && modalEl) {
-            alertModalInstance = new bootstrap.Modal(modalEl);
-            
-            modalEl.addEventListener('hidden.bs.modal', () => {
-                if (alertCallback) {
-                    const cb = alertCallback;
-                    alertCallback = null;
-                    cb();
-                }
-            });
+    if (typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
+        alert(message);
+        if (callback) callback();
+        return;
+    }
+    
+    const modalEl = document.getElementById('alertDialogModal');
+    if (modalEl) {
+        if (callback) {
+            registerModalHiddenCallback(modalEl, callback);
         }
-        if (alertModalInstance) alertModalInstance.show();
+        openModal(modalEl);
     } else {
         alert(message);
         if (callback) callback();
@@ -941,11 +1056,12 @@ export function triggerRunOutModal(): void {
     if (strikerBtn) strikerBtn.textContent = `Striker: ${striker}`;
     if (nonStrikerBtn) nonStrikerBtn.textContent = `Non-Striker: ${nonStriker}`;
     
-    if (typeof bootstrap !== 'undefined') {
-        if (!runoutModalInstance) {
-            runoutModalInstance = new bootstrap.Modal(document.getElementById('runoutModal'));
-        }
-        runoutModalInstance.show();
+    const modalEl = document.getElementById('runoutModal');
+    if (typeof (global as any).confirm === 'function' && typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
+        const isStriker = confirm(`Who was run out?\n[OK] Striker: ${striker}\n[Cancel] Non-Striker: ${nonStriker}`);
+        processRunOut(isStriker);
+    } else if (modalEl) {
+        openModal(modalEl, runoutBtn);
     } else {
         const isStriker = confirm(`Who was run out?\n[OK] Striker: ${striker}\n[Cancel] Non-Striker: ${nonStriker}`);
         processRunOut(isStriker);
@@ -980,11 +1096,15 @@ export function triggerExtraRunsModal(deliveryType: string): void {
         }
     }
     
-    if (typeof bootstrap !== 'undefined') {
-        if (!extraRunsModalInstance) {
-            extraRunsModalInstance = new bootstrap.Modal(document.getElementById('extraRunsModal'));
+    const modalEl = document.getElementById('extraRunsModal');
+    if (typeof (global as any).mockExtraRuns !== 'undefined' || (typeof window !== 'undefined' && (window as any).__TEST_ENV__)) {
+        if (typeof (global as any).mockExtraRuns !== 'undefined') {
+            selectedExtraRuns = (global as any).mockExtraRuns;
         }
-        extraRunsModalInstance.show();
+        const accrueTo = (global as any).mockAccrueTo || 'byes';
+        finalizeDelivery(currentDeliveryType, selectedExtraRuns, accrueTo);
+    } else if (modalEl) {
+        openModal(modalEl);
     } else {
         if (typeof (global as any).mockExtraRuns !== 'undefined') {
             selectedExtraRuns = (global as any).mockExtraRuns;
@@ -997,12 +1117,15 @@ export function triggerExtraRunsModal(deliveryType: string): void {
 export function triggerEndInningsModal(): void {
     if (!gameState.matchStarted || gameState.match.matchOver) return;
 
-    if (typeof bootstrap !== 'undefined') {
-        const modalEl = document.getElementById('endInningsModal');
-        if (!endInningsModalInstance && modalEl) {
-            endInningsModalInstance = new bootstrap.Modal(modalEl);
-        }
-        if (endInningsModalInstance) endInningsModalInstance.show();
+    if (typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
+        const ok = confirm("Are you sure you want to conclude this innings early?");
+        if (ok) executeEndInnings();
+        return;
+    }
+
+    const modalEl = document.getElementById('endInningsModal');
+    if (modalEl) {
+        openModal(modalEl, endInningsBtn);
     } else {
         const ok = confirm("Are you sure you want to conclude this innings early?");
         if (ok) executeEndInnings();
@@ -1010,7 +1133,7 @@ export function triggerEndInningsModal(): void {
 }
 
 export function executeEndInnings(): void {
-    if (endInningsModalInstance) endInningsModalInstance.hide();
+    closeModal('endInningsModal');
     dispatch({ type: 'FORCE_END_INNINGS' });
     updateUI();
 }
@@ -1088,13 +1211,7 @@ export function copyTextScorecard(): void {
 export function triggerFeedbackModal(): void {
     if (feedbackToastEl) feedbackToastEl.classList.add('d-none');
     updateFeedbackPreview();
-
-    if (typeof bootstrap !== 'undefined' && feedbackModalEl) {
-        if (!feedbackModalInstance) {
-            feedbackModalInstance = new bootstrap.Modal(feedbackModalEl);
-        }
-        feedbackModalInstance.show();
-    }
+    openModal('feedbackModal', feedbackBtn);
 }
 
 export function updateFeedbackPreview(): void {
@@ -1146,6 +1263,7 @@ export function handleOpenGithubIssue(): void {
 
 export function processRunOut(isStriker: boolean): void {
     if (gameState.match.matchOver) return;
+    closeModal('runoutModal');
     pendingRunOutStriker = isStriker;
     triggerExtraRunsModal('runout');
 }
@@ -1225,22 +1343,21 @@ export function startMatch(): void {
 
     dispatch({ type: 'START_MATCH', payload: { settings, team1Players: t1Names, team2Players: t2Names } });
 
-    if (typeof bootstrap === 'undefined') {
-        executeStartMatch(1);
-        return;
-    }
-
     if (tossTeam1Btn) tossTeam1Btn.textContent = `${gameState.match.team1.name || 'Team 1'} Batting`;
     if (tossTeam2Btn) tossTeam2Btn.textContent = `${gameState.match.team2.name || 'Team 2'} Batting`;
 
-    if (!tossModalInstance && tossModalEl) {
-        tossModalInstance = new bootstrap.Modal(tossModalEl);
+    const tossEl = document.getElementById('tossModal');
+    if (typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
+        executeStartMatch(1);
+    } else if (tossEl) {
+        openModal(tossEl, startMatchBtn);
+    } else {
+        executeStartMatch(1);
     }
-    if (tossModalInstance) tossModalInstance.show();
 }
 
 export function executeStartMatch(battingTeamNum: 1 | 2): void {
-    if (tossModalInstance) tossModalInstance.hide();
+    closeModal('tossModal');
 
     dispatch({ type: 'CHOOSE_TOSS_BATTING', payload: { battingTeamNum } });
 
@@ -1337,3 +1454,128 @@ function handleUIEvents(): void {
         }
     });
 }
+
+export function updateLiveIndicators(): void {
+    const session = getLiveSession();
+    if (liveSyncBadge) {
+        if (session.isLive) {
+            liveSyncBadge.classList.remove('d-none');
+            if (session.role === 'SPECTATOR') {
+                liveSyncBadge.textContent = '[LIVE - SPECTATOR]';
+                liveSyncBadge.className = 'badge bg-info-subtle text-info border border-info';
+            } else if (session.status === 'SYNCED') {
+                liveSyncBadge.textContent = '[LIVE - SYNCED]';
+                liveSyncBadge.className = 'badge bg-success-subtle text-success border border-success';
+            } else if (session.status === 'SYNCING') {
+                liveSyncBadge.textContent = '[SYNCING...]';
+                liveSyncBadge.className = 'badge bg-warning-subtle text-warning border border-warning';
+            } else if (session.status === 'OFFLINE_RETRY') {
+                liveSyncBadge.textContent = '[OFFLINE - RETRYING]';
+                liveSyncBadge.className = 'badge bg-danger-subtle text-danger border border-danger';
+            } else {
+                liveSyncBadge.textContent = `[${session.status}]`;
+                liveSyncBadge.className = 'badge bg-secondary-subtle text-secondary border border-secondary';
+            }
+        } else {
+            liveSyncBadge.classList.add('d-none');
+        }
+    }
+
+    if (spectatorBanner) {
+        if (session.isLive && session.role === 'SPECTATOR') {
+            spectatorBanner.classList.remove('d-none');
+            if (spectatorLastUpdate && session.lastSyncedAt) {
+                const dateObj = new Date(session.lastSyncedAt);
+                spectatorLastUpdate.textContent = `Updated: ${dateObj.toLocaleTimeString()}`;
+            }
+        } else {
+            spectatorBanner.classList.add('d-none');
+        }
+    }
+}
+
+export function triggerLiveModal(): void {
+    const session = getLiveSession();
+    if (session.isLive && session.matchId) {
+        if (liveInactiveSection) liveInactiveSection.classList.add('d-none');
+        if (liveActiveSection) liveActiveSection.classList.remove('d-none');
+        if (spectatorUrlInput) spectatorUrlInput.value = getSpectatorUrl(session.matchId);
+        if (umpireUrlInput) umpireUrlInput.value = session.writeKey ? getUmpireUrl(session.matchId, session.writeKey) : '(Spectator Link Active)';
+        if (modalLiveSeq) modalLiveSeq.textContent = `Packet #${session.seq}`;
+        if (modalLiveStatusBadge) {
+            modalLiveStatusBadge.textContent = `[${session.status}]`;
+            modalLiveStatusBadge.className = session.status === 'SYNCED' ? 'badge bg-success' : (session.status === 'OFFLINE_RETRY' ? 'badge bg-danger' : 'badge bg-warning');
+        }
+    } else {
+        if (liveInactiveSection) liveInactiveSection.classList.remove('d-none');
+        if (liveActiveSection) liveActiveSection.classList.add('d-none');
+    }
+
+    if (liveModalToast) liveModalToast.classList.add('d-none');
+    openModal('liveModal', liveStreamBtn);
+}
+
+export function handleStartLiveStream(): void {
+    const res = startLiveSession(gameState);
+    if (liveInactiveSection) liveInactiveSection.classList.add('d-none');
+    if (liveActiveSection) liveActiveSection.classList.remove('d-none');
+    if (spectatorUrlInput) spectatorUrlInput.value = res.spectatorUrl;
+    if (umpireUrlInput) umpireUrlInput.value = res.umpireUrl;
+    if (modalLiveSeq) modalLiveSeq.textContent = 'Packet #1';
+    if (modalLiveStatusBadge) {
+        modalLiveStatusBadge.textContent = '[SYNCED]';
+        modalLiveStatusBadge.className = 'badge bg-success';
+    }
+    updateUI();
+}
+
+export function handleStopLiveStream(): void {
+    stopLiveSync();
+    if (liveInactiveSection) liveInactiveSection.classList.remove('d-none');
+    if (liveActiveSection) liveActiveSection.classList.add('d-none');
+    updateUI();
+}
+
+export function handleCopySpectatorUrl(): void {
+    const url = spectatorUrlInput ? spectatorUrlInput.value : '';
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+        if (liveModalToast) {
+            liveModalToast.textContent = '✓ Spectator link copied to clipboard!';
+            liveModalToast.classList.remove('d-none');
+        }
+    }).catch((err: any) => {
+        console.error('Failed to copy spectator link:', {
+            errorType: err?.name || 'Error',
+            message: err?.message || String(err)
+        });
+    });
+}
+
+export function handleCopyUmpireUrl(): void {
+    const url = umpireUrlInput ? umpireUrlInput.value : '';
+    if (!url) return;
+    navigator.clipboard.writeText(url).then(() => {
+        if (liveModalToast) {
+            liveModalToast.textContent = '✓ Umpire link copied to clipboard!';
+            liveModalToast.classList.remove('d-none');
+        }
+    }).catch((err: any) => {
+        console.error('Failed to copy umpire link:', {
+            errorType: err?.name || 'Error',
+            message: err?.message || String(err)
+        });
+    });
+}
+
+export function handleSpectatorManualRefresh(): void {
+    const session = getLiveSession();
+    if (session.matchId) {
+        if (spectatorLastUpdate) spectatorLastUpdate.textContent = 'Refreshing...';
+        joinSpectatorSession(session.matchId, (updatedState) => {
+            setGameState(updatedState);
+            updateUI();
+        });
+    }
+}
+
