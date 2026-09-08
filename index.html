@@ -4,8 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Cricket Scorecard PWA</title>
-    <!-- Bootstrap CSS for base grid utility -->
+    <!-- Bootstrap CSS for grid utility -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
+    <!-- Google Fonts for crisp sports typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="src/style.css">
     <link rel="manifest" href="manifest.json" crossorigin="use-credentials">
     <meta name="theme-color" content="#0072b2">
@@ -13,43 +17,44 @@
     <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
-    <div id="app-container" class="app-wrapper">
-        <!-- Minimalist Top Navigation Header -->
-        <header class="app-header">
-            <div class="header-main">
-                <div class="brand-group">
-                    <h1 class="brand-title">Cricket Scorecard</h1>
-                    <span id="live-sync-badge" class="badge status-pill live-synced d-none">[LIVE - SYNCED]</span>
+    <div id="app-container" class="cric-app-container">
+        <!-- ESPNcricinfo-Style Top Navigation Header -->
+        <header class="cric-navbar">
+            <div class="navbar-inner">
+                <div class="brand-box">
+                    <span class="brand-icon">🏏</span>
+                    <h1 class="brand-name">CricScore</h1>
+                    <span id="live-sync-badge" class="badge live-badge d-none">[LIVE - SYNCED]</span>
                 </div>
-                <div class="header-actions">
-                    <button id="screenshot-mode-btn" class="nav-btn" title="View full match scorecard">
-                        <span class="btn-icon">📊</span>
-                        <span class="btn-text">Scorecard</span>
+                <div class="navbar-nav-group">
+                    <button id="screenshot-mode-btn" class="nav-pill-btn" title="View full match scorecard">
+                        <span class="pill-icon">📊</span>
+                        <span class="pill-label">Scorecard</span>
                     </button>
-                    <button id="new-match-btn" class="nav-btn primary" title="Start a fresh match">
-                        <span class="btn-icon">➕</span>
-                        <span class="btn-text">New Match</span>
+                    <button id="new-match-btn" class="nav-pill-btn accent" title="Start a fresh match">
+                        <span class="pill-icon">➕</span>
+                        <span class="pill-label">New Match</span>
                     </button>
-                    <button id="live-stream-btn" class="nav-btn" title="Live stream & share match">
-                        <span class="btn-icon">📡</span>
-                        <span class="btn-text">Live</span>
+                    <button id="live-stream-btn" class="nav-pill-btn" title="Live broadcast & stream">
+                        <span class="pill-icon">📡</span>
+                        <span class="pill-label">Live</span>
                     </button>
-                    <button id="share-match-btn" class="nav-btn" title="Copy match permalink">
-                        <span class="btn-icon">🔗</span>
-                        <span class="btn-text">Share</span>
+                    <button id="share-match-btn" class="nav-pill-btn" title="Share match link">
+                        <span class="pill-icon">🔗</span>
+                        <span class="pill-label">Share</span>
                     </button>
-                    <button id="feedback-btn" class="nav-btn" title="Report issue or send feedback">
-                        <span class="btn-icon">🐛</span>
-                        <span class="btn-text">Feedback</span>
+                    <button id="feedback-btn" class="nav-pill-btn" title="Report issue or give feedback">
+                        <span class="pill-icon">🐛</span>
+                        <span class="pill-label">Feedback</span>
                     </button>
-                    <div class="theme-menu-wrapper dropdown">
-                        <button id="theme-dropdown" class="nav-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Switch theme">
-                            <span class="btn-icon">🌓</span>
-                            <span class="btn-text">Theme</span>
+                    <div class="theme-menu-box dropdown">
+                        <button id="theme-dropdown" class="nav-pill-btn dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" title="Change theme">
+                            <span class="pill-icon">🌓</span>
+                            <span class="pill-label">Theme</span>
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm" aria-labelledby="theme-dropdown">
-                            <li><button class="dropdown-item theme-btn" data-theme="light">☀️ Light</button></li>
-                            <li><button class="dropdown-item theme-btn" data-theme="dark">🌙 OLED Dark</button></li>
+                        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="theme-dropdown">
+                            <li><button class="dropdown-item theme-btn" data-theme="light">☀️ Cricinfo Day</button></li>
+                            <li><button class="dropdown-item theme-btn" data-theme="dark">🌙 Night Stadium (Dark)</button></li>
                             <li><button class="dropdown-item theme-btn" data-theme="green">🌿 Pitch Green</button></li>
                         </ul>
                     </div>
@@ -60,90 +65,90 @@
             </div>
         </header>
 
-        <main class="app-content">
-            <!-- Spectator Mode Banner -->
-            <div id="spectator-banner" class="spectator-banner d-none" role="region" aria-label="Spectator Mode Status">
-                <div class="spectator-info">
-                    <span class="spectator-badge" id="spectator-status-badge">
-                        <span class="live-pulse"></span> [SPECTATOR MODE]
+        <main class="cric-main-viewport">
+            <!-- Spectator Mode Notification Strip -->
+            <div id="spectator-banner" class="spectator-ribbon d-none" role="region" aria-label="Spectator Mode Status">
+                <div class="ribbon-left">
+                    <span class="spectator-tag" id="spectator-status-badge">
+                        <span class="pulse-indicator"></span> SPECTATOR MODE
                     </span>
-                    <span id="spectator-status-text" class="spectator-text">Live feed connected &bull; Auto-refreshing</span>
+                    <span id="spectator-status-text" class="spectator-subtext">Live Match Feed Connected &bull; Auto-refreshing</span>
                 </div>
-                <div class="spectator-actions">
-                    <span id="spectator-last-update" class="spectator-timestamp">Updated: Just now</span>
-                    <button id="spectator-refresh-btn" class="btn-refresh" type="button">↻ Refresh</button>
+                <div class="ribbon-right">
+                    <span id="spectator-last-update" class="timestamp-text">Updated: Just now</span>
+                    <button id="spectator-refresh-btn" class="btn-live-refresh" type="button">↻ Refresh</button>
                 </div>
             </div>
 
-            <!-- Settings Section -->
-            <section id="settings-section" class="settings-card">
-                <div class="section-header">
-                    <h2 class="section-title">Match Setup</h2>
-                    <p class="section-subtitle">Configure match parameters and player lineups</p>
+            <!-- Settings / Match Setup Section -->
+            <section id="settings-section" class="match-setup-card">
+                <div class="card-title-bar">
+                    <div class="title-with-badge">
+                        <span class="badge-series">MATCH CONFIGURATION</span>
+                        <h2 class="card-main-title">Match Setup & Rosters</h2>
+                    </div>
                 </div>
 
-                <div class="settings-grid">
-                    <div class="settings-col">
-                        <div class="field-group">
-                            <label for="overs-per-innings" class="field-label">Overs per Innings</label>
-                            <input type="number" id="overs-per-innings" class="field-input" value="8" min="1" max="100">
-                        </div>
+                <div class="setup-controls-grid">
+                    <div class="setup-field-card">
+                        <label for="overs-per-innings" class="setup-field-label">Overs per Innings</label>
+                        <input type="number" id="overs-per-innings" class="setup-field-input" value="8" min="1" max="100">
                     </div>
-                    <div class="settings-col">
-                        <div class="field-group">
-                            <label for="max-overs-per-bowler" class="field-label">Max Overs per Bowler</label>
-                            <input type="number" id="max-overs-per-bowler" class="field-input" value="2" min="1" max="50">
-                        </div>
+                    <div class="setup-field-card">
+                        <label for="max-overs-per-bowler" class="setup-field-label">Max Overs per Bowler</label>
+                        <input type="number" id="max-overs-per-bowler" class="setup-field-input" value="2" min="1" max="50">
                     </div>
-                    <div class="settings-col rules-col">
-                        <div class="toggle-group">
-                            <label class="toggle-control" for="allow-single-batsman">
-                                <input type="checkbox" id="allow-single-batsman" class="toggle-checkbox" checked>
-                                <span class="toggle-label">Allow single batsman (last man stands)</span>
+                    <div class="setup-field-card rules-span">
+                        <div class="rules-toggle-stack">
+                            <label class="cric-toggle-item" for="allow-single-batsman">
+                                <input type="checkbox" id="allow-single-batsman" class="cric-checkbox" checked>
+                                <span class="cric-toggle-text">Allow single batsman (last man stands rule)</span>
                             </label>
-                            <label class="toggle-control" for="enable-legbyes">
-                                <input type="checkbox" id="enable-legbyes" class="toggle-checkbox">
-                                <span class="toggle-label">Enable Leg Byes</span>
+                            <label class="cric-toggle-item" for="enable-legbyes">
+                                <input type="checkbox" id="enable-legbyes" class="cric-checkbox">
+                                <span class="cric-toggle-text">Enable Leg Byes</span>
                             </label>
                         </div>
                     </div>
                 </div>
 
-                <div class="rosters-row">
-                    <!-- Team 1 Roster -->
-                    <div class="roster-col">
-                        <div class="roster-card">
-                            <div class="roster-header">
-                                <span class="roster-title">Team 1 Roster</span>
-                                <button id="team1-bulk-btn" class="roster-action-btn" data-team="1">Bulk Paste</button>
+                <div class="teams-squads-grid">
+                    <!-- Team 1 Squad Card -->
+                    <div class="squad-card">
+                        <div class="squad-header">
+                            <div class="squad-title-group">
+                                <span class="team-badge t1">T1</span>
+                                <span class="squad-title">Team 1 Squad</span>
                             </div>
-                            <div class="roster-input-row">
-                                <input type="text" id="team1-quick-add" class="roster-quick-input" placeholder="Add player name...">
-                                <button id="team1-add-btn" class="roster-add-btn" type="button">Add</button>
-                            </div>
-                            <ul id="team1-roster-list" class="roster-list"></ul>
+                            <button id="team1-bulk-btn" class="btn-bulk-paste" data-team="1">Bulk Paste</button>
                         </div>
+                        <div class="squad-add-box">
+                            <input type="text" id="team1-quick-add" class="squad-add-input" placeholder="Add player name...">
+                            <button id="team1-add-btn" class="btn-squad-add" type="button">Add</button>
+                        </div>
+                        <ul id="team1-roster-list" class="squad-list-view"></ul>
                     </div>
 
-                    <!-- Team 2 Roster -->
-                    <div class="roster-col">
-                        <div class="roster-card">
-                            <div class="roster-header">
-                                <span class="roster-title">Team 2 Roster</span>
-                                <button id="team2-bulk-btn" class="roster-action-btn" data-team="2">Bulk Paste</button>
+                    <!-- Team 2 Squad Card -->
+                    <div class="squad-card">
+                        <div class="squad-header">
+                            <div class="squad-title-group">
+                                <span class="team-badge t2">T2</span>
+                                <span class="squad-title">Team 2 Squad</span>
                             </div>
-                            <div class="roster-input-row">
-                                <input type="text" id="team2-quick-add" class="roster-quick-input" placeholder="Add player name...">
-                                <button id="team2-add-btn" class="roster-add-btn" type="button">Add</button>
-                            </div>
-                            <ul id="team2-roster-list" class="roster-list"></ul>
+                            <button id="team2-bulk-btn" class="btn-bulk-paste" data-team="2">Bulk Paste</button>
                         </div>
+                        <div class="squad-add-box">
+                            <input type="text" id="team2-quick-add" class="squad-add-input" placeholder="Add player name...">
+                            <button id="team2-add-btn" class="btn-squad-add" type="button">Add</button>
+                        </div>
+                        <ul id="team2-roster-list" class="squad-list-view"></ul>
                     </div>
                 </div>
 
-                <div class="settings-footer">
-                    <button id="start-match-btn" class="btn-start-match">
-                        ▶ Start Match
+                <div class="setup-submit-box">
+                    <button id="start-match-btn" class="btn-cric-primary-start">
+                        ▶ START MATCH
                     </button>
                 </div>
             </section>
@@ -151,142 +156,154 @@
             <!-- Flip Container for Scoreboard and Summary -->
             <div class="flip-container hidden">
                 <div class="flipper" id="app-flipper">
-                    <!-- Front Face: Live Scoreboard -->
+                    <!-- Front Face: Live Scoreboard (ESPNcricinfo Center) -->
                     <div class="front-face">
-                        <section id="scoreboard-section" class="scoreboard-card">
-                            <!-- Hero Match Header -->
-                            <div class="scoreboard-hero">
-                                <div class="match-meta-bar">
-                                    <h2 id="match-status" class="match-status-title">First Innings</h2>
+                        <section id="scoreboard-section" class="cric-match-card">
+                            <!-- Match Header Banner -->
+                            <div class="match-meta-header">
+                                <div class="match-badge-row">
+                                    <span class="match-live-tag">LIVE MATCH</span>
+                                    <h2 id="match-status" class="match-innings-title">First Innings</h2>
                                 </div>
-
-                                <div class="hero-score-row">
-                                    <div class="hero-score-block">
-                                        <div id="score-display" class="hero-score" aria-live="polite">0 - 0</div>
-                                        <div id="overs-display" class="hero-overs">Overs: 0.0 / 8</div>
-                                    </div>
-                                </div>
-
-                                <div id="target-display" class="target-strip hidden">
+                                <div id="target-display" class="equation-strip hidden">
                                     Target: 0 &bull; CRR: 0.00 &bull; RRR: 0.00
                                 </div>
                             </div>
 
-                            <!-- Match Over Actions (Visible when match concludes) -->
-                            <div id="match-over-banner" class="match-over-banner d-none">
-                                <div class="match-over-content">
-                                    <span class="match-over-icon">🏆</span>
-                                    <span id="match-over-text" class="match-over-text">Match Finished</span>
+                            <!-- Hero Scoreboard Display -->
+                            <div class="hero-score-panel">
+                                <div class="hero-score-wrapper">
+                                    <div id="score-display" class="cric-big-score" aria-live="polite">0 - 0</div>
+                                    <div id="overs-display" class="cric-overs-pill">Overs: 0.0 / 8</div>
                                 </div>
-                                <button id="match-over-new-match-btn" class="btn-match-over-new">
+                            </div>
+
+                            <!-- Match Over Victory Ribbon -->
+                            <div id="match-over-banner" class="victory-ribbon d-none">
+                                <div class="victory-info">
+                                    <span class="victory-icon">🏆</span>
+                                    <span id="match-over-text" class="victory-text">Match Finished</span>
+                                </div>
+                                <button id="match-over-new-match-btn" class="btn-victory-new-match">
                                     ➕ Start New Match
                                 </button>
                             </div>
 
-                            <!-- Batsmen & Bowler Grid -->
-                            <div class="match-players-grid">
-                                <!-- Batsman 1 (Striker Slot) -->
-                                <div id="batsman1-container" class="player-card batsman">
-                                    <div class="player-info-row">
-                                        <div class="player-role-title">
-                                            <span class="strike-dot">●</span>
-                                            <label for="batsman1-select" class="player-label">Batsman 1 (Striker)</label>
-                                        </div>
-                                        <span id="batsman1-stats" class="player-stat-pill">0 (0)</span>
+                            <!-- ESPNcricinfo Live Scorecard Tables -->
+                            <div class="live-tables-container">
+                                <!-- Batters Scorecard Table -->
+                                <div class="cric-table-card">
+                                    <div class="cric-table-head">
+                                        <span class="col-batter">Batter</span>
+                                        <span class="col-stat">R (B)</span>
                                     </div>
-                                    <select id="batsman1-select" class="player-select" aria-label="Select Striker Batsman"></select>
+
+                                    <!-- Striker Row (Batsman 1) -->
+                                    <div id="batsman1-container" class="cric-player-row batsman">
+                                        <div class="player-select-wrap">
+                                            <span class="strike-marker">●</span>
+                                            <select id="batsman1-select" class="cric-player-select" aria-label="Select Striker Batsman"></select>
+                                        </div>
+                                        <div class="player-stat-wrap">
+                                            <span id="batsman1-stats" class="cric-stat-badge">0 (0)</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Non-Striker Row (Batsman 2) -->
+                                    <div id="batsman2-container" class="cric-player-row batsman">
+                                        <div class="player-select-wrap">
+                                            <span class="strike-marker">●</span>
+                                            <select id="batsman2-select" class="cric-player-select" aria-label="Select Non-Striker Batsman"></select>
+                                        </div>
+                                        <div class="player-stat-wrap">
+                                            <span id="batsman2-stats" class="cric-stat-badge">0 (0)</span>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <!-- Batsman 2 (Non-Striker Slot) -->
-                                <div id="batsman2-container" class="player-card batsman">
-                                    <div class="player-info-row">
-                                        <div class="player-role-title">
-                                            <span class="strike-dot">●</span>
-                                            <label for="batsman2-select" class="player-label">Batsman 2</label>
-                                        </div>
-                                        <span id="batsman2-stats" class="player-stat-pill">0 (0)</span>
+                                <!-- Bowler Scorecard Table -->
+                                <div class="cric-table-card">
+                                    <div class="cric-table-head">
+                                        <span class="col-bowler">Current Bowler</span>
+                                        <span class="col-stat">W/R (Ov)</span>
                                     </div>
-                                    <select id="batsman2-select" class="player-select" aria-label="Select Non-Striker Batsman"></select>
-                                </div>
-
-                                <!-- Active Bowler -->
-                                <div class="player-card bowler">
-                                    <div class="player-info-row">
-                                        <div class="player-role-title">
-                                            <span class="bowler-icon">🎯</span>
-                                            <label for="bowler-select" class="player-label">Current Bowler</label>
+                                    <div class="cric-player-row bowler bowler-display">
+                                        <div class="player-select-wrap">
+                                            <span class="bowler-badge-icon">🎯</span>
+                                            <select id="bowler-select" class="cric-player-select" aria-label="Select Bowler"></select>
                                         </div>
-                                        <span id="bowler-stats" class="player-stat-pill">0/0 (0.0)</span>
+                                        <div class="player-stat-wrap">
+                                            <span id="bowler-stats" class="cric-stat-badge">0/0 (0.0)</span>
+                                        </div>
                                     </div>
-                                    <select id="bowler-select" class="player-select" aria-label="Select Bowler"></select>
                                 </div>
                             </div>
 
-                            <!-- This Over Timeline -->
-                            <div class="over-strip-card">
-                                <div class="over-strip-label">THIS OVER</div>
-                                <div id="over-log" class="over-balls-wrap"></div>
+                            <!-- ESPNcricinfo Recent Deliveries Strip -->
+                            <div class="recent-balls-card">
+                                <div class="recent-label">RECENT</div>
+                                <div id="over-log" class="recent-chips-stream"></div>
                             </div>
 
-                            <!-- Extras Counter Strip -->
-                            <div class="extras-strip">
+                            <!-- Extras Summary Strip -->
+                            <div class="cric-extras-strip">
                                 Extras: <strong id="extras-total">0</strong> 
-                                <span class="extras-breakdown">(Wd: <span id="wides-display">0</span>, Nb: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, Lb: <span id="legbyes-display">0</span>)</span>
+                                <span class="extras-details">(Wd: <span id="wides-display">0</span>, Nb: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, Lb: <span id="legbyes-display">0</span>)</span>
                             </div>
 
                             <!-- Selection Helper Banner -->
-                            <div id="selection-warning" class="selection-notice d-none">
-                                ⚠️ Select active batsmen and bowler above to enable scoring
+                            <div id="selection-warning" class="cric-selection-alert d-none">
+                                ⚠️ Select active batsmen and bowler above to begin scoring
                             </div>
 
-                            <!-- Umpire Scoring Controls -->
-                            <div id="controls-section" class="keypad-section">
-                                <!-- Primary Runs Grid -->
-                                <div class="keypad-runs-grid">
-                                    <button class="run-btn key-num" data-runs="0">0</button>
-                                    <button class="run-btn key-num" data-runs="1">1</button>
-                                    <button class="run-btn key-num" data-runs="2">2</button>
-                                    <button class="run-btn key-num" data-runs="3">3</button>
-                                    <button class="run-btn key-num boundary-four" data-runs="4">4</button>
-                                    <button class="run-btn key-num boundary-six" data-runs="6">6</button>
+                            <!-- Umpire Scoring Console (ESPN + Tactile Keypad) -->
+                            <div id="controls-section" class="cric-keypad-console">
+                                <!-- Primary Runs Row -->
+                                <div class="keypad-grid-runs">
+                                    <button class="run-btn cric-key key-dot" data-runs="0">0</button>
+                                    <button class="run-btn cric-key key-single" data-runs="1">1</button>
+                                    <button class="run-btn cric-key key-double" data-runs="2">2</button>
+                                    <button class="run-btn cric-key key-triple" data-runs="3">3</button>
+                                    <button class="run-btn cric-key key-four" data-runs="4">4</button>
+                                    <button class="run-btn cric-key key-six" data-runs="6">6</button>
                                 </div>
 
-                                <!-- Delivery Extras & Wickets Grid -->
-                                <div class="keypad-actions-grid">
-                                    <button id="wide-btn" class="key-action key-wide" title="Wide ball (+1 run, ball not counted)">+1 Wd</button>
-                                    <button id="noball-btn" class="key-action key-noball" title="No ball (+1 run penalty)">+1 Nb</button>
-                                    <button id="wicket-btn" class="key-action key-wicket" title="Wicket (Bowled, Caught, LBW, Stumped)">Wkt</button>
-                                    <button id="runout-btn" class="key-action key-runout" title="Run out dismissal">Run Out</button>
+                                <!-- Primary Deliveries Row -->
+                                <div class="keypad-grid-deliveries">
+                                    <button id="wide-btn" class="cric-key key-extra-wide" title="Wide ball (+1 run, extra ball)">+1 Wd</button>
+                                    <button id="noball-btn" class="cric-key key-extra-noball" title="No ball (+1 run penalty)">+1 Nb</button>
+                                    <button id="wicket-btn" class="cric-key key-wicket-btn" title="Wicket (Bowled, Caught, LBW, Stumped)">Wkt</button>
+                                    <button id="runout-btn" class="cric-key key-runout-btn" title="Run out dismissal">Run Out</button>
                                 </div>
 
-                                <!-- Secondary Scoring Operations -->
-                                <div class="keypad-aux-grid">
-                                    <button id="bye-btn" class="key-aux" title="Bye runs">Bye</button>
-                                    <button id="legbye-btn" class="key-aux" title="Leg bye runs">Leg Bye</button>
-                                    <button id="undo-btn" class="key-aux key-undo" title="Undo previous delivery">⤺ Undo</button>
-                                    <button id="trigger-end-innings-btn" class="key-aux key-end-innings" title="Conclude current innings">End Innings</button>
+                                <!-- Secondary Scoring Actions -->
+                                <div class="keypad-grid-aux">
+                                    <button id="bye-btn" class="cric-key key-aux-btn" title="Bye runs">Bye</button>
+                                    <button id="legbye-btn" class="cric-key key-aux-btn" title="Leg bye runs">Leg Bye</button>
+                                    <button id="undo-btn" class="cric-key key-aux-undo" title="Undo last delivery">⤺ Undo</button>
+                                    <button id="trigger-end-innings-btn" class="cric-key key-aux-end" title="End innings early">End Innings</button>
                                 </div>
                             </div>
 
-                            <!-- Completed Overs Collapsible List -->
-                            <div id="completed-overs-section" class="completed-overs-wrap"></div>
+                            <!-- Completed Overs Collapsible Stream -->
+                            <div id="completed-overs-section" class="cric-completed-overs-container"></div>
                         </section>
                     </div>
 
-                    <!-- Back Face: Full Detailed Scorecard -->
+                    <!-- Back Face: Full Detailed Scorecard (ESPNcricinfo Match Center) -->
                     <div class="back-face">
-                        <section id="summary-section" class="summary-card">
-                            <div class="summary-header">
+                        <section id="summary-section" class="cric-summary-card">
+                            <div class="summary-top-bar">
                                 <div>
-                                    <h2 class="summary-title">Full Match Scorecard</h2>
-                                    <p class="summary-subtitle">Official ball-by-ball analysis and stats</p>
+                                    <span class="badge-series">MATCH SCORECARD</span>
+                                    <h2 class="summary-headline">Full Match Scorecard</h2>
                                 </div>
-                                <div class="summary-actions">
-                                    <button id="copy-summary-text-btn" class="btn-summary-action">📋 Copy Text Summary</button>
-                                    <button id="exit-screenshot-mode-btn" class="btn-summary-action primary">✕ Exit Scorecard</button>
+                                <div class="summary-btn-group">
+                                    <button id="copy-summary-text-btn" class="btn-cric-outline">📋 Copy Text</button>
+                                    <button id="exit-screenshot-mode-btn" class="btn-cric-accent">✕ Exit Scorecard</button>
                                 </div>
                             </div>
-                            <div id="innings-summaries" class="innings-container"></div>
+                            <div id="innings-summaries" class="cric-innings-wrap"></div>
                         </section>
                     </div>
                 </div>
@@ -295,24 +312,24 @@
             <!-- Unified Run Out Modal -->
             <div class="modal fade" id="runoutModal" tabindex="-1" aria-labelledby="runoutModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="runoutModalLabel">Record Run Out</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="runoutModalLabel">Record Run Out</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p class="modal-instruction">1. Which batsman was run out?</p>
-                            <div class="runout-batter-group mb-3">
-                                <button id="runout-striker-btn" class="btn-choice active" type="button">Striker</button>
-                                <button id="runout-nonstriker-btn" class="btn-choice" type="button">Non-Striker</button>
+                        <div class="modal-body cric-modal-body">
+                            <p class="modal-step-label">1. Select Dismissed Batsman:</p>
+                            <div class="runout-toggle-row mb-3">
+                                <button id="runout-striker-btn" class="btn-modal-choice active" type="button">Striker</button>
+                                <button id="runout-nonstriker-btn" class="btn-modal-choice" type="button">Non-Striker</button>
                             </div>
 
-                            <p class="modal-instruction">2. Runs completed before run out:</p>
-                            <div class="runout-runs-grid">
-                                <button class="btn-runout-val" data-runs="0">0 Runs</button>
-                                <button class="btn-runout-val" data-runs="1">1 Run</button>
-                                <button class="btn-runout-val" data-runs="2">2 Runs</button>
-                                <button class="btn-runout-val" data-runs="3">3 Runs</button>
+                            <p class="modal-step-label">2. Runs Completed Before Run Out:</p>
+                            <div class="runout-runs-row">
+                                <button class="btn-runout-digit btn-runout-val" data-runs="0">0 Runs</button>
+                                <button class="btn-runout-digit btn-runout-val" data-runs="1">1 Run</button>
+                                <button class="btn-runout-digit btn-runout-val" data-runs="2">2 Runs</button>
+                                <button class="btn-runout-digit btn-runout-val" data-runs="3">3 Runs</button>
                             </div>
                         </div>
                     </div>
@@ -322,26 +339,26 @@
             <!-- Extra Runs Modal (Wide / No Ball / Bye modifiers) -->
             <div class="modal fade" id="extraRunsModal" tabindex="-1" aria-labelledby="extraRunsModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="extraRunsModalLabel">Extra Runs Details</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="extraRunsModalLabel">Extra Runs Details</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center">
-                            <p class="modal-instruction" id="extra-runs-prompt">Select total/additional runs scored:</p>
-                            <div class="extra-runs-grid mb-3">
-                                <button class="btn-extra-val extra-run-val-btn" data-val="0">0</button>
-                                <button class="btn-extra-val extra-run-val-btn" data-val="1">1</button>
-                                <button class="btn-extra-val extra-run-val-btn" data-val="2">2</button>
-                                <button class="btn-extra-val extra-run-val-btn" data-val="3">3</button>
-                                <button class="btn-extra-val extra-run-val-btn" data-val="4">4</button>
-                                <button class="btn-extra-val extra-run-val-btn" data-val="6">6</button>
+                        <div class="modal-body cric-modal-body text-center">
+                            <p class="modal-step-label mb-2" id="extra-runs-prompt">Select additional runs scored:</p>
+                            <div class="extra-digit-grid mb-3">
+                                <button class="btn-extra-digit extra-run-val-btn" data-val="0">0</button>
+                                <button class="btn-extra-digit extra-run-val-btn" data-val="1">1</button>
+                                <button class="btn-extra-digit extra-run-val-btn" data-val="2">2</button>
+                                <button class="btn-extra-digit extra-run-val-btn" data-val="3">3</button>
+                                <button class="btn-extra-digit extra-run-val-btn" data-val="4">4</button>
+                                <button class="btn-extra-digit extra-run-val-btn" data-val="6">6</button>
                             </div>
-                            <div id="accrual-section" class="accrual-box hidden">
-                                <p class="modal-instruction mb-2">Accrue extra runs to:</p>
-                                <div class="accrual-btn-group">
-                                    <button id="accrue-batsman-btn" class="btn-accrue batsman" data-bs-dismiss="modal">🏏 Batsman</button>
-                                    <button id="accrue-byes-btn" class="btn-accrue byes" data-bs-dismiss="modal">🏃 Byes</button>
+                            <div id="accrual-section" class="accrual-subcard hidden">
+                                <p class="modal-step-label mb-2">Accrue extra runs to:</p>
+                                <div class="accrual-options-row">
+                                    <button id="accrue-batsman-btn" class="btn-accrual-choice batsman" data-bs-dismiss="modal">🏏 Batsman</button>
+                                    <button id="accrue-byes-btn" class="btn-accrual-choice byes" data-bs-dismiss="modal">🏃 Byes</button>
                                 </div>
                             </div>
                         </div>
@@ -352,17 +369,17 @@
             <!-- Start New Match Confirmation Modal -->
             <div class="modal fade" id="newMatchModal" tabindex="-1" aria-labelledby="newMatchModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="newMatchModalLabel">Start New Match?</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="newMatchModalLabel">Start New Match?</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center py-3">
-                            <p class="mb-0 text-muted">Starting a new match will conclude the current match and reset to setup. Are you sure you want to proceed?</p>
+                        <div class="modal-body cric-modal-body text-center py-3">
+                            <p class="mb-0 text-muted">Conclude the current game and return to match setup? Current team rosters will be retained.</p>
                         </div>
-                        <div class="modal-footer d-flex justify-content-between">
-                            <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" id="confirm-new-match-btn" class="btn-dialog danger" data-bs-dismiss="modal">Start New Match</button>
+                        <div class="modal-footer cric-modal-foot d-flex justify-content-between">
+                            <button type="button" class="btn-cric-dialog secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" id="confirm-new-match-btn" class="btn-cric-dialog danger" data-bs-dismiss="modal">Start New Match</button>
                         </div>
                     </div>
                 </div>
@@ -371,18 +388,18 @@
             <!-- Bulk Import Modal -->
             <div class="modal fade" id="bulkImportModal" tabindex="-1" aria-labelledby="bulkImportModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="bulkImportModalLabel">Bulk Paste Roster</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="bulkImportModalLabel">Bulk Paste Roster</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p class="modal-instruction mb-2">Paste player names separated by newlines or commas:</p>
-                            <textarea id="bulk-import-textarea" class="modal-textarea" rows="6" placeholder="Rohit Sharma&#10;Virat Kohli&#10;Jasprit Bumrah..."></textarea>
+                        <div class="modal-body cric-modal-body">
+                            <p class="modal-step-label mb-2">Paste player names separated by newlines or commas:</p>
+                            <textarea id="bulk-import-textarea" class="cric-textarea" rows="6" placeholder="Rohit Sharma&#10;Virat Kohli&#10;Jasprit Bumrah..."></textarea>
                         </div>
-                        <div class="modal-footer d-flex justify-content-between">
-                            <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button type="button" id="execute-bulk-import-btn" class="btn-dialog primary" data-bs-dismiss="modal">Import Players</button>
+                        <div class="modal-footer cric-modal-foot d-flex justify-content-between">
+                            <button type="button" class="btn-cric-dialog secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="button" id="execute-bulk-import-btn" class="btn-cric-dialog primary" data-bs-dismiss="modal">Import Players</button>
                         </div>
                     </div>
                 </div>
@@ -391,16 +408,16 @@
             <!-- Toss Modal -->
             <div class="modal fade" id="tossModal" tabindex="-1" aria-labelledby="tossModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="tossModalLabel">Match Toss</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="tossModalLabel">Match Toss</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center">
-                            <p class="modal-instruction mb-3">Which team is batting first?</p>
-                            <div class="toss-btn-group">
-                                <button id="toss-team1-btn" class="btn-toss" data-bs-dismiss="modal">Team 1</button>
-                                <button id="toss-team2-btn" class="btn-toss" data-bs-dismiss="modal">Team 2</button>
+                        <div class="modal-body cric-modal-body text-center">
+                            <p class="modal-step-label mb-3">Which team won toss & bats first?</p>
+                            <div class="toss-choice-grid">
+                                <button id="toss-team1-btn" class="btn-toss-card" data-bs-dismiss="modal">Team 1</button>
+                                <button id="toss-team2-btn" class="btn-toss-card" data-bs-dismiss="modal">Team 2</button>
                             </div>
                         </div>
                     </div>
@@ -410,17 +427,17 @@
             <!-- End Innings Modal -->
             <div class="modal fade" id="endInningsModal" tabindex="-1" aria-labelledby="endInningsModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="endInningsModalLabel">End Innings</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="endInningsModalLabel">End Innings</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center py-3">
-                            <p class="mb-0 text-muted">Are you sure you want to conclude this innings early?</p>
+                        <div class="modal-body cric-modal-body text-center py-3">
+                            <p class="mb-0 text-muted">Are you sure you want to declare / conclude this innings early?</p>
                         </div>
-                        <div class="modal-footer d-flex justify-content-between">
-                            <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Cancel</button>
-                            <button id="confirm-end-innings-btn" class="btn-dialog warning" data-bs-dismiss="modal">End Innings</button>
+                        <div class="modal-footer cric-modal-foot d-flex justify-content-between">
+                            <button type="button" class="btn-cric-dialog secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button id="confirm-end-innings-btn" class="btn-cric-dialog warning" data-bs-dismiss="modal">End Innings</button>
                         </div>
                     </div>
                 </div>
@@ -429,16 +446,16 @@
             <!-- Alert Dialog Modal -->
             <div class="modal fade" id="alertDialogModal" tabindex="-1" aria-labelledby="alertDialogModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-sm">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header py-2">
-                            <h5 class="modal-title" id="alertDialogModalLabel">Notice</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head py-2">
+                            <h5 class="modal-title cric-modal-title" id="alertDialogModalLabel">Notice</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body text-center py-3">
-                            <p id="alert-message" class="mb-0 alert-dialog-text"></p>
+                        <div class="modal-body cric-modal-body text-center py-3">
+                            <p id="alert-message" class="mb-0 cric-dialog-text"></p>
                         </div>
-                        <div class="modal-footer py-2 justify-content-center">
-                            <button type="button" class="btn-dialog primary px-4" data-bs-dismiss="modal">OK</button>
+                        <div class="modal-footer cric-modal-foot py-2 justify-content-center">
+                            <button type="button" class="btn-cric-dialog primary px-4" data-bs-dismiss="modal">OK</button>
                         </div>
                     </div>
                 </div>
@@ -447,40 +464,40 @@
             <!-- Feedback & Bug Report Modal -->
             <div class="modal fade" id="feedbackModal" tabindex="-1" aria-labelledby="feedbackModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="feedbackModalLabel">Feedback & Bug Reporting</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="feedbackModalLabel">Feedback & Bug Reporting</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
-                            <p class="modal-instruction mb-2">
+                        <div class="modal-body cric-modal-body">
+                            <p class="modal-step-label mb-2">
                                 Describe the issue or request below. Match state and logs are attached for instant reproduction.
                             </p>
                             <div class="mb-3">
-                                <label for="feedback-text" class="field-label">Description / What happened:</label>
-                                <textarea id="feedback-text" class="modal-textarea" rows="4" placeholder="e.g. Strike was not rotated on ball 4 after 1 run..."></textarea>
+                                <label for="feedback-text" class="cric-form-label">Description / What happened:</label>
+                                <textarea id="feedback-text" class="cric-textarea" rows="4" placeholder="e.g. Strike was not rotated on ball 4 after 1 run..."></textarea>
                             </div>
-                            <div class="toggle-control mb-3">
-                                <input type="checkbox" id="feedback-include-state" class="toggle-checkbox" checked>
-                                <label for="feedback-include-state" class="toggle-label">Include match state & diagnostic logs (recommended)</label>
+                            <div class="cric-toggle-item mb-3">
+                                <input type="checkbox" id="feedback-include-state" class="cric-checkbox" checked>
+                                <label for="feedback-include-state" class="cric-toggle-text">Include match state & diagnostic logs (recommended)</label>
                             </div>
-                            <div class="diagnostic-accordion mb-3">
-                                <details class="diagnostic-details">
-                                    <summary class="diagnostic-summary">Preview Generated Diagnostic Report</summary>
-                                    <pre id="feedback-preview" class="diagnostic-preview"></pre>
+                            <div class="accordion-box mb-3">
+                                <details class="cric-details">
+                                    <summary class="cric-summary">Preview Generated Diagnostic Report</summary>
+                                    <pre id="feedback-preview" class="cric-code-preview"></pre>
                                 </details>
                             </div>
-                            <div id="feedback-toast" class="alert-toast d-none" role="alert">
+                            <div id="feedback-toast" class="cric-toast-alert d-none" role="alert">
                                 <strong>✓ Copied!</strong> Bug report copied to clipboard.
                             </div>
                         </div>
-                        <div class="modal-footer d-flex justify-content-between flex-wrap gap-2">
-                            <button type="button" id="open-github-issue-btn" class="btn-dialog secondary">
+                        <div class="modal-footer cric-modal-foot d-flex justify-content-between flex-wrap gap-2">
+                            <button type="button" id="open-github-issue-btn" class="btn-cric-dialog secondary">
                                 🐛 Open GitHub Issue
                             </button>
                             <div class="d-flex gap-2">
-                                <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Close</button>
-                                <button type="button" id="copy-feedback-report-btn" class="btn-dialog primary">
+                                <button type="button" class="btn-cric-dialog secondary" data-bs-dismiss="modal">Close</button>
+                                <button type="button" id="copy-feedback-report-btn" class="btn-cric-dialog primary">
                                     📋 Copy Bug Report
                                 </button>
                             </div>
@@ -492,31 +509,31 @@
             <!-- Live Stream & Sharing Modal -->
             <div class="modal fade" id="liveModal" tabindex="-1" aria-labelledby="liveModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
-                    <div class="modal-content modal-card">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="liveModalLabel">📡 Live Match Streaming & Broadcast</h5>
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <h5 class="modal-title cric-modal-title" id="liveModalLabel">📡 Live Match Streaming & Broadcast</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
-                        <div class="modal-body">
+                        <div class="modal-body cric-modal-body">
                             <div id="live-inactive-section" class="text-center py-3">
                                 <p class="mb-3 text-muted">
                                     Broadcast this match live! Spectators and players can watch ball-by-ball updates in real time with zero setup.
                                 </p>
-                                <div class="live-features-list text-start mb-3">
+                                <div class="live-features-grid text-start mb-3">
                                     <div class="live-feature-item"><strong>100% Free:</strong> No account or credit card needed.</div>
                                     <div class="live-feature-item"><strong>1-Year Cloud Retention:</strong> Archived for 365 days.</div>
                                     <div class="live-feature-item"><strong>Spectator Lock:</strong> Viewers are strictly read-only.</div>
                                     <div class="live-feature-item"><strong>Offline Resilient:</strong> Queues and syncs seamlessly.</div>
                                 </div>
-                                <button type="button" id="start-live-btn" class="btn-start-broadcast">
+                                <button type="button" id="start-live-btn" class="btn-start-stream">
                                     🚀 Start Live Broadcast
                                 </button>
                             </div>
 
                             <div id="live-active-section" class="d-none">
-                                <div class="live-status-card mb-3">
+                                <div class="live-stream-status-row mb-3">
                                     <div class="d-flex align-items-center gap-2">
-                                        <span id="modal-live-status-badge" class="badge status-pill live-synced">[SYNCED]</span>
+                                        <span id="modal-live-status-badge" class="badge live-badge">[SYNCED]</span>
                                         <span id="modal-live-seq" class="text-muted small">Packet #1</span>
                                     </div>
                                     <div class="text-muted small" id="modal-live-expires">
@@ -524,33 +541,33 @@
                                     </div>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="field-label" for="spectator-url-input">📢 Spectator Link (Share with Viewers & Players):</label>
-                                    <div class="input-copy-group">
-                                        <input type="text" id="spectator-url-input" class="copy-input" readonly>
-                                        <button class="btn-copy" type="button" id="copy-spectator-url-btn">📋 Copy Link</button>
+                                <div class="mb-3 text-start">
+                                    <label class="cric-form-label" for="spectator-url-input">📢 Spectator Link (Share with Viewers & Players):</label>
+                                    <div class="cric-input-copy-wrap">
+                                        <input type="text" id="spectator-url-input" class="cric-copy-field" readonly>
+                                        <button class="btn-cric-copy" type="button" id="copy-spectator-url-btn">📋 Copy Link</button>
                                     </div>
-                                    <span class="field-hint">Anyone with this link gets read-only live scoreboard access.</span>
+                                    <span class="cric-form-hint">Anyone with this link gets read-only live scoreboard access.</span>
                                 </div>
 
-                                <div class="mb-3">
-                                    <label class="field-label" for="umpire-url-input">🔑 Umpire Link (Private Scoring Access):</label>
-                                    <div class="input-copy-group">
-                                        <input type="text" id="umpire-url-input" class="copy-input" readonly>
-                                        <button class="btn-copy secondary" type="button" id="copy-umpire-url-btn">📋 Copy Link</button>
+                                <div class="mb-3 text-start">
+                                    <label class="cric-form-label" for="umpire-url-input">🔑 Umpire Link (Private Scoring Access):</label>
+                                    <div class="cric-input-copy-wrap">
+                                        <input type="text" id="umpire-url-input" class="cric-copy-field" readonly>
+                                        <button class="btn-cric-copy secondary" type="button" id="copy-umpire-url-btn">📋 Copy Link</button>
                                     </div>
-                                    <span class="field-hint">Private scorer key. Resume scoring from any device.</span>
+                                    <span class="cric-form-hint">Private scorer key. Resume scoring from any device.</span>
                                 </div>
 
-                                <div id="live-modal-toast" class="alert-toast d-none" role="alert">
+                                <div id="live-modal-toast" class="cric-toast-alert d-none" role="alert">
                                     ✓ Link copied to clipboard!
                                 </div>
 
-                                <div class="modal-footer-row pt-2 border-top d-flex justify-content-between align-items-center">
-                                    <button type="button" id="stop-live-btn" class="btn-dialog danger">
+                                <div class="modal-foot-actions pt-2 border-top d-flex justify-content-between align-items-center">
+                                    <button type="button" id="stop-live-btn" class="btn-cric-dialog danger">
                                         ⏹ End Live Stream
                                     </button>
-                                    <button type="button" class="btn-dialog secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="button" class="btn-cric-dialog secondary" data-bs-dismiss="modal">Close</button>
                                 </div>
                             </div>
                         </div>
@@ -559,13 +576,13 @@
             </div>
         </main>
 
-        <footer class="app-footer">
-            <div class="footer-meta">
-                <span>Version: v20260908-002</span>
-                <span class="footer-dot">&bull;</span>
-                <button id="footer-feedback-link" class="footer-link">Report Issue</button>
+        <footer class="cric-footer">
+            <div class="footer-status-line">
+                <span>Version: v20260908-003</span>
+                <span class="dot-separator">&bull;</span>
+                <button id="footer-feedback-link" class="footer-btn-link">Report Issue</button>
             </div>
-            <div class="footer-credits">
+            <div class="footer-author-line">
                 <span>Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with Gemini</span>
             </div>
         </footer>

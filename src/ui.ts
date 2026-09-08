@@ -1372,7 +1372,7 @@ export function updateFeedbackPreview(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-002'
+        appVersion: 'v20260908-003'
     });
     feedbackPreviewEl.textContent = markdown;
 }
@@ -1383,7 +1383,7 @@ export async function handleCopyFeedbackReport(): Promise<void> {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-002'
+        appVersion: 'v20260908-003'
     });
 
     const success = await copyBugReportToClipboard(markdown);
@@ -1402,7 +1402,7 @@ export function handleOpenGithubIssue(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-002'
+        appVersion: 'v20260908-003'
     });
 
     const title = userFeedback ? `Bug: ${userFeedback.substring(0, 50)}...` : undefined;
