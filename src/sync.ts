@@ -1,8 +1,12 @@
 import { GameState, LiveMatchPacket, LiveRole, LiveSessionState, LiveSyncStatus } from './types.js';
 import { minifyState, unminifyState } from './storage.js';
 
-export const FOUR_WEEKS_SECONDS = 28 * 24 * 60 * 60; // 2,419,200 seconds
-export const FOUR_WEEKS_MS = FOUR_WEEKS_SECONDS * 1000; // 2,419,200,000 ms
+export const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60; // 31,536,000 seconds (365 days / 1 year)
+export const ONE_YEAR_MS = ONE_YEAR_SECONDS * 1000; // 31,536,000,000 ms
+export const DEFAULT_TTL_SECONDS = ONE_YEAR_SECONDS;
+export const DEFAULT_TTL_MS = ONE_YEAR_MS;
+export const FOUR_WEEKS_SECONDS = ONE_YEAR_SECONDS; // Deprecated alias kept for backwards compatibility
+export const FOUR_WEEKS_MS = ONE_YEAR_MS;
 export const ACTIVE_POLL_INTERVAL_MS = 3500;
 export const BACKGROUND_POLL_INTERVAL_MS = 15000;
 export const DEBOUNCE_SYNC_MS = 250;
@@ -76,7 +80,7 @@ export class MemoryStorageProvider implements LiveStorageProvider {
         }
 
         if (Date.now() > entry.packet.expiresAt) {
-            return { success: false, expired: true, error: 'Match record has expired (4-week retention period ended)' };
+            return { success: false, expired: true, error: 'Match record has expired (1-year retention period ended)' };
         }
 
         return { success: true, packet: JSON.parse(JSON.stringify(entry.packet)) };
@@ -89,14 +93,14 @@ export class MemoryStorageProvider implements LiveStorageProvider {
 
 /**
  * Cloudflare Workers KV storage provider with sub-50ms edge latency,
- * built-in 4-week TTL (2,419,200s), and cryptographic write authorization.
+ * built-in 1-year TTL (31,536,000s), and cryptographic write authorization.
  */
 export class CloudflareKVStorageProvider implements LiveStorageProvider {
     protected endpoint: string;
 
     constructor(endpoint?: string) {
         // Default Cloudflare Workers KV endpoint or custom edge worker URL
-        this.endpoint = endpoint || 'https://cricket-scorecard-live.workers.dev/api/';
+        this.endpoint = endpoint || 'https://cricket-scorecard-live.khaneja.org/api/';
         if (!this.endpoint.endsWith('/')) {
             this.endpoint += '/';
         }
@@ -104,7 +108,7 @@ export class CloudflareKVStorageProvider implements LiveStorageProvider {
 
     async savePacket(matchId: string, writeKey: string, packet: LiveMatchPacket): Promise<{ success: boolean; error?: string }> {
         try {
-            const url = `${this.endpoint}match/${matchId}?ttl=${FOUR_WEEKS_SECONDS}`;
+            const url = `${this.endpoint}match/${matchId}?ttl=${ONE_YEAR_SECONDS}`;
             const res = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -149,7 +153,7 @@ export class CloudflareKVStorageProvider implements LiveStorageProvider {
 
             const packet: LiveMatchPacket = await res.json();
             if (Date.now() > packet.expiresAt) {
-                return { success: false, expired: true, error: 'Match record has expired (4-week retention period ended)' };
+                return { success: false, expired: true, error: 'Match record has expired (1-year retention period ended)' };
             }
 
             return { success: true, packet };
@@ -189,11 +193,13 @@ export class GoogleSheetsStorageProvider implements LiveStorageProvider {
             });
 
             if (!res.ok) {
+                console.warn(`[GoogleSheetsStorage] Save failed: HTTP ${res.status} ${res.statusText}`, { matchId });
                 return { success: false, error: `HTTP error ${res.status}` };
             }
 
             const data = await res.json();
             if (!data.success) {
+                console.warn('[GoogleSheetsStorage] Save rejected by Apps Script:', { matchId, error: data.error });
                 return { success: false, error: data.error || 'Google Apps Script save failed' };
             }
 
@@ -221,6 +227,7 @@ export class GoogleSheetsStorageProvider implements LiveStorageProvider {
             }
 
             if (!res.ok) {
+                console.warn(`[GoogleSheetsStorage] Fetch failed: HTTP ${res.status} ${res.statusText}`, { matchId });
                 return { success: false, error: `HTTP error ${res.status}` };
             }
 
@@ -332,8 +339,8 @@ export function createLiveMatchPacket(
         seq,
         updatedAt: now,
         createdAt,
-        expiresAt: createdAt + FOUR_WEEKS_MS,
-        ttlSeconds: FOUR_WEEKS_SECONDS,
+        expiresAt: createdAt + ONE_YEAR_MS,
+        ttlSeconds: ONE_YEAR_SECONDS,
         writeKeyHash: hashWriteKey(writeKey),
         state: minState
     };
@@ -360,7 +367,7 @@ export function startLiveSession(
         status: 'CONNECTING',
         lastSyncedAt: null,
         lastError: null,
-        expiresAt: now + FOUR_WEEKS_MS
+        expiresAt: now + ONE_YEAR_MS
     });
 
     // Persist write key in localStorage so umpire can refresh without losing auth
@@ -518,9 +525,9 @@ export function joinSpectatorSession(
         } else if (res.expired) {
             updateLiveSession({
                 status: 'ERROR',
-                lastError: 'This match scorecard has expired (4-week retention ended).'
+                lastError: 'This match scorecard has expired (1-year retention ended).'
             });
-            if (onStatusChange) onStatusChange('ERROR', 'Match expired (4-week retention ended).');
+            if (onStatusChange) onStatusChange('ERROR', 'Match expired (1-year retention ended).');
             isPolling = false;
             return;
         } else if (res.notFound) {
@@ -599,10 +606,63 @@ export function stopLiveSync(): void {
     });
 }
 
+function getLocalStorage(): Storage | null {
+    if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage;
+    }
+    if (typeof localStorage !== 'undefined') {
+        return localStorage;
+    }
+    return null;
+}
+
+export function initLiveProviderFromUrlOrStorage(): void {
+    if (typeof window === 'undefined' || !window.location) {
+        return;
+    }
+    const storage = getLocalStorage();
+    const search = window.location.search || '';
+    const params = search ? new URLSearchParams(search) : null;
+    const customEndpoint = params ? (params.get('endpoint') || params.get('backend')) : null;
+    if (customEndpoint && storage) {
+        try {
+            storage.setItem('custom_live_endpoint', customEndpoint);
+        } catch (e: any) {
+            console.warn('[LiveSync] Failed to persist custom live endpoint to localStorage:', {
+                errorType: e?.name || 'Error',
+                message: e?.message || String(e),
+                customEndpoint
+            });
+        }
+    }
+
+    let activeEndpoint: string | null = customEndpoint;
+    if (!activeEndpoint && storage) {
+        try {
+            activeEndpoint = storage.getItem('custom_live_endpoint');
+        } catch (e: any) {
+            console.warn('[LiveSync] Failed to read custom live endpoint from localStorage:', {
+                errorType: e?.name || 'Error',
+                message: e?.message || String(e)
+            });
+        }
+    }
+
+    if (activeEndpoint) {
+        if (activeEndpoint.includes('script.google.com')) {
+            setLiveStorageProvider(new GoogleSheetsStorageProvider(activeEndpoint));
+        } else {
+            setLiveStorageProvider(new CloudflareKVStorageProvider(activeEndpoint));
+        }
+    }
+}
+
 export function parseLiveUrlParams(): { matchId: string | null; writeKey: string | null } {
     if (typeof window === 'undefined' || !window.location || !window.location.search) {
         return { matchId: null, writeKey: null };
     }
+
+    initLiveProviderFromUrlOrStorage();
 
     const params = new URLSearchParams(window.location.search);
     const matchId = params.get('live') || params.get('match');

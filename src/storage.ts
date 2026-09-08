@@ -396,9 +396,22 @@ function getLZString(): any {
     };
 }
 
+function getLocalStorage(): Storage | null {
+    if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage;
+    }
+    if (typeof localStorage !== 'undefined') {
+        return localStorage;
+    }
+    return null;
+}
+
 export function saveState(state: GameState): void {
     try {
-        localStorage.setItem('cricketScorecardState', JSON.stringify(state));
+        const storage = getLocalStorage();
+        if (storage) {
+            storage.setItem('cricketScorecardState', JSON.stringify(state));
+        }
     } catch (e) {
         console.error("Failed to save state to localStorage", e);
     }
@@ -406,7 +419,10 @@ export function saveState(state: GameState): void {
 
 export function clearState(): void {
     try {
-        localStorage.removeItem('cricketScorecardState');
+        const storage = getLocalStorage();
+        if (storage) {
+            storage.removeItem('cricketScorecardState');
+        }
     } catch (e) {
         console.error("Failed to clear state from localStorage", e);
     }
@@ -455,7 +471,8 @@ export function loadState(): GameState | null {
     }
 
     if (!loaded) {
-        const savedState = localStorage.getItem('cricketScorecardState');
+        const storage = getLocalStorage();
+        const savedState = storage ? storage.getItem('cricketScorecardState') : null;
         if (savedState) {
             try {
                 loadedState = JSON.parse(savedState);

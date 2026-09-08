@@ -2,7 +2,7 @@ name = "cricket-scorecard-live"
 main = "worker.js"
 compatibility_date = "2024-09-01"
 
-# KV Namespace binding for 4-week state storage
+# KV Namespace binding for 1-year state storage
 [[kv_namespaces]]
 binding = "SCORECARD_KV"
 id = "cricket_scorecard_kv"

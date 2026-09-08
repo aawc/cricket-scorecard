@@ -4,7 +4,7 @@
  * Provides high-performance, zero-cost ($0.00) edge state hosting for live cricket scoring.
  * 
  * Features:
- * - Built-in 4-week TTL (2,419,200s / 28 days) eviction via KV expirationTtl
+ * - Built-in 1-year TTL (31,536,000s / 365 days) eviction via KV expirationTtl
  * - Cryptographic write key verification (prevents spectator tampering)
  * - Sub-50ms global latency with edge CDN caching
  * - Full CORS support for static GitHub Pages clients
@@ -17,7 +17,7 @@ const CORS_HEADERS = {
   'Access-Control-Max-Age': '86400'
 };
 
-const FOUR_WEEKS_SECONDS = 28 * 24 * 60 * 60; // 2,419,200 seconds
+const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60; // 31,536,000 seconds (365 days / 1 year)
 
 function jsonResponse(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data), {
@@ -78,7 +78,7 @@ export default {
 
       // Check client-side expiration timestamp guardrail
       if (packet.expiresAt && Date.now() > packet.expiresAt) {
-        return jsonResponse({ success: false, expired: true, error: 'Match record has expired (4-week retention ended)' }, 410);
+        return jsonResponse({ success: false, expired: true, error: 'Match record has expired (1-year retention ended)' }, 410);
       }
 
       return jsonResponse(packet, 200, {
@@ -121,14 +121,14 @@ export default {
 
       // Ensure writeKeyHash and expiration metadata are populated
       incomingPacket.writeKeyHash = incomingHash;
-      incomingPacket.ttlSeconds = FOUR_WEEKS_SECONDS;
+      incomingPacket.ttlSeconds = ONE_YEAR_SECONDS;
       if (!incomingPacket.expiresAt) {
-        incomingPacket.expiresAt = Date.now() + (FOUR_WEEKS_SECONDS * 1000);
+        incomingPacket.expiresAt = Date.now() + (ONE_YEAR_SECONDS * 1000);
       }
 
-      // Store in KV with native 4-week expiration TTL (2,419,200s)
+      // Store in KV with native 1-year expiration TTL (31,536,000s)
       await env.SCORECARD_KV.put(kvKey, JSON.stringify(incomingPacket), {
-        expirationTtl: FOUR_WEEKS_SECONDS
+        expirationTtl: ONE_YEAR_SECONDS
       });
 
       return jsonResponse({

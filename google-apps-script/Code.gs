@@ -13,7 +13,8 @@
  * 7. Pass this URL to GoogleSheetsStorageProvider in the PWA.
  */
 
-const FOUR_WEEKS_MS = 28 * 24 * 60 * 60 * 1000; // 2,419,200,000 ms
+const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000; // 31,536,000,000 ms (1 year)
+const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60; // 31,536,000 seconds
 
 function hashWriteKey(key) {
   let hash = 0x811c9dc5;
@@ -48,10 +49,10 @@ function doGet(e) {
 
     const packet = JSON.parse(rawData);
 
-    // Enforce 4-week expiration
+    // Enforce 1-year expiration
     if (packet.expiresAt && Date.now() > packet.expiresAt) {
       props.deleteProperty(`match_${matchId}`);
-      return createJsonResponse({ success: false, expired: true, error: "Match record has expired (4-week retention ended)" });
+      return createJsonResponse({ success: false, expired: true, error: "Match record has expired (1-year retention ended)" });
     }
 
     return createJsonResponse({ success: true, packet: packet });
@@ -94,9 +95,9 @@ function doPost(e) {
 
     // Ensure metadata
     incomingPacket.writeKeyHash = incomingHash;
-    incomingPacket.ttlSeconds = 2419200;
+    incomingPacket.ttlSeconds = ONE_YEAR_SECONDS;
     if (!incomingPacket.expiresAt) {
-      incomingPacket.expiresAt = Date.now() + FOUR_WEEKS_MS;
+      incomingPacket.expiresAt = Date.now() + ONE_YEAR_MS;
     }
 
     props.setProperty(`match_${matchId}`, JSON.stringify(incomingPacket));
