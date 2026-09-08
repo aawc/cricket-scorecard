@@ -6,7 +6,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-Fully functional and verified. Real-time multi-reader live state streaming with 4-week zero-cost cloud retention, advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 66 automated tests passing.
+Fully functional and verified. Real-time multi-reader live state streaming with 1-year zero-cost cloud retention, advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 67 automated tests passing.
 
 ## Features (Implemented)
 
@@ -14,7 +14,7 @@ Fully functional and verified. Real-time multi-reader live state streaming with 
 - **Embedded URI State Compression**: Standalone TypeScript LZString compression for ultra-compact permalinks (`?s=`) and storage minification with zero external runtime dependencies.
 - **Real-Time Live Streaming & Multi-Reader Sync**: Stream live match scores to unlimited parallel spectators at 100% zero cost ($0.00). Spectators view updates in real-time in read-only Spectator Mode without disrupting scoring.
 - **Serverless Cloud Storage Hosting**: Live match state packets are hosted remotely on high-performance Cloudflare Workers KV edge storage (`cloudflare/worker.js`) or Google Apps Script (`google-apps-script/Code.gs`) with zero hosting costs ($0.00).
-- **4-Week Remote Retention (28-day TTL)**: Match state is persisted remotely for exactly 4 weeks (2,419,200 seconds / 28 days) with automatic server-side eviction and client-side timestamp validation.
+- **1-Year Remote Retention (365-day TTL)**: Match state is persisted remotely for 1 year (31,536,000 seconds / 365 days) with automatic server-side eviction and client-side timestamp validation.
 - **Cryptographic Role Separation**: Umpire holds private write credentials (`?live=<id>&key=<key>`) stored in `localStorage`, while spectators receive clean read-only links (`?live=<id>`).
 - **Offline Resilience & Network Recovery**: Offline deliveries are queued in `localStorage` and automatically synchronized upon network restoration using monotonic sequence numbering.
 - **Modular Architecture**: Code deconstructed into clean ES6 modules (`src/` directory) separating state, live sync, rules calculation, persistence, and DOM rendering.
@@ -183,6 +183,8 @@ The repository maintains several core documentation files to manage the AI-assis
 
 | Document | Phase | Primary Audience | Core Question Answered |
 | :--- | :--- | :--- | :--- |
+| **`LIVE_SYNC_DESIGN.md`** | Design & Architecture | User & AI | *How does zero-cost real-time multi-reader state sync and 1-year TTL work?* |
+| **`DEPLOYMENT_AND_BACKEND_SETUP.md`** | Deployment & Operations | Scorer & Admin | *How do I choose, configure, and deploy Cloudflare vs Google Apps Script backends?* |
 | **`implementation_plan.md`** | Planning | User & AI | *How are we going to build this feature technically?* |
 | **`task.md`** | Execution | AI (Progress Tracking) | *What exact step are we working on right now?* |
 | **`walkthrough.md`** | Verification | User | *What exactly did we build and how was it tested?* |

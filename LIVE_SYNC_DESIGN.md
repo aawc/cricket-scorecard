@@ -1,8 +1,8 @@
-# Design Report: Free Real-Time Multi-Reader Live State Sync with 4-Week Retention
+# Design Report: Free Real-Time Multi-Reader Live State Sync with 1-Year Retention
 
 **Author:** AI Pair Programmer (Jetski)  
 **Target Repository:** `aawc/cricket-scorecard-pwa`  
-**Date:** 2026-09-07  
+**Date:** 2026-09-08  
 **Status:** [APPROVED] — Ready for Implementation  
 
 ---
@@ -14,7 +14,7 @@ The **Cricket Scorecard PWA** operates as a client-side Progressive Web App runn
 ### 1.1 Core Requirements
 1. **Single-Writer Umpire Role**: One umpire (scorer) on the field updates ball-by-ball match state (runs, wickets, extras, bowler changes, overs, toss, declarations) in real time.
 2. **Multi-Reader Spectator Role**: Multiple spectators, team members, and remote followers can concurrently observe the live match in real time or near-real-time without disrupting the umpire's scoring flow.
-3. **4-Week Data Retention (TTL)**: Match states must be persisted in remote storage for at least **4 weeks (28 days / 2,419,200 seconds)**, enabling historical lookup, post-match review, and delayed scorecard viewing.
+3. **1-Year Data Retention (TTL)**: Match states must be persisted in remote storage for at least **1 year (365 days / 31,536,000 seconds)**, enabling historical lookup, post-match review, and delayed scorecard viewing.
 4. **100% Zero Cost ($0.00)**: The entire solution must operate with zero subscription fees, zero server hosting costs, zero credit card requirements, and zero paywalls.
 5. **Static PWA & Offline Compatibility**: The system must run smoothly from GitHub Pages, handle unreliable cellular reception on cricket grounds, support offline buffering, and cleanly separate Umpire write permissions from Spectator read permissions.
 
@@ -22,7 +22,7 @@ The **Cricket Scorecard PWA** operates as a client-side Progressive Web App runn
 
 ## 2. Evaluation of Architectural Alternatives
 
-We evaluate six potential architectures across latency, cost, setup friction, 4-week TTL enforcement, security, and static site compatibility:
+We evaluate six potential architectures across latency, cost, setup friction, 1-year TTL enforcement, security, and static site compatibility:
 
 ### Alternative 1: Cloudflare Workers KV (Selected — Recommended for High Performance & Edge Security)
 - **Architecture**: A lightweight serverless Cloudflare Worker ([`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js)) running on Cloudflare's global edge network backed by a Cloudflare KV namespace (`SCORECARD_KV`).
@@ -33,7 +33,7 @@ We evaluate six potential architectures across latency, cost, setup friction, 4-
   - Edge rate limiting and DDoS protection.
 - **Pros**:
   - **100% Free Forever ($0.00)**: Cloudflare Workers free plan includes 100,000 requests/day, 100,000 KV reads/day, and 1,000 KV writes/day with zero billing requirements.
-  - **Native 4-Week TTL**: Supports server-side expiration parameter (`expirationTtl: 2419200`) and client-side timestamp checks.
+  - **Native 1-Year TTL**: Supports server-side expiration parameter (`expirationTtl: 31536000`) and client-side timestamp checks.
   - **Sub-50ms Edge Latency**: Global CDN caching (`Cache-Control: public, max-age=1`) delivers real-time score updates to spectators worldwide.
   - **Zero SDK Dependency**: Uses native browser `fetch()`; adds zero external bundles to the PWA.
   - **Turnkey Deployment**: Pre-packaged in the repo with [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js) and [`cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/wrangler.toml).
@@ -72,9 +72,9 @@ We evaluate six potential architectures across latency, cost, setup friction, 4-
 - **Architecture**: Umpire's browser acts as a P2P host, broadcasting state directly to spectator browser peers via WebRTC data channels.
 - **Pros**: Zero server storage required; real-time latency.
 - **Cons**:
-  - **Fails 4-Week Storage Requirement**: Data only lives while the umpire's browser tab is actively open and connected.
+  - **Fails 1-Year Storage Requirement**: Data only lives while the umpire's browser tab is actively open and connected.
   - Carrier-grade NAT (CGNAT) on mobile networks frequently fails direct P2P connections without paid TURN relays.
-- **Feasibility Assessment**: [FAIL] Does not meet persistence and 4-week TTL requirements.
+- **Feasibility Assessment**: [FAIL] Does not meet persistence and 1-year TTL requirements.
 
 ---
 
@@ -82,8 +82,8 @@ We evaluate six potential architectures across latency, cost, setup friction, 4-
 - **Architecture**: A free Supabase PostgreSQL database storing matches in a `matches` table.
 - **Pros**: SQL queries and real-time subscriptions.
 - **Cons**:
-  - **Inactivity Pausing**: Supabase free-tier projects automatically pause after 7 days of inactivity, violating the 4-week persistence requirement.
-- **Feasibility Assessment**: [FAIL] Free tier pause policy makes 4-week retention unreliable.
+  - **Inactivity Pausing**: Supabase free-tier projects automatically pause after 7 days of inactivity, violating the 1-year persistence requirement.
+- **Feasibility Assessment**: [FAIL] Free tier pause policy makes 1-year retention unreliable.
 
 ---
 
@@ -100,7 +100,7 @@ We evaluate six potential architectures across latency, cost, setup friction, 4-
 | Criteria | Option 1: Cloudflare Workers KV (Selected) | Option 2: Google Sheets / Apps Script (Selected) | Option 3: Firebase RTDB | Option 4: WebRTC P2P | Option 5: Supabase | Option 6: GitHub Gist |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | **Cost** | [PASS] $0.00 Free | [PASS] $0.00 Free | [PASS] $0.00 (Spark) | [PASS] $0.00 | [PASS] $0.00 | [PASS] $0.00 |
-| **4-Week TTL** | [PASS] Native (28d) | [PASS] Checked (28d) | [FAIL] Needs Blaze | [FAIL] Ephemeral | [FAIL] 7d Pause | [FAIL] Manual |
+| **1-Year TTL** | [PASS] Native (365d) | [PASS] Checked (365d) | [FAIL] Needs Blaze | [FAIL] Ephemeral | [FAIL] 7d Pause | [FAIL] Manual |
 | **Setup Ease** | [PASS] Pre-packaged | [PASS] 1-Click Paste | [WARN] Config setup | [PASS] Zero | [FAIL] High | [FAIL] PAT token |
 | **Security** | [PASS] Edge Auth | [PASS] Script Auth | [PASS] RTDB Rules | [PASS] P2P Host | [PASS] RLS | [PASS] PAT |
 | **Latency** | [PASS] < 50ms Edge | [WARN] 400–1200ms | [PASS] < 200ms | [PASS] < 100ms | [PASS] < 200ms | [FAIL] > 1000ms |
@@ -113,17 +113,17 @@ We evaluate six potential architectures across latency, cost, setup friction, 4-
 
 ### 4.1 Storage Hosting Infrastructure & Endpoints
 
-Live match scorecards are persisted remotely using a serverless **REST Key-Value (KV) Storage Architecture** implemented via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L93) (and [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L150)):
+Live match scorecards are persisted remotely using a serverless **REST Key-Value (KV) Storage Architecture** implemented via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98) (and [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L175)):
 
 1. **Remote Cloud Storage Endpoint**:
    - **Primary Service Provider (Cloudflare Workers KV)**:
-     `https://cricket-scorecard-live.workers.dev/api/match/{matchId}`
+     `https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`
      Backed by the turnkey edge script [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js).
    - **Google Apps Script Web App Provider (Google Ecosystem)**:
      `https://script.google.com/macros/s/.../exec`
      Backed by the turnkey script [`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs).
-   - **Pluggable Architecture**: The [`LiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L45) interface allows switching the underlying storage backend without changing application scoring logic.
-   - **In-Memory & Offline Provider**: [`MemoryStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L53) is provided for local automated test execution and offline simulation without network dependencies.
+   - **Pluggable Architecture**: The [`LiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L49) interface allows switching the underlying storage backend without changing application scoring logic.
+   - **In-Memory & Offline Provider**: [`MemoryStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L57) is provided for local automated test execution and offline simulation without network dependencies.
 2. **Local Client-Side Storage**:
    - **Local Match Cache**: `localStorage.getItem('cricket_scorecard_state')` retains the complete active match state on the device.
    - **Umpire Secret Key Store**: `localStorage.getItem('liveWriteKey_${matchId}')` preserves the umpire's private write credentials across browser reloads.
@@ -133,7 +133,7 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
 #### A. Umpire State Publication (Writer)
 - **HTTP Method & URL**:
   ```http
-  POST https://cricket-scorecard-live.workers.dev/api/match/{matchId}?ttl=2419200
+  POST https://cricket-scorecard-live.khaneja.org/api/match/{matchId}?ttl=31536000
   ```
 - **Request Headers**:
   - `Content-Type: application/json`
@@ -144,27 +144,27 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
     "matchId": "m_a1b2c3d4",
     "seq": 14,
     "updatedAt": 1725753600000,
-    "ttlSeconds": 2419200,
-    "expiresAt": 1728172800000,
+    "ttlSeconds": 31536000,
+    "expiresAt": 1757289600000,
     "writeKeyHash": "5e884898",
     "minifiedState": "..."
   }
   ```
-- **4-Week Expiration Header/Param**: `ttl=2419200` instructs the KV backend to automatically evict the key after exactly 28 days (2,419,200 seconds).
+- **1-Year Expiration Header/Param**: `ttl=31536000` instructs the KV backend to automatically evict the key after exactly 365 days (31,536,000 seconds).
 - **Debounced Umpire Synchronization**:
-  - Ball-by-ball updates are debounced by **250 ms** ([`DEBOUNCE_SYNC_MS = 250`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L8)) to coalesce rapid consecutive actions (e.g. wide + extra runs) into a single atomic network dispatch.
+  - Ball-by-ball updates are debounced by **250 ms** ([`DEBOUNCE_SYNC_MS = 250`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L12)) to coalesce rapid consecutive actions (e.g. wide + extra runs) into a single atomic network dispatch.
 
 #### B. Spectator State Ingestion (Reader)
 - **HTTP Method & URL**:
   ```http
-  GET https://cricket-scorecard-live.workers.dev/api/match/{matchId}
+  GET https://cricket-scorecard-live.khaneja.org/api/match/{matchId}
   ```
 - **Request Headers**:
   - `Accept: application/json`
 - **Response**: HTTP 200 with the latest [`LiveMatchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L79) payload.
 - **Adaptive Polling Intervals**:
-  - **Active Tab Focus**: Polled every **3.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 3500`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L6)).
-  - **Background / Hidden Tab**: Throttled to every **15 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 15000`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L7)) via `document.visibilityState` listeners.
+  - **Active Tab Focus**: Polled every **3.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 3500`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10)).
+  - **Background / Hidden Tab**: Throttled to every **15 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 15000`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L11)) via `document.visibilityState` listeners.
 
 ### 4.3 Role Separation & URL Schema
 1. **Spectator (Viewer) Link**:
@@ -190,8 +190,8 @@ export interface LiveMatchPacket {
   matchId: string;
   seq: number;                   // Monotonically increasing sequence number
   updatedAt: number;             // Epoch milliseconds
-  expiresAt: number;             // Epoch milliseconds (createdAt + 28 days)
-  ttlSeconds: number;            // 2,419,200 (28 days)
+  expiresAt: number;             // Epoch milliseconds (createdAt + 365 days)
+  ttlSeconds: number;            // 31,536,000 (365 days / 1 year)
   writeKeyHash: string;          // Cryptographic verification hash (hashWriteKey)
   state: any;                    // Minified game state schema
 }
@@ -205,7 +205,7 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
   - Active Tab: 1 poll every 3.5 seconds = ~17 requests/minute = ~1,000 requests/hour (~1.2 MB/hour).
   - Background Tab: 1 poll every 15 seconds (using Page Visibility API) = 4 requests/minute.
   - Match Completed: Polling halts automatically once `matchOver === true`.
-- Over a standard 4-week lifecycle, 100 simultaneous matches with 50 viewers each comfortably consume less than 15% of free-tier bandwidth allowances.
+- Over a standard 1-year lifecycle, 100 simultaneous matches with 50 viewers each comfortably consume less than 15% of free-tier bandwidth allowances.
 
 ### 4.4 Conflict Resolution & Monotonic Ordering
 - **Single Source of Truth**: The umpire's local state is authoritative.
@@ -241,7 +241,7 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
    - Spectators cannot overwrite match state because their client lacks the `writeKey`.
    - The PWA validates all incoming JSON structures against schema boundaries (`unminifyState`) before applying them to the state tree.
 3. **TTL Enforcement**:
-   - Both server-side expiration (`ttl=2419200`) and client-side expiration checks (`Date.now() > packet.expiresAt`) ensure expired matches are safely invalidated after 28 days.
+   - Both server-side expiration (`ttl=31536000`) and client-side expiration checks (`Date.now() > packet.expiresAt`) ensure expired matches are safely invalidated after 365 days.
 
 ---
 
@@ -250,12 +250,12 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
 1. **Commit 1: Design Documentation & Specifications**
    - Add `LIVE_SYNC_DESIGN.md` and update `DESIGN.md` with complete architectural details.
 2. **Commit 2: Core Live Sync Module & Types**
-   - Create `src/sync.ts` with `LiveSyncService`, storage providers, sequence management, and 4-week TTL logic.
+   - Create `src/sync.ts` with `LiveSyncService`, storage providers, sequence management, and 1-year TTL logic.
    - Update `src/types.ts`, `src/storage.ts`, and `src/state.ts`.
 3. **Commit 3: UI Live Sharing Controls, Spectator Mode, and PWA Cache**
    - Add Live Stream modal, spectator view banner, role-based control locking, and colorblind-safe badges in `src/ui.ts`, `index.html`, `src/style.css`, and `public/sw.js`.
 4. **Commit 4: Automated Unit Tests**
-   - Add comprehensive test cases in `test/test_cases.ts` (Tests 54–62) covering session generation, 4-week TTL calculation, write key authorization, spectator ingestion, offline recovery, and race prevention.
+   - Add comprehensive test cases in `test/test_cases.ts` (Tests 54–62) covering session generation, 1-year TTL calculation, write key authorization, spectator ingestion, offline recovery, and race prevention.
 5. **Commit 5: Repository Documentation Synchronization**
    - Update `README.md` and `PROMPT.md` to reflect live streaming and multi-reader capabilities.
 

@@ -46,9 +46,9 @@
 - [x] Update project status and features in `README.md`
 - [x] Update task progress in `task.md`
 
-## Phase 6: Real-Time Multi-Reader Live State Sync & 4-Week Cloud Retention
-- [x] Author comprehensive architecture design report `LIVE_SYNC_DESIGN.md` exploring 6 alternatives with pros/cons and 4-week TTL strategy
-- [x] Implement `src/sync.ts` with `LiveSyncService`, `LiveStorageProvider`, `MemoryStorageProvider`, `RestKVStorageProvider`, 4-week TTL calculation, and monotonic sequence numbering
+## Phase 6: Real-Time Multi-Reader Live State Sync & 1-Year Cloud Retention
+- [x] Author comprehensive architecture design report `LIVE_SYNC_DESIGN.md` exploring 6 alternatives with pros/cons and 1-year TTL strategy
+- [x] Implement `src/sync.ts` with `LiveSyncService`, `LiveStorageProvider`, `MemoryStorageProvider`, `RestKVStorageProvider`, 1-year TTL calculation, and monotonic sequence numbering
 - [x] Extend `src/types.ts` with `LiveRole`, `LiveSyncStatus`, `LiveMatchPacket`, and `LiveSessionState`
 - [x] Integrate auto-sync into `dispatch()` in `src/state.ts`
 - [x] Implement `#liveModal` dialog, Spectator Mode banner, and connection badges in `index.html`, `src/style.css`, and `src/ui.ts`
@@ -76,11 +76,22 @@
 
 ## Phase 9: Cloudflare Workers KV & Google Apps Script Storage Backends
 - [x] Eliminate 14-day trial service dependencies; replace with permanent free tier Cloudflare Workers KV & Google Apps Script
-- [x] Implement [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L93) with sub-50ms edge latency and native `expirationTtl: 2419200` (28 days)
+- [x] Implement [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L93) with sub-50ms edge latency and native `expirationTtl: 31536000` (1 year / 365 days)
 - [x] Implement [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L150) for turnkey Google ecosystem deployment
 - [x] Create turnkey Cloudflare Worker script [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js) and [`cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/wrangler.toml)
 - [x] Create turnkey Google Apps Script script [`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs)
-- [x] Update architectural comparisons in `LIVE_SYNC_DESIGN.md` and document endpoints across `DESIGN.md`, `PROMPT.md`, and `README.md`
-- [x] Verify all 66 automated unit tests pass (`npm test`) and production build succeeds (`npm run build`)
-- [ ] Pre-Commit confirmation of atomic commits
-- [ ] Execute atomic commits
+- [x] Author comprehensive setup and deployment guide [`DEPLOYMENT_AND_BACKEND_SETUP.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/DEPLOYMENT_AND_BACKEND_SETUP.md)
+- [x] Add dynamic provider switching via `?endpoint=` / `?backend=` and `localStorage` caching (`initLiveProviderFromUrlOrStorage`)
+- [x] Add automated unit Test 67 in `test/test_cases.ts`
+
+## Phase 10: 1-Year Retention TTL Update (365 Days / 31,536,000s)
+- [x] Update TTL constants in [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L4) to `ONE_YEAR_SECONDS = 31536000` and `ONE_YEAR_MS = 31536000000`
+- [x] Update Cloudflare Worker [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js) native KV `expirationTtl` to 31,536,000s
+- [x] Update Google Apps Script [`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs) TTL to 1 year
+- [x] Update live modal UI text in `index.html` to display "1-Year Retention" and "Expires in 1 year"
+- [x] Update automated unit Tests 55 and 56 in `test/test_cases.ts` to test 1-year TTL calculation and expiration
+- [x] Synchronize `DEPLOYMENT_AND_BACKEND_SETUP.md`, `LIVE_SYNC_DESIGN.md`, `README.md`, `DESIGN.md`, and `PROMPT.md`
+- [x] Increment version to `v20260908-001` in `index.html` and `public/sw.js`
+- [x] Run full automated test suite (`npm test`) and production build (`npm run build`)
+- [x] Pre-Commit confirmation of atomic commits
+- [x] Execute atomic commits
