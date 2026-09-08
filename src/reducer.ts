@@ -79,18 +79,9 @@ export function reducer(state: GameState, action: Action): GameState {
                     }
                 });
             } else {
-                const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
-                const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
                 match.matchOver = true;
                 nextState.phase = 'MATCH_OVER';
-                let endMsg = `Match Over! ${bowlingTeam.name} wins!`;
-                if (match.target !== null) {
-                    if (match.liveInnings.score >= match.target) {
-                        endMsg = `Match Over! ${battingTeam.name} wins!`;
-                    } else if (match.liveInnings.score === match.target - 1) {
-                        endMsg = `Match Over! Match Tied!`;
-                    }
-                }
+                const endMsg = getMatchOverAlertMessage(match);
                 nextState.uiEvents.push({
                     type: 'SHOW_ALERT',
                     payload: {
@@ -554,6 +545,21 @@ function checkOverComplete(nextState: GameState): boolean {
     return false;
 }
 
+function getMatchOverAlertMessage(match: GameState['match']): string {
+    const battingTeam = match.currentBattingTeam === 1 ? match.team1 : match.team2;
+    const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
+    if (match.target !== null) {
+        if (match.liveInnings.score >= match.target) {
+            return `Match Over! ${battingTeam.name} wins!`;
+        } else if (match.liveInnings.score === match.target - 1) {
+            return `Match Over! Match Tied!`;
+        } else {
+            return `Match Over! ${bowlingTeam.name} wins!`;
+        }
+    }
+    return `Match Over! ${bowlingTeam.name} wins!`;
+}
+
 function checkMatchOver(nextState: GameState): boolean {
     const live = nextState.match.liveInnings;
     const settings = nextState.settings;
@@ -566,27 +572,10 @@ function checkMatchOver(nextState: GameState): boolean {
         const totalPlayers = battingTeam.players.length;
         const maxWickets = settings.allowSingleBatsman ? totalPlayers : totalPlayers - 1;
 
-        let matchOver = false;
-        let alertMessage = "";
+        const isMatchOver = live.score >= target || live.wickets >= maxWickets || live.balls >= maxBalls;
 
-        if (live.score >= target) {
-            matchOver = true;
-            alertMessage = `Match Over! ${battingTeam.name} wins!`;
-        } else if (live.wickets >= maxWickets) {
-            matchOver = true;
-            const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
-            alertMessage = `Match Over! ${bowlingTeam.name} wins!`;
-        } else if (live.balls >= maxBalls) {
-            matchOver = true;
-            const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
-            if (live.score === target - 1) {
-                alertMessage = `Match Over! Match Tied!`;
-            } else {
-                alertMessage = `Match Over! ${bowlingTeam.name} wins!`;
-            }
-        }
-
-        if (matchOver) {
+        if (isMatchOver) {
+            const alertMessage = getMatchOverAlertMessage(match);
             archiveLiveInnings(match);
             match.matchOver = true;
             nextState.phase = 'MATCH_OVER';
@@ -620,14 +609,14 @@ function handleAllOut(nextState: GameState): void {
             }
         });
     } else {
-        const bowlingTeam = match.currentBattingTeam === 1 ? match.team2 : match.team1;
+        const alertMessage = getMatchOverAlertMessage(match);
         match.matchOver = true;
         nextState.phase = 'MATCH_OVER';
         nextState.uiEvents.push({
             type: 'SHOW_ALERT',
             payload: {
                 title: 'Match Over',
-                message: `Match Over! ${bowlingTeam.name} wins!`
+                message: alertMessage
             }
         });
         nextState.uiEvents.push({ type: 'TOGGLE_SCREENSHOT' });

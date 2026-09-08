@@ -2261,10 +2261,190 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
+    // Test 78: Tied Match Result on All-Out and Over Limit in 2nd Innings
+    console.log("Running Test 78...");
+    resetTestState();
+    gameState.settings.oversPerInnings = 4;
+    gameState.settings.allowSingleBatsman = true;
+    gameState.match.currentInnings = 2;
+    gameState.match.currentBattingTeam = 2;
+    gameState.match.target = 41;
+    gameState.match.team1 = { name: "Team 1", players: ["A", "C"], innings: [] };
+    gameState.match.team2 = { name: "Team 2", players: ["B", "D"], innings: [] };
+    gameState.match.liveInnings = {
+        score: 40,
+        wickets: 1,
+        balls: 20,
+        extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+        batsmen: {
+            "B": { runs: 4, balls: 8, fours: 1, sixes: 0, active: false },
+            "D": { runs: 36, balls: 12, fours: 0, sixes: 6, active: true }
+        },
+        bowlers: {
+            "A": { runs: 36, balls: 12, wickets: 0, maidens: 1, wides: 0, noballs: 0 },
+            "C": { runs: 4, balls: 8, wickets: 1, maidens: 1, wides: 0, noballs: 0 }
+        },
+        currentBatsman1: "D",
+        currentBatsman2: "",
+        currentBowler: "C",
+        previousBowler: "A",
+        outBatsmen: ["B"],
+        overs: [],
+        overLog: ['4', 'W'],
+        fow: [{ wicket: 1, score: 40, batsman: "B", overs: "3.2" }]
+    };
+
+    // Sub-case 1: Wicket fall resulting in all-out with score equal to target - 1 (Tied match)
+    dispatch({ type: 'ADD_WICKET' });
+    if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver) {
+        console.error(`Test 78 Failed (Sub-case 1): Phase should be MATCH_OVER, got ${gameState.phase}`);
+        process.exit(1);
+    }
+    const alertEvent1 = gameState.uiEvents.find((e: any) => e.type === 'SHOW_ALERT');
+    if (!alertEvent1 || alertEvent1.payload.message !== 'Match Over! Match Tied!') {
+        console.error(`Test 78 Failed (Sub-case 1): Expected 'Match Over! Match Tied!', got '${alertEvent1?.payload?.message}'`);
+        process.exit(1);
+    }
+
+    // Verify UI rendering for Sub-case 1
+    updateUI();
+    const matchStatusElem = document.getElementById('match-status');
+    const matchOverTextElem = document.getElementById('match-over-text');
+    if (!matchStatusElem || matchStatusElem.textContent !== 'Match Over! Match Tied!') {
+        console.error(`Test 78 Failed (Sub-case 1 UI): match-status textContent should be 'Match Over! Match Tied!', got '${matchStatusElem?.textContent}'`);
+        process.exit(1);
+    }
+    if (!matchOverTextElem || matchOverTextElem.textContent !== 'Match Over! Match Tied!') {
+        console.error(`Test 78 Failed (Sub-case 1 UI): match-over-text textContent should be 'Match Over! Match Tied!', got '${matchOverTextElem?.textContent}'`);
+        process.exit(1);
+    }
+
+    // Sub-case 2: Run-out on last wicket when 1 run completed to tie score (39 + 1 = 40, Target = 41)
+    resetTestState();
+    gameState.settings.oversPerInnings = 4;
+    gameState.settings.allowSingleBatsman = false;
+    gameState.match.currentInnings = 2;
+    gameState.match.currentBattingTeam = 2;
+    gameState.match.target = 41;
+    gameState.match.team1 = { name: "Team 1", players: ["A", "C"], innings: [] };
+    gameState.match.team2 = { name: "Team 2", players: ["B", "D"], innings: [] };
+    gameState.match.liveInnings = {
+        score: 39,
+        wickets: 0,
+        balls: 15,
+        extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+        batsmen: {
+            "B": { runs: 10, balls: 8, fours: 1, sixes: 0, active: true },
+            "D": { runs: 29, balls: 7, fours: 0, sixes: 4, active: false }
+        },
+        bowlers: {
+            "A": { runs: 20, balls: 6, wickets: 0, maidens: 0, wides: 0, noballs: 0 },
+            "C": { runs: 19, balls: 9, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+        },
+        currentBatsman1: "B",
+        currentBatsman2: "D",
+        currentBowler: "C",
+        previousBowler: "A",
+        outBatsmen: [],
+        overs: [],
+        overLog: [],
+        fow: []
+    };
+    dispatch({ type: 'FINALIZE_DELIVERY', payload: { type: 'runout', extraRuns: 1, accrueTo: 'batsman', pendingRunOutStriker: false } });
+    if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver) {
+        console.error(`Test 78 Failed (Sub-case 2): Phase should be MATCH_OVER, got ${gameState.phase}`);
+        process.exit(1);
+    }
+    const alertEvent2 = gameState.uiEvents.find((e: any) => e.type === 'SHOW_ALERT');
+    if (!alertEvent2 || alertEvent2.payload.message !== 'Match Over! Match Tied!') {
+        console.error(`Test 78 Failed (Sub-case 2): Expected 'Match Over! Match Tied!', got '${alertEvent2?.payload?.message}'`);
+        process.exit(1);
+    }
+
+    // Sub-case 3: All-out with score LESS than target - 1 (Bowling team wins)
+    resetTestState();
+    gameState.settings.oversPerInnings = 4;
+    gameState.settings.allowSingleBatsman = true;
+    gameState.match.currentInnings = 2;
+    gameState.match.currentBattingTeam = 2;
+    gameState.match.target = 41;
+    gameState.match.team1 = { name: "Team 1", players: ["A", "C"], innings: [] };
+    gameState.match.team2 = { name: "Team 2", players: ["B", "D"], innings: [] };
+    gameState.match.liveInnings = {
+        score: 35,
+        wickets: 1,
+        balls: 20,
+        extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+        batsmen: {
+            "B": { runs: 4, balls: 8, fours: 1, sixes: 0, active: false },
+            "D": { runs: 31, balls: 12, fours: 0, sixes: 5, active: true }
+        },
+        bowlers: {
+            "A": { runs: 31, balls: 12, wickets: 0, maidens: 1, wides: 0, noballs: 0 },
+            "C": { runs: 4, balls: 8, wickets: 1, maidens: 1, wides: 0, noballs: 0 }
+        },
+        currentBatsman1: "D",
+        currentBatsman2: "",
+        currentBowler: "C",
+        previousBowler: "A",
+        outBatsmen: ["B"],
+        overs: [],
+        overLog: [],
+        fow: [{ wicket: 1, score: 35, batsman: "B", overs: "3.2" }]
+    };
+    dispatch({ type: 'ADD_WICKET' });
+    const alertEvent3 = gameState.uiEvents.find((e: any) => e.type === 'SHOW_ALERT');
+    if (!alertEvent3 || alertEvent3.payload.message !== 'Match Over! Team 1 wins!') {
+        console.error(`Test 78 Failed (Sub-case 3): Expected 'Match Over! Team 1 wins!', got '${alertEvent3?.payload?.message}'`);
+        process.exit(1);
+    }
+
+    // Sub-case 4: Max overs reached with score equal to target - 1 (Tied match)
+    resetTestState();
+    gameState.settings.oversPerInnings = 1;
+    gameState.settings.allowSingleBatsman = true;
+    gameState.match.currentInnings = 2;
+    gameState.match.currentBattingTeam = 2;
+    gameState.match.target = 11;
+    gameState.match.team1 = { name: "Team 1", players: ["A", "C"], innings: [] };
+    gameState.match.team2 = { name: "Team 2", players: ["B", "D"], innings: [] };
+    gameState.match.liveInnings = {
+        score: 10,
+        wickets: 0,
+        balls: 5,
+        extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+        batsmen: {
+            "B": { runs: 5, balls: 3, fours: 1, sixes: 0, active: true },
+            "D": { runs: 5, balls: 2, fours: 0, sixes: 0, active: false }
+        },
+        bowlers: {
+            "A": { runs: 10, balls: 5, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+        },
+        currentBatsman1: "B",
+        currentBatsman2: "D",
+        currentBowler: "A",
+        previousBowler: null,
+        outBatsmen: [],
+        overs: [],
+        overLog: ['1', '4', '1', '2', '2'],
+        fow: []
+    };
+    dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
+    if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver) {
+        console.error(`Test 78 Failed (Sub-case 4): Phase should be MATCH_OVER, got ${gameState.phase}`);
+        process.exit(1);
+    }
+    const alertEvent4 = gameState.uiEvents.find((e: any) => e.type === 'SHOW_ALERT');
+    if (!alertEvent4 || alertEvent4.payload.message !== 'Match Over! Match Tied!') {
+        console.error(`Test 78 Failed (Sub-case 4): Expected 'Match Over! Match Tied!', got '${alertEvent4?.payload?.message}'`);
+        process.exit(1);
+    }
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {
     console.error("Test Suite Failed with unhandled rejection:", err);
     process.exit(1);
 });
+
 
