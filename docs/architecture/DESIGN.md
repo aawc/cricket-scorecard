@@ -320,7 +320,7 @@ To transition this project from a prototype implementation to a professional, in
     *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Signals) that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
 2.  **Remote Storage Sync (Cloud Persistence)** - *Status: [IMPLEMENTED] (Production Ready)*:
-    *   Zero-cost live streaming and remote 1-year state persistence implemented via [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L1), [`LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/LIVE_SYNC_DESIGN.md#L1), and [`DEPLOYMENT_AND_BACKEND_SETUP.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/DEPLOYMENT_AND_BACKEND_SETUP.md#L1).
+    *   Zero-cost live streaming and remote 1-year state persistence implemented via [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L1), [`docs/architecture/LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/LIVE_SYNC_DESIGN.md#L1), and [`docs/deployment/DEPLOYMENT_AND_BACKEND_SETUP.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/deployment/DEPLOYMENT_AND_BACKEND_SETUP.md#L1).
 
 ---
 

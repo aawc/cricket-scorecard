@@ -25,7 +25,7 @@ The **Cricket Scorecard PWA** operates as a client-side Progressive Web App runn
 We evaluate six potential architectures across latency, cost, setup friction, 1-year TTL enforcement, security, and static site compatibility:
 
 ### Alternative 1: Cloudflare Workers KV (Selected — Recommended for High Performance & Edge Security)
-- **Architecture**: A lightweight serverless Cloudflare Worker ([`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js)) running on Cloudflare's global edge network backed by a Cloudflare KV namespace (`SCORECARD_KV`).
+- **Architecture**: A lightweight serverless Cloudflare Worker ([`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)) running on Cloudflare's global edge network backed by a Cloudflare KV namespace (`SCORECARD_KV`).
 - **Security**:
   - Validates `X-Write-Key` cryptographic authorization before writing to KV.
   - Enforces CORS policies (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Headers: Content-Type, X-Write-Key`).
@@ -36,14 +36,14 @@ We evaluate six potential architectures across latency, cost, setup friction, 1-
   - **Native 1-Year TTL**: Supports server-side expiration parameter (`expirationTtl: 31536000`) and client-side timestamp checks.
   - **Sub-50ms Edge Latency**: Global CDN caching (`Cache-Control: public, max-age=1`) delivers real-time score updates to spectators worldwide.
   - **Zero SDK Dependency**: Uses native browser `fetch()`; adds zero external bundles to the PWA.
-  - **Turnkey Deployment**: Pre-packaged in the repo with [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js) and [`cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/wrangler.toml).
+  - **Turnkey Deployment**: Pre-packaged in the repo with [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1) and [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1).
 - **Cons**: Requires a free Cloudflare account for hosting the worker.
 - **Feasibility Assessment**: [PASS] Highest security, lowest latency, zero cost.
 
 ---
 
 ### Alternative 2: Google Sheets / Google Apps Script Web App (Selected Alternative — Easiest in Google Ecosystem)
-- **Architecture**: A free Google Apps Script web app ([`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs)) deployed under the user's personal Google account, storing live matches in `PropertiesService` or a linked Google Sheet.
+- **Architecture**: A free Google Apps Script web app ([`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1)) deployed under the user's personal Google account, storing live matches in `PropertiesService` or a linked Google Sheet.
 - **Security**:
   - Validates `writeKeyHash` on `doPost(e)` before committing updates.
   - Operates under standard Google account security and HTTPS infrastructure.
@@ -118,10 +118,10 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
 1. **Remote Cloud Storage Endpoint**:
    - **Primary Service Provider (Cloudflare Workers KV)**:
      `https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`
-     Backed by the turnkey edge script [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js).
+     Backed by the turnkey edge script [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1).
    - **Google Apps Script Web App Provider (Google Ecosystem)**:
      `https://script.google.com/macros/s/.../exec`
-     Backed by the turnkey script [`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs).
+     Backed by the turnkey script [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1).
    - **Pluggable Architecture**: The [`LiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L49) interface allows switching the underlying storage backend without changing application scoring logic.
    - **In-Memory & Offline Provider**: [`MemoryStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L57) is provided for local automated test execution and offline simulation without network dependencies.
 2. **Local Client-Side Storage**:

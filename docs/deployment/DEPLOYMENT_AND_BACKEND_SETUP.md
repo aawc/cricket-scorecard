@@ -94,9 +94,9 @@ setLiveStorageProvider(new GoogleSheetsStorageProvider('https://script.google.co
 
 ## 2. Step-by-Step Setup: Cloudflare Workers KV
 
-All source files for Cloudflare deployment are pre-packaged in the [`cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare) directory:
-- Worker Script: [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js)
-- Wrangler Configuration: [`cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/wrangler.toml)
+All source files for Cloudflare deployment are pre-packaged in the [`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare#L1) directory:
+- Worker Script: [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)
+- Wrangler Configuration: [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1)
 
 ### Option A: 1-Click CLI Deployment via Wrangler (Recommended)
 
@@ -121,8 +121,8 @@ All source files for Cloudflare deployment are pre-packaged in the [`cloudflare/
    id = "8f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c"
    ```
 
-4. **Update `cloudflare/wrangler.toml`**:
-   Open [`cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/wrangler.toml) and replace the placeholder `id` with your generated KV namespace ID:
+4. **Update [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1)**:
+   Open [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1) and replace the placeholder `id` with your generated KV namespace ID:
    ```toml
    name = "cricket-scorecard-live"
    main = "worker.js"
@@ -161,7 +161,7 @@ All source files for Cloudflare deployment are pre-packaged in the [`cloudflare/
    - Name your worker: `cricket-scorecard-live` and click **Deploy**.
 4. **Paste Worker Code**:
    - On the worker summary page, click **Edit code** (or **Quick Edit**).
-   - Replace the default template by pasting the complete contents of [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js).
+   - Replace the default template by pasting the complete contents of [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1).
    - Click **Save and deploy**.
 5. **Bind the KV Namespace**:
    - Go to your Worker's dashboard page (`cricket-scorecard-live`).
@@ -170,7 +170,7 @@ All source files for Cloudflare deployment are pre-packaged in the [`cloudflare/
    - Click **Add** (or **Add binding**).
    - **Select Binding Type (KV Namespace)**: In the modal or side drawer that appears, Cloudflare presents a selector for binding types (D1 Database, KV Namespace, R2 Bucket, Queue, Vectorize, etc.). If the dialog defaults to **D1 Database** (which shows SQL queries and database schemas), click the **Type** dropdown or card list and select **KV namespace** (or **KV**).
    - Fill in the two KV configuration fields:
-     - **Variable name**: Type `SCORECARD_KV` (this maps to `env.SCORECARD_KV` in [`cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/cloudflare/worker.js)).
+     - **Variable name**: Type `SCORECARD_KV` (this maps to `env.SCORECARD_KV` in [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)).
      - **KV namespace**: Select `SCORECARD_KV` from the dropdown list of namespaces created in Step 2.
    - Click **Deploy** (or **Save and deploy** / **Add binding**).
 6. **Copy Worker URL**:
@@ -201,7 +201,7 @@ Test the endpoint using `curl` (pointing to production `https://cricket-scorecar
 
 ## 3. Step-by-Step Setup: Google Apps Script (Google Sheets / Drive)
 
-The complete backend code is pre-packaged in [`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs).
+The complete backend code is pre-packaged in [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1).
 
 ### 3.1 Deployment Walkthrough
 
@@ -211,7 +211,7 @@ The complete backend code is pre-packaged in [`google-apps-script/Code.gs`](file
    Click "Untitled project" in the top-left and rename it to `Cricket Scorecard Live Sync`.
 3. **Paste the Script Code**:
    - Select all existing placeholder code in `Code.gs` and delete it.
-   - Copy the entire contents of [`google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/google-apps-script/Code.gs) and paste it into the editor.
+   - Copy the entire contents of [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1) and paste it into the editor.
    - Click the **Save** icon (diskette) or press `Ctrl+S` / `Cmd+S`.
 4. **Deploy as Web App**:
    - In the top-right corner, click **Deploy** > **New deployment**.
