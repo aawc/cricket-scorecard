@@ -5,7 +5,7 @@ const PHASE_ACTIONS: Record<MatchPhase, string[]> = {
     'TOSS': ['CHOOSE_TOSS_BATTING', 'RESET_MATCH'],
     'PLAYING_INNINGS': ['ADD_RUNS', 'ADD_LEG_BYE', 'ADD_WICKET', 'FINALIZE_DELIVERY', 'CHANGE_BATSMAN', 'CHANGE_BOWLER', 'UNDO', 'FORCE_END_INNINGS', 'RESET_MATCH'],
     'INNINGS_BREAK': ['START_NEXT_INNINGS', 'UNDO', 'RESET_MATCH'],
-    'MATCH_OVER': ['RESET_MATCH', 'UNDO']
+    'MATCH_OVER': ['RESET_MATCH']
 };
 
 function isValidActionForPhase(phase: MatchPhase, actionType: string): boolean {
@@ -15,6 +15,14 @@ function isValidActionForPhase(phase: MatchPhase, actionType: string): boolean {
 
 export function reducer(state: GameState, action: Action): GameState {
     const currentPhase = state.phase || 'SETUP';
+
+    // Match is immutable once completed
+    if (currentPhase === 'MATCH_OVER' || state.match?.matchOver) {
+        if (action.type !== 'RESET_MATCH') {
+            console.warn(`Match state is immutable after match completion. Action ${action.type} is rejected.`);
+            return state;
+        }
+    }
 
     if (!isValidActionForPhase(currentPhase, action.type)) {
         console.warn(`Action ${action.type} is not valid in phase ${currentPhase}`);

@@ -181,6 +181,8 @@ async function loadModulesAndRun() {
     (global as any).unminifyState = storageMod.unminifyState;
     (global as any).healInningsOvers = storageMod.healInningsOvers;
     (global as any).generatePermalink = storageMod.generatePermalink;
+    (global as any).archiveCompletedMatch = storageMod.archiveCompletedMatch;
+    (global as any).getCompletedMatches = storageMod.getCompletedMatches;
 
     (global as any).resetMatch = uiMod.resetMatch;
     (global as any).startMatch = uiMod.startMatch;

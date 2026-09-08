@@ -62,7 +62,7 @@ All contributors MUST follow the authoritative directory layout defined in [`doc
 ### Key Commands
 
 ```bash
-# 1. Run automated unit test suite (79 tests)
+# 1. Run automated unit test suite
 npm test
 
 # 2. Start local Vite development server

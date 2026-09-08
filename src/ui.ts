@@ -1,5 +1,5 @@
 import { gameState, dispatch, setGameState } from './state.js';
-import { saveState, loadState, generatePermalink, clearState } from './storage.js';
+import { saveState, loadState, generatePermalink, clearState, archiveCompletedMatch } from './storage.js';
 import { GameState, LiveInnings, Team } from './types.js';
 import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl } from './feedback.js';
 import { openModal, closeModal, initModalSystem, registerModalHiddenCallback } from './modal.js';
@@ -1089,7 +1089,12 @@ function checkControlsState(): void {
     
     if (gameState.match.matchOver) {
         controls.forEach(btn => btn.disabled = true);
+        if (undoBtn) undoBtn.disabled = true;
+        if (batsman1Select) batsman1Select.disabled = true;
+        if (batsman2Select) batsman2Select.disabled = true;
+        if (bowlerSelect) bowlerSelect.disabled = true;
         if (triggerEndInningsBtn) triggerEndInningsBtn.disabled = true;
+        if (endInningsBtn) endInningsBtn.disabled = true;
         if (selectionWarning) selectionWarning.classList.add('d-none');
         return;
     }
@@ -1523,6 +1528,29 @@ export function executeStartMatch(battingTeamNum: 1 | 2): void {
 
 export function resetMatch(): void {
     if (isSpectator()) return;
+
+    // 1. Terminate any active live streaming session so it cannot overwrite the completed match in cloud storage
+    stopLiveSync();
+
+    // 2. Clear any stored active live match ID
+    if (typeof localStorage !== 'undefined') {
+        try {
+            localStorage.removeItem('activeLiveMatchId');
+        } catch (e) {
+            console.warn('Failed to remove activeLiveMatchId from localStorage', e);
+        }
+    }
+
+    // 3. Clear URL query parameters (?live=..., ?s=..., ?state=...)
+    if (typeof window !== 'undefined' && window.history && window.location) {
+        window.history.replaceState({}, '', window.location.pathname);
+    }
+
+    // 4. Archive completed match before clearing active state
+    if (gameState.match && (gameState.match.matchOver || (gameState.match.liveInnings && gameState.match.liveInnings.balls > 0))) {
+        archiveCompletedMatch(gameState);
+    }
+
     clearState();
     dispatch({ type: 'RESET_MATCH' });
     expandedOvers = [];

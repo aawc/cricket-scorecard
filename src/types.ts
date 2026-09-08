@@ -131,6 +131,22 @@ export type Action =
   | { type: 'UNDO' }
   | { type: 'RESET_MATCH' };
 
+export interface CompletedMatchRecord {
+  id: string;
+  timestamp: number;
+  date: string;
+  phase: MatchPhase;
+  summary: {
+    team1: string;
+    team2: string;
+    score1: number;
+    wickets1: number;
+    score2: number;
+    wickets2: number;
+  };
+  state: any;
+}
+
 // Global type overrides for CDN loaded libraries
 declare global {
   interface Window {

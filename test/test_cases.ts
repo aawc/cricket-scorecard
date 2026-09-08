@@ -2483,6 +2483,114 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
+    // Test 80: Match Immutability on Completion & New Match Separation
+    console.log("Running Test 80 (Match Immutability on Completion & New Match Separation)...");
+    resetTestState();
+    gameState.settings.oversPerInnings = 2;
+    gameState.settings.allowSingleBatsman = true;
+    gameState.match.currentInnings = 2;
+    gameState.match.currentBattingTeam = 2;
+    gameState.match.target = 25;
+    gameState.match.team1 = { name: "Team 1", players: ["Player A1", "Player A2"], innings: [{ score: 24, wickets: 2, balls: 12, extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 }, batsmen: {}, bowlers: {}, currentBatsman1: null, currentBatsman2: null, currentBowler: null, previousBowler: null, outBatsmen: [], overs: [], overLog: [] }] };
+    gameState.match.team2 = { name: "Team 2", players: ["Player B1", "Player B2"], innings: [] };
+    gameState.match.liveInnings = {
+        score: 20,
+        wickets: 0,
+        balls: 10,
+        extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+        batsmen: {
+            "Player B1": { runs: 12, balls: 6, fours: 3, sixes: 0, active: true },
+            "Player B2": { runs: 8, balls: 4, fours: 2, sixes: 0, active: false }
+        },
+        bowlers: {
+            "Player A1": { runs: 20, balls: 10, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+        },
+        currentBatsman1: "Player B1",
+        currentBatsman2: "Player B2",
+        currentBowler: "Player A1",
+        previousBowler: null,
+        outBatsmen: [],
+        overs: [],
+        overLog: ['4', '4', '4', '4', '4'],
+        fow: []
+    };
+
+    // Batsman hits a 6 to pass target and finish match (20 + 6 = 26 > Target 25)
+    dispatch({ type: 'ADD_RUNS', payload: { runs: 6 } });
+    if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver) {
+        console.error(`Test 80 Failed: Match should be in MATCH_OVER phase, got ${gameState.phase}`);
+        process.exit(1);
+    }
+
+    const completedScore = gameState.match.liveInnings.score;
+    const completedBalls = gameState.match.liveInnings.balls;
+
+    // 1. Assert Immutability: Attempt scoring actions on ended match
+    dispatch({ type: 'ADD_RUNS', payload: { runs: 4 } });
+    dispatch({ type: 'ADD_WICKET' });
+    dispatch({ type: 'ADD_LEG_BYE' });
+    dispatch({ type: 'FINALIZE_DELIVERY', payload: { type: 'wide', extraRuns: 1, accrueTo: 'byes' } });
+    dispatch({ type: 'UNDO' });
+
+    if (gameState.match.liveInnings.score !== completedScore || gameState.match.liveInnings.balls !== completedBalls) {
+        console.error(`Test 80 Failed: Match state was mutated after completion! Expected score ${completedScore} and balls ${completedBalls}, got score ${gameState.match.liveInnings.score}, balls ${gameState.match.liveInnings.balls}`);
+        process.exit(1);
+    }
+
+    // 2. Setup live session on Match 1
+    const memoryProvider = new MemoryStorageProvider();
+    setLiveStorageProvider(memoryProvider);
+    const match1Session = startLiveSession(gameState, 'm_match1', 'k_key1');
+    const packet1 = await memoryProvider.fetchPacket('m_match1');
+    if (!packet1.success || !packet1.packet) {
+        console.error("Test 80 Failed: Failed to retrieve Match 1 live packet from storage provider");
+        process.exit(1);
+    }
+    const unminified1 = unminifyState(packet1.packet.state);
+    if (unminified1.match.liveInnings.score !== 26) {
+        console.error(`Test 80 Failed: Expected Match 1 packet score 26, got ${unminified1.match.liveInnings.score}`);
+        process.exit(1);
+    }
+
+    // 3. Trigger New Match
+    resetMatch();
+
+    // 4. Assert that Match 1 in storage provider was NOT overwritten
+    const packet1AfterReset = await memoryProvider.fetchPacket('m_match1');
+    if (!packet1AfterReset.success || !packet1AfterReset.packet) {
+        console.error("Test 80 Failed: Match 1 was corrupted or deleted after resetMatch()");
+        process.exit(1);
+    }
+    const unminified1After = unminifyState(packet1AfterReset.packet.state);
+    if (unminified1After.match.liveInnings.score !== 26 || !unminified1After.match.matchOver) {
+        console.error(`Test 80 Failed: Match 1 was overwritten during New Match! Expected preserved score 26 & matchOver=true, got score ${unminified1After.match.liveInnings.score} & matchOver=${unminified1After.match.matchOver}`);
+        process.exit(1);
+    }
+
+    // 5. Assert live session disconnected & state is fresh SETUP with preserved rosters
+    const sessionAfterReset = getLiveSession();
+    if (sessionAfterReset.matchId !== null || sessionAfterReset.isLive !== false) {
+        console.error(`Test 80 Failed: Live session was not disconnected after resetMatch(), got matchId: ${sessionAfterReset.matchId}`);
+        process.exit(1);
+    }
+
+    if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false) {
+        console.error(`Test 80 Failed: Expected phase SETUP and matchStarted false, got phase ${gameState.phase}`);
+        process.exit(1);
+    }
+
+    if (gameState.match.team1.players.length !== 2 || gameState.match.team2.players.length !== 2) {
+        console.error("Test 80 Failed: Team rosters were not preserved for the new match");
+        process.exit(1);
+    }
+
+    // 6. Start Match 2 and verify it generates a distinct unique matchId
+    const match2Session = startLiveSession(gameState);
+    if (!match2Session.matchId || match2Session.matchId === 'm_match1') {
+        console.error(`Test 80 Failed: Match 2 did not receive a new unique matchId, got ${match2Session.matchId}`);
+        process.exit(1);
+    }
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {

@@ -1,4 +1,4 @@
-import { GameState, LiveInnings, Team } from './types.js';
+import { CompletedMatchRecord, GameState, LiveInnings, Team } from './types.js';
 
 const KEY_STR_URI_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
 
@@ -697,4 +697,45 @@ export function unminifyState(min: any): GameState {
             matchOver: min.m ? min.m.mo === 1 : false
         }
     };
+}
+
+export function archiveCompletedMatch(state: GameState): void {
+    try {
+        const storage = getLocalStorage();
+        if (!storage) return;
+        const historyKey = 'cricketScorecardCompletedMatches';
+        const existing = storage.getItem(historyKey);
+        const list: any[] = existing ? JSON.parse(existing) : [];
+        const snapshot = {
+            id: `match_${Date.now()}`,
+            timestamp: Date.now(),
+            date: new Date().toISOString(),
+            phase: state.phase,
+            summary: {
+                team1: state.match?.team1?.name || "Team 1",
+                team2: state.match?.team2?.name || "Team 2",
+                score1: state.match?.team1?.innings?.[0]?.score ?? (state.match?.currentBattingTeam === 1 ? state.match?.liveInnings?.score : 0),
+                wickets1: state.match?.team1?.innings?.[0]?.wickets ?? (state.match?.currentBattingTeam === 1 ? state.match?.liveInnings?.wickets : 0),
+                score2: state.match?.team2?.innings?.[0]?.score ?? (state.match?.currentBattingTeam === 2 ? state.match?.liveInnings?.score : 0),
+                wickets2: state.match?.team2?.innings?.[0]?.wickets ?? (state.match?.currentBattingTeam === 2 ? state.match?.liveInnings?.wickets : 0),
+            },
+            state: minifyState(state)
+        };
+        list.unshift(snapshot);
+        if (list.length > 20) list.pop();
+        storage.setItem(historyKey, JSON.stringify(list));
+    } catch (e) {
+        console.warn('Failed to archive completed match:', e);
+    }
+}
+
+export function getCompletedMatches(): CompletedMatchRecord[] {
+    try {
+        const storage = getLocalStorage();
+        if (!storage) return [];
+        const raw = storage.getItem('cricketScorecardCompletedMatches');
+        return raw ? (JSON.parse(raw) as CompletedMatchRecord[]) : [];
+    } catch (e) {
+        return [];
+    }
 }

@@ -222,7 +222,7 @@ Asynchronous side-effects (like Bootstrap alerts and modals) are managed by appe
 
 The test suite runs in Node.js using `ts-node` to execute TypeScript assertions directly without requiring a compilation step.
 -   **Runner (`test/test.ts`)**: Mocks browser DOM APIs in the global Node scope, uses ESM ts-node loader to dynamically import the TypeScript source modules from `src/`, binds modules to global variables for test compatibility, and executes the suite.
--   **Test Cases (`test/test_cases.ts`)**: Written in TypeScript with type definitions, containing 50 unit tests verifying:
+-   **Test Cases (`test/test_cases.ts`)**: Written in TypeScript with type definitions, verifying:
     *   Runs accumulation, boundary tracking (`4s`, `6s`), and strike rotation.
     *   Bowler maiden over calculation (`M`) and Economy rates (`Econ`).
     *   Fall of Wickets (`FOW`) progression recording on dismissals and run-outs.

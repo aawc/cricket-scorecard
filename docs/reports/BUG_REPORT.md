@@ -101,7 +101,7 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
 
 ## Test & Verification Evidence
 
-All 41 unit tests executed through the test harness pass with zero regressions:
+All unit tests executed through the test harness pass with zero regressions:
 
 ```
 > cricket-scorecard-pwa@1.0.0 test

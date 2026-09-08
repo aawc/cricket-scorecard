@@ -12,7 +12,7 @@
 
 A comprehensive review of the `cricket-scorecard-pwa` codebase and scoring engine was conducted across domain accuracy (MCC Laws of Cricket compliance), state management, UI/UX interaction, mobile touch ergonomics, accessibility (red-green color blindness standards), and offline PWA resilience.
 
-A total of **12 key issues and enhancements** were identified, categorized, implemented, and verified through a 50-test automated suite (`npm test`), strict TypeScript type checking (`npx tsc --noEmit`), and production build verification (`npm run build`).
+A total of **12 key issues and enhancements** were identified, categorized, implemented, and verified through an automated test suite (`npm test`), strict TypeScript type checking (`npx tsc --noEmit`), and production build verification (`npm run build`).
 
 ---
 
@@ -232,7 +232,7 @@ A total of **12 key issues and enhancements** were identified, categorized, impl
 
 ## 4. Automated Verification & Test Suite
 
-The automated test runner executes 50 unit and regression test cases:
+The automated test runner executes unit and regression test cases:
 
 ```bash
 export PATH="/usr/bin:$(pwd)/node-env/node-v20.11.0-linux-x64/bin:$PATH"

@@ -77,9 +77,8 @@ export function dispatch(action: Action): void {
         clearState();
     } else {
         saveState(gameState);
+        // Auto-sync live state if live session is active
+        syncStateIfLive(gameState);
     }
-
-    // Auto-sync live state if live session is active
-    syncStateIfLive(gameState);
 }
 

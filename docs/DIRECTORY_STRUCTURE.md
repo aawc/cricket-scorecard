@@ -61,7 +61,7 @@ cricket-scorecard/
 │   └── version.ts                   # Semantic versioning authority (v$yyyy.$mm.$nnn)
 ├── test/                            # Automated Unit & Regression Test Suites
 │   ├── test.ts                      # Test harness & JSDOM test runner
-│   └── test_cases.ts                # Test suites 1 to 77+ asserting cricket logic
+│   └── test_cases.ts                # Test cases asserting cricket logic, live sync, and state transitions
 ├── .gitignore                       # Git ignore patterns
 ├── CONTRIBUTING.md                  # Comprehensive developer & contributor onboarding guide
 ├── GEMINI.md                        # AI developer pairing guide & workspace rules
