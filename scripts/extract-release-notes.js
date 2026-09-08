@@ -21,14 +21,25 @@ function parseArgs() {
     const args = process.argv.slice(2);
     let tag = null;
     let output = null;
+    let getTag = false;
     for (let i = 0; i < args.length; i++) {
         if (args[i] === "--tag" && args[i + 1]) {
             tag = args[++i];
         } else if (args[i] === "--output" && args[i + 1]) {
             output = args[++i];
+        } else if (args[i] === "--get-tag") {
+            getTag = true;
         }
     }
-    return { tag, output };
+    return { tag, output, getTag };
+}
+
+function extractAppVersionFromVersionTs() {
+    const versionTsPath = path.join(rootDir, "src/version.ts");
+    if (!fs.existsSync(versionTsPath)) return "v2026.09.001";
+    const content = fs.readFileSync(versionTsPath, "utf8");
+    const match = content.match(/export const APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
+    return match ? match[1] : "v2026.09.001";
 }
 
 function extractReleasesFromVersionTs() {
@@ -49,14 +60,20 @@ function extractReleasesFromVersionTs() {
 }
 
 function main() {
-    const { tag, output } = parseArgs();
+    const { tag, output, getTag } = parseArgs();
+    const appVersion = extractAppVersionFromVersionTs();
+
+    if (getTag) {
+        process.stdout.write(tag || appVersion);
+        return;
+    }
+
     const releases = extractReleasesFromVersionTs();
     
     let targetRelease = null;
     if (tag) {
         targetRelease = releases.find(r => r.version === tag || r.version === `v${tag}` || `v${r.version}` === tag);
-    }
-    if (!targetRelease && releases.length > 0) {
+    } else if (releases.length > 0) {
         targetRelease = releases[0];
     }
 
