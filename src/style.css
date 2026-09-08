@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Cricket Scorecard PWA - Modern ESPNcricinfo-Inspired Design System
+   Cricket Scorecard PWA - Modern Broadcast Design System
    Colorblind Accessible (Blue #0072B2 vs Orange #D55E00)
    ========================================================================== */
 
@@ -7,13 +7,13 @@
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --font-mono: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
 
-    /* ESPNcricinfo Theme: Day (Light) */
+    /* Theme: Day (Light) */
     --bg-page: #f1f5f9;
     --bg-card: #ffffff;
     --bg-card-subtle: #f8fafc;
     --bg-card-hover: #f1f5f9;
     --bg-accent: #e0f2fe;
-    --bg-nav: #031b33; /* Signature ESPNcricinfo deep navy header */
+    --bg-nav: #031b33; /* Deep navy header */
     --text-nav: #ffffff;
     
     --border: #e2e8f0;
@@ -139,7 +139,7 @@ body {
     flex: 1 0 auto;
 }
 
-/* ESPNcricinfo Navbar */
+/* Main Navbar */
 .cric-navbar {
     background: var(--bg-nav);
     margin: 0 -12px 12px;
@@ -553,7 +553,7 @@ body {
 }
 
 /* ==========================================================================
-   ESPNcricinfo Match Card & Hero Scoreboard
+   Match Card & Hero Scoreboard
    ========================================================================== */
 
 .cric-match-card {
@@ -683,7 +683,7 @@ body {
 }
 
 /* ==========================================================================
-   Live Scorecard Tables (ESPNcricinfo Batting & Bowling Layout)
+   Live Scorecard Tables (Batting & Bowling Layout)
    ========================================================================== */
 
 .live-tables-container {
@@ -794,7 +794,7 @@ body {
     white-space: nowrap;
 }
 
-/* Recent Deliveries Strip (ESPNcricinfo Recent Balls) */
+/* Recent Deliveries Strip (Recent Balls) */
 .recent-balls-card {
     display: flex;
     align-items: center;
@@ -1146,7 +1146,7 @@ button:disabled {
 }
 
 /* ==========================================================================
-   Modals System (Accessible ESPNcricinfo Style)
+   Modals System (Accessible Dialogs)
    ========================================================================== */
 
 .modal {

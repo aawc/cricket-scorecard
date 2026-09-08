@@ -6,7 +6,7 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-Fully functional, overhauled, and verified. Extreme minimalist UX redesign, real-time multi-reader live state streaming with 1-year zero-cost cloud retention, strict spectator-mode controls lockout, dedicated Start New Match workflow, fixed & streamlined delivery controls (Wide, No Ball, Run Out, Byes), advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 71 automated tests passing.
+Fully functional, overhauled, and verified. Modern minimalist UX redesign, real-time multi-reader live state streaming with 1-year zero-cost cloud retention, strict spectator-mode controls lockout, dedicated Start New Match workflow, fixed & streamlined delivery controls (Wide, No Ball, Run Out, Byes), advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 72 automated tests passing.
 
 ## Features (Implemented)
 
@@ -38,7 +38,7 @@ Fully functional, overhauled, and verified. Extreme minimalist UX redesign, real
 - **Full Scorecard mode**: Clean monospace match summary featuring individual batsman 4s/6s/SR, bowler maidens/econ, wide and no-ball tallies, and Fall of Wickets summary.
 - **Undo functionality**: Instant rollback for scoring corrections.
 - **Web App Manifest & Service Worker**: Offline PWA installation support.
-- **Automated Tests**: Comprehensive test suite with 71 unit tests covering all scoring rules, live sync, spectator restrictions, and edge cases.
+- **Automated Tests**: Comprehensive test suite with 72 unit tests covering all scoring rules, live sync, spectator restrictions, and edge cases.
 
 ## Local Development
 

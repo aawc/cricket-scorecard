@@ -389,7 +389,7 @@ function _lzDecompress(length: number, resetValue: number, getNextValue: (index:
 
 function getLZString(): any {
     if (typeof window !== 'undefined' && window.LZString) return window.LZString;
-    if (typeof global !== 'undefined' && (global as any).LZString) return (global as any).LZString;
+    if (typeof globalThis !== 'undefined' && (globalThis as any).LZString) return (globalThis as any).LZString;
     return {
         compressToEncodedURIComponent: lzCompressToEncodedURIComponent,
         decompressFromEncodedURIComponent: lzDecompressFromEncodedURIComponent

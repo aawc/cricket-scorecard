@@ -1180,12 +1180,12 @@ export function triggerRunOutModal(): void {
     pendingRunOutStriker = true;
     
     const modalEl = document.getElementById('runoutModal');
-    if (typeof (global as any).confirm === 'function' && typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
-        const isStriker = confirm(`Who was run out?\n[OK] Striker: ${striker}\n[Cancel] Non-Striker: ${nonStriker}`);
+    if (typeof window !== 'undefined' && (window as any).__TEST_ENV__ && typeof (globalThis as any).confirm === 'function') {
+        const isStriker = (globalThis as any).confirm(`Who was run out?\n[OK] Striker: ${striker}\n[Cancel] Non-Striker: ${nonStriker}`);
         processRunOut(isStriker);
     } else if (modalEl) {
         openModal(modalEl, runoutBtn);
-    } else {
+    } else if (typeof confirm === 'function') {
         const isStriker = confirm(`Who was run out?\n[OK] Striker: ${striker}\n[Cancel] Non-Striker: ${nonStriker}`);
         processRunOut(isStriker);
     }
@@ -1229,20 +1229,16 @@ export function triggerExtraRunsModal(deliveryType: string): void {
     }
     
     const modalEl = document.getElementById('extraRunsModal');
-    if (typeof (global as any).mockExtraRuns !== 'undefined' || (typeof window !== 'undefined' && (window as any).__TEST_ENV__)) {
-        if (typeof (global as any).mockExtraRuns !== 'undefined') {
-            selectedExtraRuns = (global as any).mockExtraRuns;
+    if (typeof window !== 'undefined' && (window as any).__TEST_ENV__) {
+        if (typeof (globalThis as any).mockExtraRuns !== 'undefined') {
+            selectedExtraRuns = (globalThis as any).mockExtraRuns;
         }
-        const accrueTo = (global as any).mockAccrueTo || 'byes';
+        const accrueTo = (globalThis as any).mockAccrueTo || 'byes';
         finalizeDelivery(currentDeliveryType, selectedExtraRuns, accrueTo);
     } else if (modalEl) {
         openModal(modalEl);
     } else {
-        if (typeof (global as any).mockExtraRuns !== 'undefined') {
-            selectedExtraRuns = (global as any).mockExtraRuns;
-        }
-        const accrueTo = (global as any).mockAccrueTo || 'byes';
-        finalizeDelivery(currentDeliveryType, selectedExtraRuns, accrueTo);
+        finalizeDelivery(currentDeliveryType, selectedExtraRuns, 'byes');
     }
 }
 
@@ -1372,7 +1368,7 @@ export function updateFeedbackPreview(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-003'
+        appVersion: 'v20260908-004'
     });
     feedbackPreviewEl.textContent = markdown;
 }
@@ -1383,7 +1379,7 @@ export async function handleCopyFeedbackReport(): Promise<void> {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-003'
+        appVersion: 'v20260908-004'
     });
 
     const success = await copyBugReportToClipboard(markdown);
@@ -1402,7 +1398,7 @@ export function handleOpenGithubIssue(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-003'
+        appVersion: 'v20260908-004'
     });
 
     const title = userFeedback ? `Bug: ${userFeedback.substring(0, 50)}...` : undefined;

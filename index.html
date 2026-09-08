@@ -18,7 +18,7 @@
 </head>
 <body>
     <div id="app-container" class="cric-app-container">
-        <!-- ESPNcricinfo-Style Top Navigation Header -->
+        <!-- Top Navigation Header -->
         <header class="cric-navbar">
             <div class="navbar-inner">
                 <div class="brand-box">
@@ -53,7 +53,7 @@
                             <span class="pill-label">Theme</span>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="theme-dropdown">
-                            <li><button class="dropdown-item theme-btn" data-theme="light">☀️ Cricinfo Day</button></li>
+                            <li><button class="dropdown-item theme-btn" data-theme="light">☀️ Day Mode (Light)</button></li>
                             <li><button class="dropdown-item theme-btn" data-theme="dark">🌙 Night Stadium (Dark)</button></li>
                             <li><button class="dropdown-item theme-btn" data-theme="green">🌿 Pitch Green</button></li>
                         </ul>
@@ -156,7 +156,7 @@
             <!-- Flip Container for Scoreboard and Summary -->
             <div class="flip-container hidden">
                 <div class="flipper" id="app-flipper">
-                    <!-- Front Face: Live Scoreboard (ESPNcricinfo Center) -->
+                    <!-- Front Face: Live Scoreboard (Match Center) -->
                     <div class="front-face">
                         <section id="scoreboard-section" class="cric-match-card">
                             <!-- Match Header Banner -->
@@ -189,7 +189,7 @@
                                 </button>
                             </div>
 
-                            <!-- ESPNcricinfo Live Scorecard Tables -->
+                            <!-- Live Scorecard Tables -->
                             <div class="live-tables-container">
                                 <!-- Batters Scorecard Table -->
                                 <div class="cric-table-card">
@@ -239,7 +239,7 @@
                                 </div>
                             </div>
 
-                            <!-- ESPNcricinfo Recent Deliveries Strip -->
+                            <!-- Recent Deliveries Strip -->
                             <div class="recent-balls-card">
                                 <div class="recent-label">RECENT</div>
                                 <div id="over-log" class="recent-chips-stream"></div>
@@ -256,7 +256,7 @@
                                 ⚠️ Select active batsmen and bowler above to begin scoring
                             </div>
 
-                            <!-- Umpire Scoring Console (ESPN + Tactile Keypad) -->
+                            <!-- Umpire Scoring Console (Tactile Keypad) -->
                             <div id="controls-section" class="cric-keypad-console">
                                 <!-- Primary Runs Row -->
                                 <div class="keypad-grid-runs">
@@ -290,7 +290,7 @@
                         </section>
                     </div>
 
-                    <!-- Back Face: Full Detailed Scorecard (ESPNcricinfo Match Center) -->
+                    <!-- Back Face: Full Detailed Scorecard (Match Summary) -->
                     <div class="back-face">
                         <section id="summary-section" class="cric-summary-card">
                             <div class="summary-top-bar">
@@ -578,7 +578,7 @@
 
         <footer class="cric-footer">
             <div class="footer-status-line">
-                <span>Version: v20260908-003</span>
+                <span>Version: v20260908-004</span>
                 <span class="dot-separator">&bull;</span>
                 <button id="footer-feedback-link" class="footer-btn-link">Report Issue</button>
             </div>

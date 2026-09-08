@@ -2113,6 +2113,36 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
+    // Test 72: Modal Triggers (triggerExtraRunsModal & triggerRunOutModal)
+    console.log("Running Test 72...");
+    resetTestState();
+    (globalThis as any).mockExtraRuns = 0;
+    (globalThis as any).mockAccrueTo = 'byes';
+
+    // Trigger Bye modal
+    (global as any).triggerExtraRunsModal('bye');
+    if (gameState.match.liveInnings.score !== 1 || gameState.match.liveInnings.extras.byes !== 1) {
+        console.error(`Test 72 Failed: triggerExtraRunsModal('bye') failed. Score: ${gameState.match.liveInnings.score}`);
+        process.exit(1);
+    }
+
+    // Trigger Wide modal
+    (global as any).triggerExtraRunsModal('wide');
+    if (gameState.match.liveInnings.score !== 2 || gameState.match.liveInnings.extras.wides !== 1) {
+        console.error(`Test 72 Failed: triggerExtraRunsModal('wide') failed. Score: ${gameState.match.liveInnings.score}`);
+        process.exit(1);
+    }
+
+    // Trigger No Ball modal
+    (global as any).triggerExtraRunsModal('noball');
+    if (gameState.match.liveInnings.score !== 3 || gameState.match.liveInnings.extras.noballs !== 1) {
+        console.error(`Test 72 Failed: triggerExtraRunsModal('noball') failed. Score: ${gameState.match.liveInnings.score}`);
+        process.exit(1);
+    }
+
+    delete (globalThis as any).mockExtraRuns;
+    delete (globalThis as any).mockAccrueTo;
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {
