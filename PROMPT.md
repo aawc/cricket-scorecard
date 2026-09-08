@@ -39,7 +39,12 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Match Over Logic (Single Innings)**: For a 1-innings per team game, the match ends when the chasing team passes the target, gets all out, overs run out, or innings is forfeited.
 - **Stats Accuracy**: Ensure the ball that a batsman gets out on is counted against their name in terms of balls faced.
 - **Validation**: Count the number of players and see if that's enough players, considering the total number of overs and the max overs per bowler. If not, flag that as an error and do not start the match until the user addresses it.
-- **Permalink Sharing**: Compress and minify match state using client-side LZString compression and key aliasing (`?s=`), ensuring shareable URLs remain highly compact while preserving support for legacy uncompressed links (`?state=`).
+- **Permalink Sharing & Live State Streaming (4-Week Retention)**:
+    - **Permalink Compression**: Compress and minify match state using client-side LZString compression and key aliasing (`?s=`), ensuring shareable URLs remain highly compact while preserving support for legacy uncompressed links (`?state=`).
+    - **Zero-Cost Live Streaming & Cloud Hosting**: Broadcast match scores live in real time to unlimited parallel spectators at 100% zero cost ($0.00). Match state packets are hosted on serverless Cloudflare Workers KV edge storage (`https://cricket-scorecard-live.workers.dev/api/match/{matchId}`) or Google Apps Script (`google-apps-script/Code.gs`) with zero user fees.
+    - **4-Week Data Retention**: Match states are stored in remote cloud storage with an exact 28-day TTL (2,419,200 seconds / `FOUR_WEEKS_SECONDS`) for historical and post-match review.
+    - **Role Isolation**: The umpire holds a private write key (`?live=<matchId>&key=<writeKey>`) stored in `localStorage`, while spectators receive a read-only link (`?live=<matchId>`) locking scoring controls and auto-polling updates.
+    - **Offline Queue & Reconnection**: Scores entered while offline on the field buffer locally in `localStorage` and flush automatically with monotonic sequence numbering upon network restoration.
 - **Reset Match**: Provide a mechanism to reset the match state and return to the settings screen. **When hitting reset, retain all match settings (such as overs per innings or max overs per baller or teams) but forget all information about the innings i.e. balls bowled, runs scored, etc.**
 - **Button States**: Disable the screenshot and the reset buttons when on the match settings page (match not started).
 - **Visibility**: When on the match settings page, do not show the scoreboard section.
@@ -47,7 +52,7 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 
 ### 2. Technical Specifications
 - **Hosting**: Static website compiled via Vite into `dist/` and hosted on GitHub Pages (via custom Actions workflow or manual commit pushing).
-- **Tech Stack**: TypeScript (transpiled to standard modern ES2022 JavaScript). Source modules live under `src/` (`app.ts`, `state.ts`, `storage.ts`, `reducer.ts`, `ui.ts`, `types.ts`). Uses Vite for local development, hot module reloading, and production bundling. Bootstrap 5 via CDN for styling.
+- **Tech Stack**: TypeScript (transpiled to standard modern ES2022 JavaScript). Source modules live under `src/` (`app.ts`, `modal.ts`, `state.ts`, `storage.ts`, `sync.ts`, `reducer.ts`, `ui.ts`, `types.ts`, `feedback.ts`). Uses Vite for local development, hot module reloading, and production bundling. Bootstrap 5 via CDN for styling with universal zero-dependency fallback modal controller.
 - **State Management**: Governed by a centralized reducer state machine in `src/reducer.ts` which manages match phases (`SETUP`, `TOSS`, `PLAYING_INNINGS`, `INNINGS_BREAK`, `MATCH_OVER`) and dispatches synchronous actions. Asynchronous side-effects (alerts/modals) are queued in `gameState.uiEvents` and processed by the UI orchestrator.
 - **Themes**: Support a few different themes (e.g., Light, Dark, Cricket Green).
 - **Offline Support**: PWA manifest (`public/manifest.json`) and service worker template (`public/sw.js`). A post-build crawler (`scripts/build-sw.js`) automatically finds and injects hashed production assets into the service worker pre-cache, making the app fully installable and working offline.

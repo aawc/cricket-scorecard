@@ -6,11 +6,18 @@ A standalone website on GitHub Pages that can be used as an offline PWA to enter
 
 ## Current Status
 
-Fully functional and verified. Advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, and WCAG/colorblind accessibility improvements implemented. All 53 automated tests passing.
+Fully functional and verified. Real-time multi-reader live state streaming with 4-week zero-cost cloud retention, advanced boundary tracking (4s/6s), bowler maidens, Fall of Wickets (FOW), multi-run leg byes, MCC Law 21.18 extras separation, early declaration/forfeit, plaintext scorecard exporter, feedback & diagnostic bug reporting mechanism, zero-dependency universal modal controller, embedded URI compression, and WCAG/colorblind accessibility improvements implemented. All 66 automated tests passing.
 
 ## Features (Implemented)
 
-- Modular Architecture: Code deconstructed into clean ES6 modules (`src/` directory) separating state, rules calculation, persistence, and DOM rendering.
+- **Universal Zero-Dependency Modal System & WAI-ARIA Focus Guardrail**: Robust native modal open/close controller with automated backdrop lifecycle, keyboard/click dismissal, automatic fallback when external CDNs fail, and strict W3C WAI-ARIA focus management (active element blurring before `aria-hidden` and focus restoration).
+- **Embedded URI State Compression**: Standalone TypeScript LZString compression for ultra-compact permalinks (`?s=`) and storage minification with zero external runtime dependencies.
+- **Real-Time Live Streaming & Multi-Reader Sync**: Stream live match scores to unlimited parallel spectators at 100% zero cost ($0.00). Spectators view updates in real-time in read-only Spectator Mode without disrupting scoring.
+- **Serverless Cloud Storage Hosting**: Live match state packets are hosted remotely on high-performance Cloudflare Workers KV edge storage (`cloudflare/worker.js`) or Google Apps Script (`google-apps-script/Code.gs`) with zero hosting costs ($0.00).
+- **4-Week Remote Retention (28-day TTL)**: Match state is persisted remotely for exactly 4 weeks (2,419,200 seconds / 28 days) with automatic server-side eviction and client-side timestamp validation.
+- **Cryptographic Role Separation**: Umpire holds private write credentials (`?live=<id>&key=<key>`) stored in `localStorage`, while spectators receive clean read-only links (`?live=<id>`).
+- **Offline Resilience & Network Recovery**: Offline deliveries are queued in `localStorage` and automatically synchronized upon network restoration using monotonic sequence numbering.
+- **Modular Architecture**: Code deconstructed into clean ES6 modules (`src/` directory) separating state, live sync, rules calculation, persistence, and DOM rendering.
 - Formal State Machine: Centralized match phase flow (SETUP, TOSS, PLAYING_INNINGS, INNINGS_BREAK, MATCH_OVER) governed by a deterministic reducer inside `src/reducer.ts`.
 - Score tracking: Complete ball-by-ball tallying (Runs, Wickets, Overs, Wides, No Balls, Byes, Leg Byes), with Byes counting towards batsman balls faced.
 - Feedback & Diagnostic Bug Reporting: Dedicated "Feedback / Bug" modal generating comprehensive Markdown bug reports with user description, complete match state (striker/non-striker figures, bowler maidens/econ, FOW, extras), minified state JSON, LZString permalink, and captured runtime errors for instant reproduction.
@@ -186,7 +193,7 @@ The repository maintains several core documentation files to manage the AI-assis
 
 - **Frontend**: TypeScript, Vanilla HTML5 & CSS3.
 - **Build Toolchain**: Vite (for local development and bundling).
-- **Libraries**: Bootstrap 5 (CDN), SortableJS (CDN), LZString (CDN).
+- **Libraries**: Bootstrap 5 (CSS & responsive grid), SortableJS (CDN), embedded LZString.
 - **Testing**: Node.js test runner with `ts-node/esm` loaders.
 
 ## License
