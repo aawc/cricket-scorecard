@@ -1,6 +1,7 @@
 import { gameState } from './state.js';
 import { minifyState, generatePermalink } from './storage.js';
 import { GameState } from './types.js';
+import { APP_VERSION } from './version.js';
 
 export interface RuntimeErrorLog {
     timestamp: string;
@@ -107,7 +108,7 @@ export function generateBugReportMarkdown(options: BugReportOptions = {}): strin
     const state = options.stateOverride || gameState;
     const feedback = (options.userFeedback || '').trim();
     const includeState = options.includeState !== false;
-    const version = options.appVersion || 'v20260907-003';
+    const version = options.appVersion || APP_VERSION;
     const nowIso = new Date().toISOString();
 
     let clientEnv = 'Node.js / Headless Test Environment';

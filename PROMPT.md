@@ -67,18 +67,19 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - **Mobile-First**: The design must be optimized for mobile devices, as it will be used on the field.
 - **Usability**: Large, tactile 48px+ touch targets for scoring keys. Clear feedback when players need to be selected.
 - **Screenshot Mode Layout**: Use a table for better layout and use a popular fixed-width font (monospace) for text in this mode.
-- **Footer**: Always include a version number for the scorecard on the footer of the page and when it was deployed (include date and time). **Update the version information only when making code changes, not for documentation updates.**
+- **Footer & Release Badge**: Always include an interactive release badge for the scorecard in the footer of the page displaying the active semantic version (`v$yyyy.$mm.$nnn`), deployment status, and built-by credits. Clicking the badge opens the integrated Release Notes Modal (`#releaseNotesModal`). **Update the version information only when making code changes, not for documentation updates.**
 - **Credits**: Include a line in the footer that says that this site was built by Varun Khaneja using Gemini with a link to his GitHub at github.com/aawc.
+- **Standardized Release Management**: Dynamic timestamped semantic tagging (`v$yyyy.$mm.$nnn`), automated repository tag push, persistent application footer displaying active release badge, and integrated release notes modal listing commit history and highlights. Single source of truth in [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1).
 
 ## Standing Instructions for Development
-- Keep `PROMPT.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
-- Keep `README.md` updated with project status and features.
+- Keep `PROMPT.md`, `README.md`, `GEMINI.md`, and `CONTRIBUTING.md` updated with all confirmed requirements and changes in a way that it can be independently used by another LLM to recreate or update the project.
 - Keep `DESIGN.md` updated with the current implementation details (data structures, control flow, decisions) as the codebase evolves.
 - Keep `SECURITY.md` updated with project security policies and reporting guidelines as architectural or dependency changes occur.
 - Do not add any special tags such as AGY and CONV or any other internal tags in commit messages or documentation.
 - All files related to this project, such as `task.md`, must always be created in the current directory.
 - Always use a new git branch for new bug fixes or features.
-- Always update the footer in `index.html` with the version number (in the format `vYYYYMMDD-NNN`, e.g., `v20260614-001`, where `YYYYMMDD` is the current date and `NNN` is a 3-digit sequence starting at `001` each day, incremented by 1 for each subsequent update), deployment date, and deployment time on each update (restricted to code changes as per above requirement).
-- Always update the cache version name in `public/sw.js` (e.g. `cricket-scorecard-vYYYYMMDD-NNN`) to match the new version.
+- Always update versioning using the standardized semantic format `v$yyyy.$mm.$nnn` (e.g. `v2026.09.001`, where `$yyyy` is 4-digit year, `$mm` is 2-digit month, and `$nnn` is 3-digit monthly sequence incremented automatically by `npm run release` / [`scripts/release.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts/release.js#L1)).
+- Always maintain single-source-of-truth versioning in [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1) and synchronize across `package.json`, `public/sw.js`, and `index.html`.
 - Always write automated unit test assertions in `test/test_cases.ts` for all new features and bug fixes to prevent regressions.
 - Always run automated unit tests (`npm test`) on each edit without requesting confirmation from the user.
+- Follow colorblind accessibility standards: use high contrast (Blue `#0072B2` vs Orange `#D55E00`) and explicit text status indicators (`[PASS]`, `[FAIL]`, `[FEAT]`, `[FIX]`, `[DOCS]`, `[TEST]`).

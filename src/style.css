@@ -1496,8 +1496,57 @@ button:disabled {
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+/* Persistent Footer Release Badge */
+.badge-release-pill {
+    display: inline-flex;
+    align-items: center;
     gap: 6px;
-    margin-bottom: 4px;
+    padding: 3px 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    color: var(--text-main);
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+    text-decoration: none;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.badge-release-pill:hover,
+.badge-release-pill:focus-visible {
+    border-color: var(--color-primary);
+    background: var(--bg-card-subtle);
+    transform: translateY(-1px);
+    outline: 2px solid var(--border-focus);
+    outline-offset: 1px;
+}
+
+.badge-release-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(0, 114, 178, 0.2);
+    display: inline-block;
+}
+
+.badge-release-tag {
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: var(--radius-full);
+    background: rgba(0, 114, 178, 0.12);
+    color: var(--color-primary);
+    border: 1px solid rgba(0, 114, 178, 0.25);
 }
 
 .footer-btn-link {
@@ -1517,6 +1566,226 @@ button:disabled {
 .footer-author-line a {
     color: var(--text-muted);
     text-decoration: underline;
+}
+
+/* Release Notes Modal Styling */
+.release-notes-view {
+    padding: 1rem;
+}
+
+.release-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.release-card.latest-release {
+    border-left: 4px solid var(--color-primary);
+}
+
+.release-card-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+.release-version-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.release-badge-pill {
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--text-main);
+    background: var(--bg-card-subtle);
+    padding: 2px 10px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--border);
+}
+
+.badge-status-latest {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 8px;
+    background: #0072b2;
+    color: #ffffff;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+}
+
+.release-date-text {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.release-section-heading {
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-main);
+    margin-bottom: 0.65rem;
+}
+
+.release-highlights-box {
+    margin-bottom: 1.25rem;
+}
+
+.release-highlights-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.highlight-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.88rem;
+    color: var(--text-main);
+}
+
+.highlight-bullet {
+    color: var(--color-primary);
+    font-weight: 900;
+    line-height: 1.2;
+}
+
+.release-commits-stream {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.release-commit-card {
+    background: var(--bg-card-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    padding: 8px 10px;
+}
+
+.commit-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.commit-title-wrap {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    flex: 1;
+}
+
+.commit-cat-badge {
+    font-size: 0.68rem;
+    font-weight: 800;
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    white-space: nowrap;
+    line-height: 1.3;
+}
+
+.badge-cat-feat {
+    background: #0072b2;
+    color: #ffffff;
+}
+
+.badge-cat-fix {
+    background: #d55e00;
+    color: #ffffff;
+}
+
+.badge-cat-docs {
+    background: #56b4e9;
+    color: #000000;
+}
+
+.badge-cat-test {
+    background: #cc79a7;
+    color: #ffffff;
+}
+
+.badge-cat-perf {
+    background: #f0e442;
+    color: #000000;
+}
+
+.badge-cat-refactor {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.badge-cat-chore {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.commit-msg-text {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-main);
+    line-height: 1.3;
+}
+
+.commit-hash-pill {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.commit-hash-pill:hover {
+    background: var(--color-primary);
+    color: #ffffff;
+}
+
+.commit-meta-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.older-releases-section {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--border);
+}
+
+.older-releases-heading {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: var(--text-main);
+    margin-bottom: 0.75rem;
 }
 
 /* Screenshot Mode */

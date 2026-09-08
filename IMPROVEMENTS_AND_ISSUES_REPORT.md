@@ -303,3 +303,16 @@ Successfully injected 8 assets into dist/sw.js
 8. [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js): Updated cache name to `cricket-scorecard-v20260907-002` and included `src/style.css`.
 9. [`test/test.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test.ts): Bound `generateTextSummary`, `executeEndInnings`, and `dispatch` into test environment.
 10. [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts): Added Tests 42 to 50 covering boundaries, maidens, maiden breaking, Fall of Wickets, multi-run leg byes, no-ball bowler figures, force end innings, state minification roundtrip, and text scorecard formatting.
+
+---
+
+## 6. Milestone 8: Standardized Release Management & Contributor Guide (v2026.09.001)
+
+| Enhancement | Module | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **Dynamic Semantic Tagging** | [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1) | Centralized single-source-of-truth semantic versioning (`v$yyyy.$mm.$nnn`) with dynamic monthly sequence calculations. | `[PASS] Implemented` |
+| **Automated Release CLI** | [`scripts/release.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts/release.js#L1) | `npm run release` tool for automated pre-release test gates, commit history parsing, highlights extraction, file synchronization, git tag creation, and remote tag push. | `[PASS] Implemented` |
+| **Persistent Footer Release Badge** | [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L580), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1496) | Interactive release badge in page footer displaying active version pill, pulsing status indicator, and click-to-open modal interaction. | `[PASS] Implemented` |
+| **Integrated Release Notes Modal** | [`src/release_notes.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/release_notes.ts#L1), [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L577) | Accessible dialog (`#releaseNotesModal`) featuring release highlights, complete commit history with short SHA links to GitHub, and colorblind-safe category badges. | `[PASS] Implemented` |
+| **Comprehensive Contributor Guide** | [`CONTRIBUTING.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/CONTRIBUTING.md#L1) | Detailed developer documentation on bug diagnosis, Red-Green regression testing, state reducer rules, and release tagging workflows. | `[PASS] Implemented` |
+| **Automated Regression Suite (Tests 73-77)** | [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2145) | 5 comprehensive automated tests verifying tag parsing, dynamic sequence calculation, release notes rendering, cross-module version synchronization, and modal opening. | `[PASS] Implemented` |

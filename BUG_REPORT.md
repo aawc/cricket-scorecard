@@ -173,3 +173,22 @@ All tests passed!
 [+]     }
 [+] }
 ```
+
+---
+
+### 7. Decentralized Versioning & Release Management Automation
+- **Severity**: `[MEDIUM]`
+- **Status**: `[PASS]` Resolved & Verified (Tests 73-77)
+- **Affected Components**: [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1), [`src/release_notes.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/release_notes.ts#L1), [`scripts/release.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts/release.js#L1), [`src/feedback.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L1), [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L577), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1496)
+- **Root Cause**:
+  1. Version numbers were manually updated and hardcoded across disconnected files (`index.html`, `public/sw.js`, `src/feedback.ts`, `package.json`).
+  2. The application lacked a standardized timestamped semantic tagging scheme (`v$yyyy.$mm.$nnn`) and automated repository tag generation/push mechanism.
+  3. The page footer displayed static text with no interactive release notes dialog or colorblind-accessible change manifest.
+- **Resolution**:
+  1. Created [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1) as the single source of truth for semantic versioning (`APP_VERSION = 'v2026.09.001'`), dynamic tag sequence parsing, and release history.
+  2. Authored [`scripts/release.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts/release.js#L1) to automate dynamic tag calculation (`v$yyyy.$mm.$nnn`), git log parsing, highlights extraction, file synchronization, pre-release test execution, and repository tag push.
+  3. Implemented [`src/release_notes.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/release_notes.ts#L1) and `#releaseNotesModal` with colorblind-safe badges (`[FEAT]`, `[FIX]`, `[DOCS]`, `[TEST]`, `[PERF]`), commit hashes linked to GitHub, and keyboard/focus management.
+  4. Embedded the interactive `#footer-release-badge` pill in `index.html` and `src/style.css`.
+  5. Authored [`CONTRIBUTING.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/CONTRIBUTING.md#L1) providing clear developer instructions for issue reporting, TDD regression testing, and release management.
+- **Verification**: `[PASS]` Verified by Tests 73, 74, 75, 76, and 77 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2145).
+

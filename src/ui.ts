@@ -13,6 +13,7 @@ import {
     getSpectatorUrl,
     getUmpireUrl
 } from './sync.js';
+import { initReleaseNotesModal, openReleaseNotesModal } from './release_notes.js';
 
 // DOM Elements
 const appContainer = document.getElementById('app-container') as HTMLElement | null;
@@ -137,6 +138,7 @@ export function isSpectator(): boolean {
 
 export function initUI(): void {
     initModalSystem();
+    initReleaseNotesModal();
     setupEventListeners();
     initSortable();
     renderRosters();
@@ -1744,3 +1746,5 @@ export function handleSpectatorManualRefresh(): void {
         });
     }
 }
+
+export { openReleaseNotesModal, initReleaseNotesModal };

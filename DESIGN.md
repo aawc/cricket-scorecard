@@ -16,8 +16,11 @@ The application is structured as a TypeScript Progressive Web App, utilizing Vit
   - `src/reducer.ts`: Pure reducer state machine managing match state calculations, strike rotations, and validation.
   - `src/sync.ts`: Real-time multi-reader live state sync engine, storage provider abstraction, write-token authorization, and 1-year TTL management.
   - `src/modal.ts`: Universal zero-dependency modal controller and W3C WAI-ARIA focus management.
+  - `src/version.ts`: Centralized semantic version constants (`APP_VERSION`), dynamic tagging calculations (`v$yyyy.$mm.$nnn`), and release records.
+  - `src/release_notes.ts`: Release notes modal rendering, highlights, commit manifest streams, and version badge event bindings.
   - `src/feedback.ts`: Bug reporting engine and diagnostic Markdown generator.
   - `src/ui.ts`: Cached DOM selectors, event listeners, and UI rendering bindings.
+  - `scripts/release.js`: Automated release management CLI with semantic tagging, commit compilation, and git tag push.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
 - **PWA Capabilities**: Service Worker (`sw.js`) compiled into `dist/` root, caching static assets for offline capability; Web App Manifest (`manifest.json`) for installation.
 - **State Persistence**: `localStorage` to save match state across reloads.
@@ -288,7 +291,7 @@ To track history and progress, the following major refactorings have been succes
 
 7.  **Real-Time Multi-Reader Live State Sync & 1-Year Retention**:
     *   **Remote Storage Hosting Endpoint**: Live match states are stored in a serverless REST Key-Value store via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98) connecting to Cloudflare Workers KV endpoints (`https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`), with turnkey Google Apps Script support via [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L175).
-    *   **Single-Writer / Multi-Reader Model**: Implemented a zero-cost cloud synchronization service ([`LiveSyncService`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L257)) in [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts) supporting 1 umpire author and N parallel spectators.
+    *   **Single-Writer / Multi-Reader Model**: Implemented a zero-cost cloud synchronization service ([`LiveSyncService`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L257)) in [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L1) supporting 1 umpire author and N parallel spectators.
     *   **Cryptographic Role Isolation**: Umpire holds a private `writeKey` (`?live=<matchId>&key=<writeKey>`) stored in `localStorage`, while spectators receive a read-only link (`?live=<matchId>`). Write operations are validated via [`hashWriteKey()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L37).
     *   **1-Year Retention TTL**: Transports state packets with a 365-day (31,536,000 seconds / [`ONE_YEAR_SECONDS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L4)) expiration TTL enforced both server-side via HTTP query parameters and client-side via metadata timestamps (`expiresAt`).
     *   **Adaptive Polling & Visibility Optimization**: Spectators poll adaptively (3.5s active via [`ACTIVE_POLL_INTERVAL_MS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10), 15s when tab is backgrounded via [`BACKGROUND_POLL_INTERVAL_MS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L11)).
@@ -296,12 +299,19 @@ To track history and progress, the following major refactorings have been succes
     *   **Spectator UX & Accessibility**: Read-only Spectator Mode locks scoring controls, renders a top live banner with connection status badges (`[LIVE - SYNCED]`, `[OFFLINE - RETRYING]`, `[SPECTATOR MODE]`), and permits theme toggling and full scorecard inspection.
 
 8.  **Universal Zero-Dependency Modal Controller & WAI-ARIA Focus Management**:
-    *   Implemented [`src/modal.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts) providing [`openModal()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L30) and [`closeModal()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89) with native backdrop lifecycle management, keyboard/click dismissal, and automatic fallback when Bootstrap CDN fails.
+    *   Implemented [`src/modal.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L1) providing [`openModal()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L30) and [`closeModal()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89) with native backdrop lifecycle management, keyboard/click dismissal, and automatic fallback when Bootstrap CDN fails.
     *   Guarantees W3C WAI-ARIA accessibility by actively blurring focused descendants before applying `aria-hidden="true"` and restoring focus to triggering elements upon dismissal.
+
+9.  **Standardized Release Management & Semantic Tagging Architecture**:
+    *   **Dynamic Timestamped Semantic Tagging (`v$yyyy.$mm.$nnn`)**: Authored [`src/version.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L1) defining [`APP_VERSION`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L24), [`parseSemanticVersion()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L48), and [`getNextSemanticVersion()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/version.ts#L71) with automated rollover on year and month boundaries.
+    *   **Release CLI Pipeline**: Authored [`scripts/release.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts/release.js#L1) orchestrating pre-release unit test gates, commit history compilation from git logs, release highlights generation, cross-file version synchronization, and automated annotated git tag creation and remote pushing.
+    *   **Persistent Footer Release Badge**: Created an interactive `#footer-release-badge` in [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L580) and [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1496) featuring a live update indicator and version pill.
+    *   **Release Notes Modal View**: Implemented [`src/release_notes.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/release_notes.ts#L1) rendering `#releaseNotesModal` with categorized colorblind-safe badges (`[FEAT]`, `[FIX]`, `[DOCS]`, `[TEST]`, `[PERF]`), commit SHA links to GitHub, author attributions, and keyboard accessibility.
+    *   **Developer Contributor Guidelines**: Authored [`CONTRIBUTING.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/CONTRIBUTING.md#L1) and [`GEMINI.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/GEMINI.md#L1) standardizing bug reproduction from diagnostic payloads, Red-Green regression testing, pure reducer rules, and release execution.
 
 ---
 
-## 9. Future Architectural Roadmap
+## 10. Future Architectural Roadmap
 
 To transition this project from a prototype implementation to a professional, industry-standard codebase, we have planned the following structural improvements:
 
@@ -310,7 +320,7 @@ To transition this project from a prototype implementation to a professional, in
     *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Signals) that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
 2.  **Remote Storage Sync (Cloud Persistence)** - *Status: [IMPLEMENTED] (Production Ready)*:
-    *   Zero-cost live streaming and remote 1-year state persistence implemented via [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts), [`LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/LIVE_SYNC_DESIGN.md), and [`DEPLOYMENT_AND_BACKEND_SETUP.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/DEPLOYMENT_AND_BACKEND_SETUP.md).
+    *   Zero-cost live streaming and remote 1-year state persistence implemented via [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L1), [`LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/LIVE_SYNC_DESIGN.md#L1), and [`DEPLOYMENT_AND_BACKEND_SETUP.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/DEPLOYMENT_AND_BACKEND_SETUP.md#L1).
 
 ---
 

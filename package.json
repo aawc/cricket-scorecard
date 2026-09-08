@@ -1,13 +1,14 @@
 {
   "name": "cricket-scorecard-pwa",
-  "version": "1.0.0",
+  "version": "2026.09.001",
   "description": "Cricket Scorecard PWA",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && node scripts/build-sw.js",
     "preview": "vite preview",
-    "test": "node --loader ts-node/esm test/test.ts"
+    "test": "node --loader ts-node/esm test/test.ts",
+    "release": "node scripts/release.js"
   },
   "devDependencies": {
     "ts-node": "^10.9.1",

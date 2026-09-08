@@ -574,13 +574,50 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Release Notes & Version History Modal -->
+            <div class="modal fade" id="releaseNotesModal" tabindex="-1" aria-labelledby="releaseNotesModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                    <div class="modal-content cric-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="release-modal-icon">📦</span>
+                                <h5 class="modal-title cric-modal-title" id="releaseNotesModalLabel">Release Notes & Version History</h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body cric-modal-body p-0">
+                            <div id="release-notes-container" class="release-notes-view">
+                                <!-- Populated dynamically by release_notes.ts -->
+                            </div>
+                        </div>
+                        <div class="modal-footer cric-modal-foot d-flex justify-content-between flex-wrap gap-2">
+                            <a id="release-github-repo-link" href="https://github.com/aawc/cricket-scorecard/releases" target="_blank" rel="noopener" class="btn-cric-dialog secondary">
+                                🌐 GitHub Releases
+                            </a>
+                            <div class="d-flex gap-2">
+                                <button type="button" id="release-report-issue-btn" class="btn-cric-dialog secondary">
+                                    🐛 Report Issue
+                                </button>
+                                <button type="button" class="btn-cric-dialog primary" data-bs-dismiss="modal">
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <footer class="cric-footer">
             <div class="footer-status-line">
-                <span>Version: v20260908-004</span>
+                <button id="footer-release-badge" class="badge-release-pill" title="View release notes and version history" type="button">
+                    <span class="badge-release-dot"></span>
+                    <span id="footer-version-text">v2026.09.001</span>
+                    <span class="badge-release-tag">Latest</span>
+                </button>
                 <span class="dot-separator">&bull;</span>
-                <button id="footer-feedback-link" class="footer-btn-link">Report Issue</button>
+                <button id="footer-feedback-link" class="footer-btn-link" type="button">Report Issue</button>
             </div>
             <div class="footer-author-line">
                 <span>Built by <a href="https://github.com/aawc" target="_blank" rel="noopener">Varun Khaneja</a> with Gemini</span>

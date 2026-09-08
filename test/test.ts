@@ -251,6 +251,24 @@ async function loadModulesAndRun() {
     (global as any).handleCopyUmpireUrl = uiMod.handleCopyUmpireUrl;
     (global as any).updateLiveIndicators = uiMod.updateLiveIndicators;
 
+    // Version & Release Management globals
+    const versionMod = await import('../src/version.js');
+    (global as any).APP_VERSION = versionMod.APP_VERSION;
+    (global as any).APP_RELEASE_DATE = versionMod.APP_RELEASE_DATE;
+    (global as any).APP_RELEASE_TIMESTAMP = versionMod.APP_RELEASE_TIMESTAMP;
+    (global as any).RELEASE_HISTORY = versionMod.RELEASE_HISTORY;
+    (global as any).parseSemanticVersion = versionMod.parseSemanticVersion;
+    (global as any).formatSemanticVersion = versionMod.formatSemanticVersion;
+    (global as any).getNextSemanticVersion = versionMod.getNextSemanticVersion;
+    (global as any).categorizeCommitMessage = versionMod.categorizeCommitMessage;
+    (global as any).getLatestRelease = versionMod.getLatestRelease;
+    (global as any).getAllReleases = versionMod.getAllReleases;
+
+    const releaseNotesMod = await import('../src/release_notes.js');
+    (global as any).renderReleaseNotesHTML = releaseNotesMod.renderReleaseNotesHTML;
+    (global as any).openReleaseNotesModal = releaseNotesMod.openReleaseNotesModal;
+    (global as any).initReleaseNotesModal = releaseNotesMod.initReleaseNotesModal;
+
     // Run tests - dynamic import for ESM compatibility
     await import('./test_cases.js');
 }

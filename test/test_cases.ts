@@ -2143,6 +2143,124 @@ console.log("Running Test 56...");
     delete (globalThis as any).mockExtraRuns;
     delete (globalThis as any).mockAccrueTo;
 
+    // Test 73: Semantic Tag Format Parsing & Dynamic Sequence Calculation (v$yyyy.$mm.$nnn)
+    console.log("Running Test 73...");
+    const parsedValid = (global as any).parseSemanticVersion("v2026.09.001");
+    if (!parsedValid || parsedValid.year !== 2026 || parsedValid.month !== 9 || parsedValid.seq !== 1) {
+        console.error(`Test 73 Failed: Expected parsed tag v2026.09.001, got ${JSON.stringify(parsedValid)}`);
+        process.exit(1);
+    }
+
+    if ((global as any).parseSemanticVersion("2026.09.001") !== null ||
+        (global as any).parseSemanticVersion("v2026.9.1") !== null ||
+        (global as any).parseSemanticVersion("v20260908-001") !== null ||
+        (global as any).parseSemanticVersion("v2026.13.001") !== null ||
+        (global as any).parseSemanticVersion("v2026.09.000") !== null) {
+        console.error("Test 73 Failed: Invalid semantic tags must return null");
+        process.exit(1);
+    }
+
+    const formattedTag = (global as any).formatSemanticVersion(2026, 9, 5);
+    if (formattedTag !== "v2026.09.005") {
+        console.error(`Test 73 Failed: Expected formatted tag v2026.09.005, got ${formattedTag}`);
+        process.exit(1);
+    }
+
+    const refDate = new Date("2026-09-08T00:00:00Z");
+    const nextInitial = (global as any).getNextSemanticVersion([], refDate);
+    if (nextInitial !== "v2026.09.001") {
+        console.error(`Test 73 Failed: Expected initial tag v2026.09.001, got ${nextInitial}`);
+        process.exit(1);
+    }
+
+    const nextIncremented = (global as any).getNextSemanticVersion([
+        "v2026.08.010",
+        "v2026.09.001",
+        "v2026.09.002",
+        "v2026.09.005"
+    ], refDate);
+    if (nextIncremented !== "v2026.09.006") {
+        console.error(`Test 73 Failed: Expected incremented tag v2026.09.006, got ${nextIncremented}`);
+        process.exit(1);
+    }
+
+    // Rollover next month test
+    const octDate = new Date("2026-10-01T00:00:00Z");
+    const nextMonth = (global as any).getNextSemanticVersion(["v2026.09.006"], octDate);
+    if (nextMonth !== "v2026.10.001") {
+        console.error(`Test 73 Failed: Expected next month tag v2026.10.001, got ${nextMonth}`);
+        process.exit(1);
+    }
+
+    // Test 74: Commit Categorization & Release History Metadata
+    console.log("Running Test 74...");
+    if ((global as any).categorizeCommitMessage("feat(sync): add live broadcast") !== "feat" ||
+        (global as any).categorizeCommitMessage("Implement run out modal") !== "feat" ||
+        (global as any).categorizeCommitMessage("fix: solve strike rotation") !== "fix" ||
+        (global as any).categorizeCommitMessage("docs: author contributing guide") !== "docs" ||
+        (global as any).categorizeCommitMessage("test: add unit tests 70-73") !== "test" ||
+        (global as any).categorizeCommitMessage("perf: optimize score rendering") !== "perf" ||
+        (global as any).categorizeCommitMessage("refactor: split ui modules") !== "refactor") {
+        console.error("Test 74 Failed: Commit categorization failed on standard messages");
+        process.exit(1);
+    }
+
+    const latestRelease = (global as any).getLatestRelease();
+    if (!latestRelease || !latestRelease.version || !latestRelease.highlights || latestRelease.highlights.length === 0) {
+        console.error("Test 74 Failed: Latest release metadata is missing version or highlights");
+        process.exit(1);
+    }
+
+    // Test 75: Release Notes Modal HTML Generation & Colorblind Accessibility Badges
+    console.log("Running Test 75...");
+    const sampleReleases = [
+        {
+            version: "v2026.09.001",
+            date: "2026-09-08",
+            timestamp: "2026-09-08T01:55:00.000Z",
+            highlights: ["Dynamic semantic tagging", "Integrated release modal"],
+            commits: [
+                { hash: "abc1234", author: "Varun Khaneja", date: "2026-09-08", message: "feat: add release badge", category: "feat" },
+                { hash: "def5678", author: "Varun Khaneja", date: "2026-09-08", message: "fix: solve delivery crash", category: "fix" }
+            ]
+        }
+    ];
+
+    const htmlOutput = (global as any).renderReleaseNotesHTML(sampleReleases);
+    if (!htmlOutput.includes("v2026.09.001") ||
+        !htmlOutput.includes("[LATEST RELEASE]") ||
+        !htmlOutput.includes("Dynamic semantic tagging") ||
+        !htmlOutput.includes("[FEAT]") ||
+        !htmlOutput.includes("[FIX]") ||
+        !htmlOutput.includes("abc1234") ||
+        !htmlOutput.includes("def5678")) {
+        console.error(`Test 75 Failed: Release notes HTML missing required components or colorblind badges. Output:\n${htmlOutput}`);
+        process.exit(1);
+    }
+
+    // Test 76: Cross-Module Version Synchronization Single Source of Truth
+    console.log("Running Test 76...");
+    const appVersion = (global as any).APP_VERSION;
+    if (!appVersion || !/^v\d{4}\.\d{2}\.\d{3}$/.test(appVersion)) {
+        console.error(`Test 76 Failed: APP_VERSION must match format v$yyyy.$mm.$nnn, got ${appVersion}`);
+        process.exit(1);
+    }
+
+    const bugReport = (global as any).generateBugReportMarkdown({ userFeedback: "Test issue" });
+    if (!bugReport.includes(`**App Version**: \`${appVersion}\``)) {
+        console.error(`Test 76 Failed: Bug report did not use centralized APP_VERSION: ${bugReport}`);
+        process.exit(1);
+    }
+
+    // Test 77: Release Notes Modal Trigger & Footer Badge Integration
+    console.log("Running Test 77...");
+    const container = document.getElementById("release-notes-container");
+    (global as any).openReleaseNotesModal();
+    if (!container || !container.innerHTML.includes(appVersion)) {
+        console.error(`Test 77 Failed: openReleaseNotesModal did not populate container with APP_VERSION ${appVersion}`);
+        process.exit(1);
+    }
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {
