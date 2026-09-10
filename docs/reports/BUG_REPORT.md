@@ -192,3 +192,27 @@ All tests passed!
   5. Authored [`CONTRIBUTING.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/CONTRIBUTING.md#L1) providing clear developer instructions for issue reporting, TDD regression testing, and release management.
 - **Verification**: `[PASS]` Verified by Tests 73, 74, 75, 76, and 77 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2145).
 
+---
+
+### 8. Empty Batsman Dropdown during Innings Break & Missing 2nd Innings Start Controls
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Test 81)
+- **Affected Components**: [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L985), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1135), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575), [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645)
+- **Diagnostic Context**:
+  - Bug Report: 2026-09-09T02:05:42.934Z | App Version `v20260908-004`
+  - Feedback: "After the first team got all out, there were no batsmen left to select. Expected: show batsmen from the second team in the drop-down."
+  - Payload: Team 2 all out for 12 in Innings 1 (Target: 13). `phase = 'INNINGS_BREAK'`, `ci = 1`, `cbt = 2`, `outBatsmen = ['G', 'E', 'F']`.
+- **Root Cause**:
+  1. When Innings 1 concludes (all-out, max overs, early declaration), the state transitions to `INNINGS_BREAK`. In `INNINGS_BREAK`, `currentBattingTeam` is still Team 2 and `outBatsmen` contains all players of Team 2.
+  2. The application previously lacked an on-screen Innings Break banner or explicit "Start 2nd Innings" button, relying exclusively on a transient alert modal callback. If the modal was dismissed, not triggered (e.g. on permalink/localStorage load), or viewed in spectator mode, the UI remained on the main scoreboard.
+  3. `updateUI()` did not branch on `phase === 'INNINGS_BREAK'` and attempted to populate the batsman dropdowns using `battingTeam.players` (Team 2) filtered against `outBatsmen` (`['G', 'E', 'F']`). Because all players were out, 0 candidates were rendered in the dropdown and no mechanism was available to advance to the 2nd innings.
+  4. In `generateScorecardSummary()`, `liveInnings` was rendered alongside archived Innings 1 during `INNINGS_BREAK`, causing duplicate summary display.
+- **Resolution**:
+  1. Added an interactive `#innings-break-banner` in [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182) and [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645) displaying the match target, chasing team requirement, and a prominent `▶ Start 2nd Innings` button (`#start-next-innings-btn`).
+  2. Implemented and exported [`startNextInnings()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575) in `src/ui.ts` which dispatches `START_NEXT_INNINGS` to transition the state machine to `PLAYING_INNINGS`, advance `currentInnings` to 2, flip `currentBattingTeam` to the chasing team, reset `liveInnings`, and clear `outBatsmen`.
+  3. Updated `checkControlsState()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1135) to lock keypad scoring controls and player dropdowns during `INNINGS_BREAK` while keeping `start-next-innings-btn` and `undo-btn` enabled (with spectator mode locks).
+  4. Updated `populateDropdown` handling during `INNINGS_BREAK` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870) to prompt "Innings Break - Click 'Start 2nd Innings'".
+  5. Updated `generateScorecardSummary()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L770) to prevent duplicate innings rendering during `INNINGS_BREAK`.
+- **Verification**: `[PASS]` Verified by automated Test 81 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2595) reproducing the exact bug report state payload and asserting banner visibility, control locking, clean 2nd innings transition, and player dropdown population for both teams.
+
+

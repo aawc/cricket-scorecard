@@ -641,6 +641,68 @@ body {
     letter-spacing: -0.01em;
 }
 
+/* Innings Break Ribbon */
+.innings-break-ribbon {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: rgba(213, 94, 0, 0.08);
+    border: 1px solid #d55e00;
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+
+.innings-break-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.innings-break-icon {
+    font-size: 1.25rem;
+}
+
+.innings-break-text-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.innings-break-title {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #d55e00;
+}
+
+.innings-break-subtitle {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
+.btn-innings-start {
+    padding: 8px 14px;
+    background: #d55e00;
+    border: none;
+    border-radius: var(--radius-xs);
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.15s ease;
+}
+
+.btn-innings-start:hover {
+    opacity: 0.9;
+}
+
 /* Match Over Victory Ribbon */
 .victory-ribbon {
     display: flex;

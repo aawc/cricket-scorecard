@@ -73,6 +73,10 @@ const overLogDisplay = document.getElementById('over-log') as HTMLElement | null
 const selectionWarning = document.getElementById('selection-warning') as HTMLElement | null;
 const matchOverBanner = document.getElementById('match-over-banner') as HTMLElement | null;
 const matchOverText = document.getElementById('match-over-text') as HTMLElement | null;
+const inningsBreakBanner = document.getElementById('innings-break-banner') as HTMLElement | null;
+const inningsBreakTitle = document.getElementById('innings-break-title') as HTMLElement | null;
+const inningsBreakSubtitle = document.getElementById('innings-break-subtitle') as HTMLElement | null;
+const startNextInningsBtn = document.getElementById('start-next-innings-btn') as HTMLButtonElement | null;
 
 const controlsSection = document.getElementById('controls-section') as HTMLElement | null;
 const runBtns = document.querySelectorAll('.run-btn') as NodeListOf<HTMLButtonElement>;
@@ -205,6 +209,7 @@ function setupEventListeners(): void {
     if (endInningsBtn) endInningsBtn.addEventListener('click', triggerEndInningsModal);
     if (triggerEndInningsBtn) triggerEndInningsBtn.addEventListener('click', triggerEndInningsModal);
     if (confirmEndInningsBtn) confirmEndInningsBtn.addEventListener('click', executeEndInnings);
+    if (startNextInningsBtn) startNextInningsBtn.addEventListener('click', startNextInnings);
     
     // New Match button handlers
     if (newMatchBtn) newMatchBtn.addEventListener('click', handleNewMatchClick);
@@ -763,8 +768,8 @@ export function generateSummaryView(): void {
         gameState.match.team1.innings.forEach(inn => renderInningsSummary(gameState.match.team1.name, inn, 1));
         gameState.match.team2.innings.forEach(inn => renderInningsSummary(gameState.match.team2.name, inn, 2));
 
-        // Render active live innings if the match is not over
-        if (!gameState.match.matchOver) {
+        // Render active live innings if the match is not over and not in innings break
+        if (!gameState.match.matchOver && gameState.phase !== 'INNINGS_BREAK') {
             const battingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team1 : gameState.match.team2;
             const currentInningNumber = gameState.match.currentInnings;
             renderInningsSummary(battingTeam.name, gameState.match.liveInnings, currentInningNumber);
@@ -865,31 +870,45 @@ export function updateUI(): void {
     const lastManStanding = singleBatsmanAllowed && live.wickets === totalPlayers - 1;
 
     // Populate dropdowns with filtering
-    if (batsman1Select && battingTeam) {
-        populateDropdown(batsman1Select, battingTeam.players, live.currentBatsman1, "Select Batsman 1 (Striker)", (player) => {
-            return player !== live.currentBatsman2 && !live.outBatsmen.includes(player);
-        });
-    }
-
-    if (batsman2Select && battingTeam) {
-        if (lastManStanding) {
-            batsman2Select.classList.add('hidden');
-            if (batsman2Stats) batsman2Stats.classList.add('hidden');
-        } else {
+    if (gameState.phase === 'INNINGS_BREAK') {
+        if (batsman1Select) {
+            populateDropdown(batsman1Select, [], null, "Innings Break - Click 'Start 2nd Innings'");
+        }
+        if (batsman2Select) {
             batsman2Select.classList.remove('hidden');
             if (batsman2Stats) batsman2Stats.classList.remove('hidden');
-            populateDropdown(batsman2Select, battingTeam.players, live.currentBatsman2, "Select Batsman 2", (player) => {
-                return player !== live.currentBatsman1 && !live.outBatsmen.includes(player);
+            populateDropdown(batsman2Select, [], null, "Innings Break - Click 'Start 2nd Innings'");
+        }
+        if (bowlerSelect) {
+            populateDropdown(bowlerSelect, [], null, "Innings Break - Click 'Start 2nd Innings'");
+        }
+    } else {
+        if (batsman1Select && battingTeam) {
+            populateDropdown(batsman1Select, battingTeam.players, live.currentBatsman1, "Select Batsman 1 (Striker)", (player) => {
+                return player !== live.currentBatsman2 && !live.outBatsmen.includes(player);
             });
         }
-    }
 
-    if (bowlerSelect && bowlingTeam) {
-        populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, "Select Bowler", (player) => {
-            const maxBalls = gameState.settings.maxOversPerBowler * 6;
-            const stats = live.bowlers[player] || { balls: 0 };
-            return player !== live.previousBowler && stats.balls < maxBalls;
-        });
+        if (batsman2Select && battingTeam) {
+            if (lastManStanding) {
+                batsman2Select.classList.add('hidden');
+                if (batsman2Stats) batsman2Stats.classList.add('hidden');
+            } else {
+                batsman2Select.classList.remove('hidden');
+                if (batsman2Stats) batsman2Stats.classList.remove('hidden');
+                populateDropdown(batsman2Select, battingTeam.players, live.currentBatsman2, "Select Batsman 2", (player) => {
+                    return player !== live.currentBatsman1 && !live.outBatsmen.includes(player);
+                });
+            }
+        }
+
+        if (bowlerSelect && bowlingTeam) {
+            populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, "Select Bowler", (player) => {
+                const maxBalls = gameState.settings.maxOversPerBowler * 6;
+                const stats = live.bowlers[player] || { balls: 0 };
+                return player !== live.previousBowler && stats.balls < maxBalls;
+            });
+        }
     }
 
     // Striker indicators & Active styles
@@ -963,7 +982,7 @@ export function updateUI(): void {
         });
     }
 
-    // Match Status description & Match Over Banner
+    // Match Status description & Match Over / Innings Break Banner
     if (matchStatusDisplay) {
         if (gameState.match.matchOver) {
             let winText = "Match Over!";
@@ -983,9 +1002,24 @@ export function updateUI(): void {
                 matchOverBanner.classList.remove('d-none');
                 if (matchOverText) matchOverText.textContent = winText;
             }
+            if (inningsBreakBanner) inningsBreakBanner.classList.add('d-none');
+        } else if (gameState.phase === 'INNINGS_BREAK') {
+            const nextBattingTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
+            const statusText = `Innings Break | Target: ${target}`;
+            matchStatusDisplay.textContent = statusText;
+            if (inningsBreakBanner) {
+                inningsBreakBanner.classList.remove('d-none');
+                if (inningsBreakTitle) inningsBreakTitle.textContent = `Innings Break (Target: ${target})`;
+                if (inningsBreakSubtitle) {
+                    inningsBreakSubtitle.textContent = `${nextBattingTeam ? nextBattingTeam.name : 'Chasing Team'} needs ${target} runs to win (${gameState.settings.oversPerInnings} ov)`;
+                }
+                if (startNextInningsBtn) startNextInningsBtn.disabled = isSpectator();
+            }
+            if (matchOverBanner) matchOverBanner.classList.add('d-none');
         } else {
             matchStatusDisplay.textContent = `Innings ${gameState.match.currentInnings} | Batting: ${battingTeam ? battingTeam.name : 'Unknown'}`;
             if (matchOverBanner) matchOverBanner.classList.add('d-none');
+            if (inningsBreakBanner) inningsBreakBanner.classList.add('d-none');
         }
     }
 
@@ -1095,6 +1129,19 @@ function checkControlsState(): void {
         if (bowlerSelect) bowlerSelect.disabled = true;
         if (triggerEndInningsBtn) triggerEndInningsBtn.disabled = true;
         if (endInningsBtn) endInningsBtn.disabled = true;
+        if (selectionWarning) selectionWarning.classList.add('d-none');
+        return;
+    }
+
+    if (gameState.phase === 'INNINGS_BREAK') {
+        controls.forEach(btn => btn.disabled = true);
+        if (undoBtn) undoBtn.disabled = session.isLive && session.role === 'SPECTATOR';
+        if (batsman1Select) batsman1Select.disabled = true;
+        if (batsman2Select) batsman2Select.disabled = true;
+        if (bowlerSelect) bowlerSelect.disabled = true;
+        if (triggerEndInningsBtn) triggerEndInningsBtn.disabled = true;
+        if (endInningsBtn) endInningsBtn.disabled = true;
+        if (startNextInningsBtn) startNextInningsBtn.disabled = session.isLive && session.role === 'SPECTATOR';
         if (selectionWarning) selectionWarning.classList.add('d-none');
         return;
     }
@@ -1523,6 +1570,12 @@ export function executeStartMatch(battingTeamNum: 1 | 2): void {
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer) flipContainer.classList.remove('hidden');
 
+    updateUI();
+}
+
+export function startNextInnings(): void {
+    if (isSpectator() || gameState.phase !== 'INNINGS_BREAK') return;
+    dispatch({ type: 'START_NEXT_INNINGS' });
     updateUI();
 }
 

@@ -18,6 +18,9 @@ declare function startMatch(): void;
 declare function endInnings(): void;
 declare function minifyState(state: any): any;
 declare function unminifyState(min: any): any;
+declare function lzCompressToEncodedURIComponent(uncompressed: string): string;
+declare function lzDecompressFromEncodedURIComponent(input: string): string;
+declare function startNextInnings(): void;
 declare function healInningsOvers(inn: any): void;
 declare function generateSummaryView(): void;
 declare function loadFromLocalStorage(): void;
@@ -2588,6 +2591,85 @@ console.log("Running Test 56...");
     const match2Session = startLiveSession(gameState);
     if (!match2Session.matchId || match2Session.matchId === 'm_match1') {
         console.error(`Test 80 Failed: Match 2 did not receive a new unique matchId, got ${match2Session.matchId}`);
+        process.exit(1);
+    }
+
+    // Test 81: Innings Break Transition & 2nd Innings Player Dropdowns (Bug Reproduction)
+    console.log("Running Test 81 (Innings Break Transition & 2nd Innings Player Dropdowns)...");
+    const bugPermalink = "N4IgDgFiBcIJIDkGIOIGUD6AhASgUQEEBpEAGhAGcZQB7MASxgDZyBbGgIxgCZyBDCl2gBGcgFMANkIAM5AC5RYE+gHMIckAF821EAGNGI8no4bovEHOG6AdjBAAVMX1YACa+TAwA2iAJkQLACAYRAAXXJ6O2hvMO1Lblt7JxdXRM8fEDwAgDEAlHDI6O9QCj0YYQsAdxgAZnIhAHZxAA9dKoATGFkQGyFREA4AT27yKW74jj4zUDzoUAAnGAAWBpXyADNRym2+CfIC+ZAl6GbBus2K8ipoHr3b+Oyjk57+y9vr3YnJmiqJXVCzwqFiELBAVQA1jwdB9wV1YX0KvEgkDYW9wVCjCBWNtOttEQ94iZrLAAiZEqTjBwaPYgp5qfZQuROJkCuRsuQ8hEQDQAG4+UAM2BMwb-GIgdIgDwgWoBPoAamlywCAHVVeFtIKabA6aLMmq4tyaGLYpsajFQOaBjdKmtYGyefzYNIAHQAVi0pEt0J2IhB9g5jvswhd0k93ug9V9tvOsDyzKdUpd1k0hviyl0ZWB5HNUaarXa8J6BIGw224weDWmujmi3WsdWIC2sJud32IEOddOdqjzetX0rWV0LztA2bPVb-G+DV+YtAgK7MdBOcxFhxsLxCP6yOH23RkKu2NxRfIBOkmiJHBJIDJHApN6p2sCATAQpAIpZ4odga5CYFgyfEUOBNCUAmlWVTw4RUAmVcg1TgjUvQA2kAmA-UNSNE1uQ2c0SnBQ8bX9e0Aj5exXQ9TV8PMT4-TtIc-1gEMw0o3MaKXex4yDRjky0OJ5BUCoo3Yb4gA";
+    const decompressed = lzDecompressFromEncodedURIComponent(bugPermalink);
+    const loadedBugState = unminifyState(JSON.parse(decompressed));
+    setGameState(loadedBugState);
+    updateUI();
+
+    // 1. Verify state loaded in INNINGS_BREAK
+    if (gameState.phase !== 'INNINGS_BREAK') {
+        console.error(`Test 81 Failed: Expected phase INNINGS_BREAK, got ${gameState.phase}`);
+        process.exit(1);
+    }
+    if (gameState.match.currentInnings !== 1 || gameState.match.currentBattingTeam !== 2 || gameState.match.target !== 13) {
+        console.error(`Test 81 Failed: Innings 1 state mismatch: innings=${gameState.match.currentInnings}, battingTeam=${gameState.match.currentBattingTeam}, target=${gameState.match.target}`);
+        process.exit(1);
+    }
+
+    // 2. Verify Innings Break Banner is visible & match status displays target
+    const statusText = elements['match-status']?.textContent || '';
+    if (!statusText.includes('Innings Break') || !statusText.includes('13')) {
+        console.error(`Test 81 Failed: match-status should display Innings Break and Target 13, got "${statusText}"`);
+        process.exit(1);
+    }
+
+    const breakBanner = elements['innings-break-banner'];
+    if (breakBanner && breakBanner.classes.has('d-none')) {
+        console.error("Test 81 Failed: innings-break-banner should be visible (d-none removed) during INNINGS_BREAK");
+        process.exit(1);
+    }
+
+    // 3. Start 2nd Innings via startNextInnings()
+    startNextInnings();
+
+    if (gameState.phase !== 'PLAYING_INNINGS') {
+        console.error(`Test 81 Failed: Expected phase PLAYING_INNINGS after startNextInnings(), got ${gameState.phase}`);
+        process.exit(1);
+    }
+    if (gameState.match.currentInnings !== 2) {
+        console.error(`Test 81 Failed: Expected currentInnings 2, got ${gameState.match.currentInnings}`);
+        process.exit(1);
+    }
+    if (gameState.match.currentBattingTeam !== 1) {
+        console.error(`Test 81 Failed: Expected currentBattingTeam 1 (Team 1), got ${gameState.match.currentBattingTeam}`);
+        process.exit(1);
+    }
+    if (gameState.match.liveInnings.score !== 0 || gameState.match.liveInnings.balls !== 0 || gameState.match.liveInnings.wickets !== 0) {
+        console.error("Test 81 Failed: Live innings should be clean 0/0 (0.0)");
+        process.exit(1);
+    }
+    if (gameState.match.liveInnings.outBatsmen.length !== 0) {
+        console.error("Test 81 Failed: Out batsmen list should be empty in fresh 2nd innings");
+        process.exit(1);
+    }
+
+    // 4. Verify player dropdowns for 2nd innings (Team 1 batting: A, B, C; Team 2 bowling: E, F, G)
+    const b1Options = (elements['batsman1-select']?.children || []).map((c: any) => c.value);
+    if (!b1Options.includes('A') || !b1Options.includes('B') || !b1Options.includes('C')) {
+        console.error("Test 81 Failed: Batsman 1 dropdown should include Team 1 players A, B, C, got:", b1Options);
+        process.exit(1);
+    }
+
+    const bowlOptions = (elements['bowler-select']?.children || []).map((c: any) => c.value);
+    if (!bowlOptions.includes('E') || !bowlOptions.includes('F') || !bowlOptions.includes('G')) {
+        console.error("Test 81 Failed: Bowler dropdown should include Team 2 players E, F, G, got:", bowlOptions);
+        process.exit(1);
+    }
+
+    // 5. Select batsmen and bowler, then score
+    handleBatsmanChange(1, "A");
+    handleBatsmanChange(2, "B");
+    handleBowlerChange("E");
+
+    addRuns(4);
+    if (gameState.match.liveInnings.score !== 4 || gameState.match.liveInnings.batsmen["A"].runs !== 4) {
+        console.error("Test 81 Failed: Scoring 4 runs in 2nd innings failed, got score:", gameState.match.liveInnings.score);
         process.exit(1);
     }
 

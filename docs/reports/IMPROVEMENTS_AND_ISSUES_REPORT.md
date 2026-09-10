@@ -316,3 +316,15 @@ Successfully injected 8 assets into dist/sw.js
 | **Integrated Release Notes Modal** | [`src/release_notes.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/release_notes.ts#L1), [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L577) | Accessible dialog (`#releaseNotesModal`) featuring release highlights, complete commit history with short SHA links to GitHub, and colorblind-safe category badges. | `[PASS] Implemented` |
 | **Comprehensive Contributor Guide** | [`CONTRIBUTING.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/CONTRIBUTING.md#L1) | Detailed developer documentation on bug diagnosis, Red-Green regression testing, state reducer rules, and release tagging workflows. | `[PASS] Implemented` |
 | **Automated Regression Suite (Tests 73-77)** | [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2145) | 5 comprehensive automated tests verifying tag parsing, dynamic sequence calculation, release notes rendering, cross-module version synchronization, and modal opening. | `[PASS] Implemented` |
+
+---
+
+## 7. Milestone 9: Innings Break UI & 2nd Innings Transition Resilience
+
+| Enhancement | Module | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **Innings Break Banner & 2nd Innings CTA** | [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645) | Interactive `#innings-break-banner` with target equation and prominent `▶ Start 2nd Innings` button (`#start-next-innings-btn`). | `[PASS] Implemented` |
+| **Innings Break Control Locking & Dropdown Prompts** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1135) | Locks scoring keys and player selectors during `INNINGS_BREAK`, preventing empty dropdown rendering for all-out teams. | `[PASS] Implemented` |
+| **2nd Innings State Transition Handler** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575) | Implemented `startNextInnings()` dispatching `START_NEXT_INNINGS` to flip batting/bowling teams, reset live figures, and populate 2nd innings rosters. | `[PASS] Implemented` |
+| **Innings Summary Duplicate Prevention** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L770) | Prevents duplicate rendering of live innings alongside archived Innings 1 in Full Scorecard mode during innings breaks. | `[PASS] Implemented` |
+| **Automated Bug Reproduction & Verification (Test 81)** | [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2595) | Recreated exact user diagnostic payload verifying banner display, control locking, clean 2nd innings transition, and player dropdown population. | `[PASS] Implemented` |

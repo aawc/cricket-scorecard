@@ -192,8 +192,8 @@ The game transitions between the following phases:
 *   **`SETUP`**: Roster editing and settings selection. Allowed: `ADD_PLAYER`, `DELETE_PLAYER`, `UPDATE_SETTINGS`, `START_MATCH`.
 *   **`TOSS`**: Toss winner selection. Allowed: `CHOOSE_TOSS_BATTING`.
 *   **`PLAYING_INNINGS`**: Match active, scoring controls enabled. Allowed: `ADD_RUNS`, `ADD_WICKET`, `ADD_LEG_BYE`, `FINALIZE_DELIVERY`, `CHANGE_BATSMAN`, `CHANGE_BOWLER`, `UNDO`.
-*   **`INNINGS_BREAK`**: First innings completed, target set. Awaiting user input to swap. Allowed: `START_NEXT_INNINGS`, `UNDO`.
-*   **`MATCH_OVER`**: Match completed, scorecard locked. Allowed: `RESET_MATCH`, `UNDO`.
+*   **`INNINGS_BREAK`**: First innings completed, target set. Displays `#innings-break-banner` with `▶ Start 2nd Innings` (`#start-next-innings-btn`). Scoring controls locked. Allowed: `START_NEXT_INNINGS`, `UNDO`, `RESET_MATCH`.
+*   **`MATCH_OVER`**: Match completed, match state immutable, scoring and player selectors locked. Allowed: `RESET_MATCH`.
 
 #### 2. Reducer Dispatch Flow
 Every user interaction dispatches a synchronous Action object: `{ type: 'ACTION_TYPE', payload: { ... } }`.
