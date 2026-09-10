@@ -16,6 +16,10 @@ import {
     getUmpireUrl
 } from './sync.js';
 import { initReleaseNotesModal, openReleaseNotesModal } from './release_notes.js';
+import { wakeLockController, haptics, audioSynth } from './v2/hardware.js';
+import { renderWormChartSVG, renderManhattanChartSVG, renderPartnershipChartSVG } from './v2/charts.js';
+import { getProjectionsFromGameState, synthesizeEventsFromLiveInnings } from './v2/bridge.js';
+import { formatBallByBallCSV } from './v2/export.js';
 
 // DOM Elements
 const appContainer = document.getElementById('app-container') as HTMLElement | null;
@@ -36,6 +40,17 @@ const liveStreamBtn = document.getElementById('live-stream-btn') as HTMLButtonEl
 const feedbackBtn = document.getElementById('feedback-btn') as HTMLButtonElement | null;
 const footerFeedbackLink = document.getElementById('footer-feedback-link') as HTMLButtonElement | null;
 const copySummaryTextBtn = document.getElementById('copy-summary-text-btn') as HTMLButtonElement | null;
+const exportCsvBtn = document.getElementById('export-csv-btn') as HTMLButtonElement | null;
+const wakelockBtn = document.getElementById('wakelock-btn') as HTMLButtonElement | null;
+const hapticsBtn = document.getElementById('haptics-btn') as HTMLButtonElement | null;
+const tabScoringBtn = document.getElementById('tab-scoring-btn') as HTMLButtonElement | null;
+const tabAnalyticsBtn = document.getElementById('tab-analytics-btn') as HTMLButtonElement | null;
+const paneScoring = document.getElementById('pane-scoring') as HTMLElement | null;
+const paneAnalytics = document.getElementById('pane-analytics') as HTMLElement | null;
+const wormChartBox = document.getElementById('worm-chart-box') as HTMLElement | null;
+const manhattanChartBox = document.getElementById('manhattan-chart-box') as HTMLElement | null;
+const partnershipsChartBox = document.getElementById('partnerships-chart-box') as HTMLElement | null;
+const telemetryBox = document.getElementById('telemetry-box') as HTMLElement | null;
 const themeBtns = document.querySelectorAll('.theme-btn') as NodeListOf<HTMLButtonElement>;
 
 const oversPerInningsInput = document.getElementById('overs-per-innings') as HTMLInputElement | null;
@@ -247,11 +262,66 @@ function setupEventListeners(): void {
     if (shareMatchBtn) shareMatchBtn.addEventListener('click', shareMatch);
     if (liveStreamBtn) liveStreamBtn.addEventListener('click', triggerLiveModal);
     if (copySummaryTextBtn) copySummaryTextBtn.addEventListener('click', copyTextScorecard);
+    if (exportCsvBtn) exportCsvBtn.addEventListener('click', handleExportCSV);
     if (feedbackBtn) feedbackBtn.addEventListener('click', triggerFeedbackModal);
     if (footerFeedbackLink) footerFeedbackLink.addEventListener('click', (e) => {
         e.preventDefault();
         triggerFeedbackModal();
     });
+
+    // Hardware & Tab Switcher Listeners
+    if (wakelockBtn) {
+        wakelockBtn.addEventListener('click', async () => {
+            const active = await wakeLockController.toggle();
+            if (active) {
+                wakelockBtn.classList.add('active-state');
+                wakelockBtn.setAttribute('title', 'Screen Wake Lock: Active (Screen stays on)');
+            } else {
+                wakelockBtn.classList.remove('active-state');
+                wakelockBtn.setAttribute('title', 'Screen Wake Lock: Disabled');
+            }
+            haptics.tap();
+            audioSynth.playKeyClick();
+        });
+    }
+
+    if (hapticsBtn) {
+        hapticsBtn.addEventListener('click', () => {
+            const next = !haptics.isEnabled();
+            haptics.setEnabled(next);
+            audioSynth.setEnabled(next);
+            if (next) {
+                hapticsBtn.classList.add('active-state');
+                haptics.tap();
+                audioSynth.playKeyClick();
+            } else {
+                hapticsBtn.classList.remove('active-state');
+            }
+        });
+    }
+
+    if (tabScoringBtn) {
+        tabScoringBtn.addEventListener('click', () => {
+            tabScoringBtn.classList.add('active');
+            tabAnalyticsBtn?.classList.remove('active');
+            paneScoring?.classList.remove('d-none');
+            paneAnalytics?.classList.add('d-none');
+            haptics.tap();
+            audioSynth.playKeyClick();
+        });
+    }
+
+    if (tabAnalyticsBtn) {
+        tabAnalyticsBtn.addEventListener('click', () => {
+            tabAnalyticsBtn.classList.add('active');
+            tabScoringBtn?.classList.remove('active');
+            paneAnalytics?.classList.remove('d-none');
+            paneScoring?.classList.add('d-none');
+            renderAnalyticsCharts();
+            haptics.tap();
+            audioSynth.playKeyClick();
+        });
+    }
     if (feedbackTextInput) feedbackTextInput.addEventListener('input', updateFeedbackPreview);
     if (feedbackIncludeStateInput) feedbackIncludeStateInput.addEventListener('change', updateFeedbackPreview);
     if (copyFeedbackReportBtn) copyFeedbackReportBtn.addEventListener('click', handleCopyFeedbackReport);
@@ -844,6 +914,85 @@ function populateDropdown(selectElement: HTMLSelectElement, playerList: string[]
     });
 }
 
+export function renderAnalyticsCharts(): void {
+    if (!gameState.match || !gameState.matchStarted) return;
+    try {
+        const projections = getProjectionsFromGameState(gameState);
+        if (wormChartBox) {
+            wormChartBox.innerHTML = renderWormChartSVG(projections.wormData, {
+                team1Name: gameState.match.team1.name || 'Team 1',
+                team2Name: gameState.match.team2.name || 'Team 2'
+            });
+        }
+        if (manhattanChartBox) {
+            const currentBars = gameState.match.currentInnings === 2 ? projections.manhattan2 : projections.manhattan1;
+            manhattanChartBox.innerHTML = renderManhattanChartSVG(currentBars);
+        }
+        if (partnershipsChartBox) {
+            const activeInngs = gameState.match.currentInnings === 2 ? projections.innings2 : projections.innings1;
+            if (activeInngs && activeInngs.partnerships.length > 0) {
+                partnershipsChartBox.innerHTML = renderPartnershipChartSVG(activeInngs.partnerships);
+            } else {
+                partnershipsChartBox.innerHTML = '<div class="text-muted small py-2 text-center">No partnerships recorded yet.</div>';
+            }
+        }
+        if (telemetryBox) {
+            const activeInngs = gameState.match.currentInnings === 2 ? projections.innings2 : projections.innings1;
+            if (activeInngs) {
+                telemetryBox.innerHTML = `
+                    <div class="telemetry-stat-grid">
+                        <div class="telemetry-stat-card">
+                            <div class="telemetry-stat-label">Current Run Rate</div>
+                            <div class="telemetry-stat-val">${activeInngs.runRate.toFixed(2)}</div>
+                        </div>
+                        ${activeInngs.requiredRunRate !== null ? `
+                            <div class="telemetry-stat-card">
+                                <div class="telemetry-stat-label">Req. Run Rate</div>
+                                <div class="telemetry-stat-val">${activeInngs.requiredRunRate.toFixed(2)}</div>
+                            </div>
+                        ` : `
+                            <div class="telemetry-stat-card">
+                                <div class="telemetry-stat-label">Projected Total</div>
+                                <div class="telemetry-stat-val">${activeInngs.projectedScores.at8Overs}</div>
+                            </div>
+                        `}
+                        <div class="telemetry-stat-card">
+                            <div class="telemetry-stat-label">Extras Total</div>
+                            <div class="telemetry-stat-val">${activeInngs.extras.total}</div>
+                        </div>
+                        <div class="telemetry-stat-card">
+                            <div class="telemetry-stat-label">Boundary Runs</div>
+                            <div class="telemetry-stat-val">${activeInngs.batsmenList.reduce((s, b) => s + (b.fours * 4 + b.sixes * 6), 0)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    } catch (err) {
+        console.warn('Failed to render analytics charts:', err);
+    }
+}
+
+export function handleExportCSV(): void {
+    const projections = getProjectionsFromGameState(gameState);
+    const allEvents = [...projections.events1, ...projections.events2];
+    const csv = formatBallByBallCSV(allEvents);
+
+    if (typeof document !== 'undefined') {
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `cricket-scorecard-${Date.now()}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    haptics.tap();
+    audioSynth.playKeyClick();
+}
+
 export function updateUI(): void {
     if (!gameState.match || !gameState.match.liveInnings) return;
     
@@ -1115,6 +1264,7 @@ export function updateUI(): void {
         tossTeam1Btn.textContent = `${gameState.match.team1.name || 'Team 1'} Batting`;
         tossTeam2Btn.textContent = `${gameState.match.team2.name || 'Team 2'} Batting`;
     }
+    renderAnalyticsCharts();
     updateLiveIndicators();
     handleUIEvents();
 }
@@ -1678,6 +1828,8 @@ export function shareMatch(): void {
 
 export function undoLastAction(): void {
     if (isSpectator()) return;
+    haptics.undo();
+    audioSynth.playKeyClick();
     dispatch({ type: 'UNDO' });
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer && flipContainer.classList.contains('flipped') && !gameState.match.matchOver) {
@@ -1689,24 +1841,40 @@ export function undoLastAction(): void {
 
 export function addRuns(runs: number): void {
     if (isSpectator()) return;
+    if (runs === 4) {
+        haptics.boundary4();
+        audioSynth.playBoundary();
+    } else if (runs === 6) {
+        haptics.maximum6();
+        audioSynth.playBoundary();
+    } else {
+        haptics.single();
+        audioSynth.playKeyClick();
+    }
     dispatch({ type: 'ADD_RUNS', payload: { runs } });
     updateUI();
 }
 
 export function addLegBye(): void {
     if (isSpectator()) return;
+    haptics.single();
+    audioSynth.playKeyClick();
     dispatch({ type: 'ADD_LEG_BYE' });
     updateUI();
 }
 
 export function addWicket(): void {
     if (isSpectator()) return;
+    haptics.wicket();
+    audioSynth.playWicket();
     dispatch({ type: 'ADD_WICKET' });
     updateUI();
 }
 
 export function finalizeDelivery(type: string, extraRuns: number, accrueTo: string): void {
     if (isSpectator()) return;
+    haptics.single();
+    audioSynth.playKeyClick();
     dispatch({ type: 'FINALIZE_DELIVERY', payload: { type, extraRuns, accrueTo, pendingRunOutStriker } });
     updateUI();
 }

@@ -37,18 +37,24 @@ Fully functional, overhauled, and verified. Standardized Release Management & dy
 - **Early Declaration / Forfeit**: "End Innings" feature to conclude an innings early with full confirmation safeguards for Innings 1 (triggers Innings Break with target) or Innings 2 (triggers Match Over).
 - **Monospace Text Scorecard Exporter**: "Copy Text Scorecard" button to instantly format and copy a complete match summary to the clipboard for sharing via chat, SMS, or email.
 - **Red-Green Colorblind & Touch Accessibility**: High-contrast Blue (`#0072B2`) vs Orange (`#D55E00`) palette, explicit `●` striker indicator, text badges for deliveries, and WCAG 2.1 AA 48px minimum touch targets.
+- **v2 Event-Sourced Delivery Core (`src/v2/`)**: Pure event-sourced domain modeling (`DeliveryEvent`) with lossless replay, deterministic statistical projections, and complete historical auditability.
+- **Advanced Cricket Analytics & Partnerships**: Real-time tracking of batting partnerships (runs, balls, individual contributions, unbroken indicators), multi-spell bowler figures with dots & dot percentages, Fall of Wickets (FOW), and MCC Law 21.18 extras separation.
+- **Zero-Dependency SVG Visual Analytics**: High-contrast, colorblind-safe vector charts rendered entirely in native SVG: Match Worm Chart (with wicket indicators), Manhattan Chart (with over-by-over run bars & wickets), and Partnerships Breakdown bars.
+- **Mobile Ergonomics & Hardware Engine**: Screen Wake Lock API (`wakeLockController`) to keep device screens alive on the field, tactile Web Haptics Engine (`haptics`) providing physical vibration feedback on boundaries/wickets, and Zero-Asset Web Audio Synthesizer (`audioSynth`) for tactile audio cues without external assets.
+- **Universal Data Portability Suite**: Monospace ASCII scorecard exporter, ball-by-ball CSV exporter for spreadsheet analysis, and lossless JSON match archive import/export.
 - **Configurable match parameters**: Overs per innings, bowler limits, single batsman mode, leg byes toggle.
 - **State persistence**: `localStorage` automatic synchronization.
 - **Full Scorecard mode**: Clean monospace match summary featuring individual batsman 4s/6s/SR, bowler maidens/econ, wide and no-ball tallies, and Fall of Wickets summary.
 - **Undo functionality**: Instant rollback for scoring corrections.
 - **Web App Manifest & Service Worker**: Offline PWA installation support.
-- **Automated Tests**: Comprehensive test suite covering all scoring rules, live sync, spectator restrictions, release management, match immutability, and edge cases.
+- **Automated Tests**: Comprehensive test suite covering all scoring rules, live sync, spectator restrictions, release management, match immutability, v2 event projections, SVG charts, and hardware abstractions.
 
 ## Repository Layout & Architectural Standard
 
 This project follows an enterprise modular directory organization system:
 
 - **[`src/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src#L1)**: Modular TypeScript client source code (state machine, UI controller, modal manager, live sync, storage compression, and semantic versioning).
+- **[`src/v2/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2#L1)**: Event-sourced v2 architecture modules (delivery types, pure projection engine, SVG charts, hardware controllers, CSV/JSON exporters, and adapter bridge).
 - **[`backend/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend#L1)**: Serverless cloud backends and edge streaming integrations ([`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare#L1) and [`backend/google-apps-script/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script#L1)).
 - **[`docs/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs#L1)**: Comprehensive documentation repository. See [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) for governance rules and [`docs/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/README.md#L1) for the index.
 - **[`scripts/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts#L1)**: Build, release automation (`npm run release`), service worker compiler, and release notes extractors.
