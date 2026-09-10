@@ -237,4 +237,28 @@ All tests passed!
   4. Added explicit bypass in [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45) fetch listener for `/api/match/`, `action=fetch`, `_t=`, and cloud backend hosts.
 - **Verification**: `[PASS]` Verified by automated Test 82 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2675) reproducing the reported payload, validating cache-busting headers and query parameters, and asserting immediate state synchronization on manual refresh.
 
+---
+
+### 10. Multi-Device Umpire Link Resumption State Loss & Cloud Overwrite
+- **Severity**: `[CRITICAL]`
+- **Status**: `[PASS]` Resolved & Verified (Test 83)
+- **Affected Components**: [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L408), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L180)
+- **Diagnostic Context**:
+  - Bug Report / Problem: Opening an umpire link (e.g. `https://varun.khaneja.org/cricket-scorecard/?live=m_qo74hk3a&key=k_4cpigb3r8o2x4i9w`) on a new device does not resume the existing match state, shows the blank "Start Match" setup form, and overwrites the remote match data with the blank state.
+- **Root Cause**:
+  1. **Premature `startLiveSession()` on Page Load** ([`src/ui.ts#L183`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L183)): When `liveParams.matchId && liveParams.writeKey` were detected in URL parameters during `init()`, the app invoked `startLiveSession(gameState, liveParams.matchId, liveParams.writeKey)`. On a new device or fresh browser session without existing `localStorage`, `gameState` is the blank initial setup state (`matchStarted: false`).
+  2. **Remote Cloud Overwrite**: `startLiveSession()` immediately pushed the local state via `syncStateIfLive(state, true)`, permanently overwriting the live cloud storage packet with the unstarted blank state.
+  3. **Missing Umpire Remote State Hydration**: There was no dedicated mechanism to fetch the remote `LiveMatchPacket`, verify write key authorization (`hashWriteKey(writeKey) === packet.writeKeyHash`), unminify and hydrate the match state into local `gameState` and `localStorage`, and synchronize sequence numbers before allowing new scoring actions.
+- **Resolution**:
+  1. Implemented and exported [`resumeUmpireSession()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L408) in `src/sync.ts`:
+     - Halts existing timers via `stopLiveSync()`.
+     - Fetches existing `LiveMatchPacket` from the active cloud storage provider.
+     - Performs cryptographic authentication by asserting `hashWriteKey(writeKey) === packet.writeKeyHash`.
+     - Decompresses and unminifies the remote state and sets `matchStarted = true`.
+     - Updates `currentLiveSession` with `role: 'UMPIRE'`, `seq: packet.seq`, `status: 'SYNCED'`, and timestamp metadata.
+     - Hydrates `localStorage` keys (`cricket_scorecard_state`, `activeLiveMatchId`, `liveWriteKey_${matchId}`) so page reloads on the new device maintain scoring credentials.
+     - Invokes `onStateLoaded(decompressed)` callback to hydrate UI.
+  2. Updated `init()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L180) to invoke `resumeUmpireSession` when `liveParams.matchId && liveParams.writeKey` are present in the URL, updating `gameState`, unhiding scoreboard/flip-container, applying saved theme, and re-rendering UI without pushing unstarted state.
+- **Verification**: `[PASS]` Verified by automated Test 83 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2840) creating a match on Device 1, simulating Device 2 with blank state/cleared storage, verifying unauthorized write key rejection, verifying authorized resumption and state hydration (16/1 in 1.3 ov), asserting cloud packet is never overwritten with blank state, scoring 4 runs on Device 2, and verifying cloud packet synchronization with sequence number 2.
+
 

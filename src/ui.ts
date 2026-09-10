@@ -5,6 +5,7 @@ import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl 
 import { openModal, closeModal, initModalSystem, registerModalHiddenCallback } from './modal.js';
 import {
     startLiveSession,
+    resumeUmpireSession,
     stopLiveSync,
     joinSpectatorSession,
     getLiveSession,
@@ -179,8 +180,23 @@ export function initUI(): void {
     const liveParams = parseLiveUrlParams();
     if (liveParams.matchId) {
         if (liveParams.writeKey) {
-            // Umpire resuming scoring session
-            startLiveSession(gameState, liveParams.matchId, liveParams.writeKey);
+            // Umpire resuming scoring session: fetch cloud packet, verify writeKey, hydrate state
+            resumeUmpireSession(liveParams.matchId, liveParams.writeKey, (loadedState) => {
+                setGameState(loadedState);
+                if (gameState.matchStarted) {
+                    if (settingsSection) settingsSection.classList.add('hidden');
+                    const flipContainer = document.querySelector('.flip-container');
+                    if (flipContainer) flipContainer.classList.remove('hidden');
+                }
+                if (gameState.settings && gameState.settings.theme) {
+                    setTheme(gameState.settings.theme);
+                }
+                updateUI();
+            }, (status, errorMsg) => {
+                if (status === 'ERROR') {
+                    showAlert(errorMsg || 'Failed to resume live umpire session.', 'Live Stream Notice');
+                }
+            });
         } else {
             // Spectator mode: Join match stream in read-only observation mode
             joinSpectatorSession(liveParams.matchId, (updatedState) => {

@@ -27,6 +27,7 @@ declare function loadFromLocalStorage(): void;
 declare function generateTextSummary(): string;
 declare function generatePermalink(state: any): string;
 declare function executeEndInnings(): void;
+declare function clearState(): void;
 declare function openBulkImportModal(teamNum: number, triggerEl?: any): void;
 declare function handleBulkImport(): void;
 declare function openModal(modal: any, trigger?: any): void;
@@ -63,6 +64,7 @@ declare function createLiveMatchPacket(matchId: string, writeKey: string, seq: n
 declare function setLiveStorageProvider(provider: any): void;
 declare function getLiveStorageProvider(): any;
 declare function startLiveSession(state: any, matchId?: string, writeKey?: string): any;
+declare function resumeUmpireSession(matchId: string, writeKey: string, onStateLoaded: (state: any) => void, onStatusChange?: (status: any, message?: string) => void): Promise<{ success: boolean; error?: string }>;
 declare function stopLiveSync(): void;
 declare function joinSpectatorSession(matchId: string, onUpdate: (state: any) => void, onStatus?: (status: any, msg?: string) => void): () => void;
 declare function getLiveSession(): any;
@@ -2831,6 +2833,174 @@ console.log("Running Test 56...");
         }
 
         unsubSpectator();
+        stopLiveSync();
+    }
+
+    // =========================================================================
+    // Test 83: Multi-Device Umpire Link Resumption, Cryptographic Auth & Cloud State Preservation
+    // =========================================================================
+    {
+        console.log("Running Test 83: Multi-Device Umpire Link Resumption & State Preservation...");
+
+        // 1. Setup Device 1 with an active match (16/1 in 1.3 overs)
+        const matchPayload = "N4IgDgFiBcIAoBkCCBNAkgOQOIH1McywGUQAaEAZxlAHswBLGAFnIFsaAjGAJnIEMKXaAEZyAUwA2QgAzkALlFgT6AcwhyQAXzbUQAY0Yjyejhui8Qc4boB2MEABUxfVgAJr5MDADaIJGRAAIQCAYRAAXXJ6O2hvcO1Lblt7JxdXJM8fEAARAIBRAIAxCKiYuITlXQo9GGEANnIAd1ryIQBOcQAPXUaAExhZEBsZVoBPAfIpAYSOPjNQAuhQACdahpAhAA5yADMJyn2+afJipZBV6EGhURA9y-Iqe5Ajy4Tcs4ur-bvBx8GX4SaGY0RoSXTBD61ADMrRg60aAGt9qx9n19sNjn5dBcYRsYLjES0QCinminhjXgkTNZYAVjBwkrBcvSaPZ-J4OKzYMFyJwssVIiAaAA3HygTn2HkbMGxEAZOUBeVKgJQiKaQU0GW+eUeEAAdRKt2asVAxpuj3qsNgxV5otgwgAdKr1Qk5CoYDYAK4SCRsLnSIFAA";
+        const decompressedJson = lzDecompressFromEncodedURIComponent(matchPayload);
+        const initialMatchState = unminifyState(JSON.parse(decompressedJson));
+
+        const liveStorage = new MemoryStorageProvider();
+        setLiveStorageProvider(liveStorage);
+
+        setGameState(JSON.parse(JSON.stringify(initialMatchState)));
+        updateUI();
+
+        // 2. Start live session on Device 1
+        const matchId = "m_umpire_resume_test";
+        const writeKey = "k_valid_umpire_key_12345";
+        const session1 = startLiveSession(gameState, matchId, writeKey);
+        await syncStateIfLive(gameState, true);
+
+        // Verify Device 1 created packet in cloud store
+        const dev1PacketRes = await liveStorage.fetchPacket(matchId);
+        if (!dev1PacketRes.success || !dev1PacketRes.packet) {
+            console.error("Test 83 Failed: Device 1 initial packet not found in liveStorage:", dev1PacketRes);
+            process.exit(1);
+        }
+        const dev1Decompressed = unminifyState(dev1PacketRes.packet.state);
+        if (dev1Decompressed.match.liveInnings.score !== 16 || dev1Decompressed.match.liveInnings.wickets !== 1) {
+            console.error("Test 83 Failed: Device 1 packet score mismatch (expected 16/1):", dev1Decompressed.match.liveInnings);
+            process.exit(1);
+        }
+
+        // 3. Simulate Device 2 (New Device with empty localStorage and blank initialState)
+        stopLiveSync();
+        localStorage.clear();
+        clearState();
+        
+        // Blank state on Device 2
+        setGameState({
+            settings: {
+                totalInnings: 1,
+                oversPerInnings: 8,
+                maxOversPerBowler: 2,
+                widePenalty: 1,
+                noBallPenalty: 1,
+                allowSingleBatsman: true,
+                theme: 'light',
+                enableLegByes: false
+            },
+            match: {
+                currentInnings: 1,
+                currentBattingTeam: 1,
+                team1: { name: "Team 1", players: [], innings: [] },
+                team2: { name: "Team 2", players: [], innings: [] },
+                liveInnings: {
+                    score: 0,
+                    wickets: 0,
+                    balls: 0,
+                    extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+                    batsmen: {},
+                    bowlers: {},
+                    currentBatsman1: "",
+                    currentBatsman2: "",
+                    currentBowler: "",
+                    previousBowler: null,
+                    outBatsmen: [],
+                    overs: [],
+                    overLog: [],
+                    fow: []
+                },
+                target: null,
+                matchOver: false
+            },
+            matchStarted: false,
+            phase: 'SETUP',
+            uiEvents: [],
+            history: []
+        });
+        updateUI();
+
+        if (gameState.matchStarted !== false || gameState.match.liveInnings.score !== 0) {
+            console.error("Test 83 Failed: Device 2 clean baseline setup failed:", gameState);
+            process.exit(1);
+        }
+
+        // 4. Test unauthorized resume attempt with wrong write key
+        const unauthorizedRes = await resumeUmpireSession(matchId, "k_invalid_wrong_key", () => {});
+        if (unauthorizedRes.success) {
+            console.error("Test 83 Failed: resumeUmpireSession allowed unauthorized writeKey:", unauthorizedRes);
+            process.exit(1);
+        }
+        if (getLiveSession().status !== 'ERROR') {
+            console.error("Test 83 Failed: Expected live session status ERROR for unauthorized writeKey, got:", getLiveSession().status);
+            process.exit(1);
+        }
+
+        // Verify cloud storage packet was NOT overwritten with blank state during unauthorized attempt
+        const postUnauthorizedPacket = await liveStorage.fetchPacket(matchId);
+        const postUnauthDecompressed = unminifyState(postUnauthorizedPacket.packet!.state);
+        if (postUnauthDecompressed.match.liveInnings.score !== 16) {
+            console.error("Test 83 Failed: Cloud storage packet corrupted or overwritten during unauthorized resume:", postUnauthDecompressed);
+            process.exit(1);
+        }
+
+        // 5. Test authorized resume on Device 2
+        let resumedLoadedState: any = null;
+        const authorizedRes = await resumeUmpireSession(matchId, writeKey, (loaded: any) => {
+            resumedLoadedState = loaded;
+            setGameState(loaded);
+            updateUI();
+        });
+
+        if (!authorizedRes.success) {
+            console.error("Test 83 Failed: resumeUmpireSession failed with valid write key:", authorizedRes);
+            process.exit(1);
+        }
+        if (!resumedLoadedState || resumedLoadedState.matchStarted !== true) {
+            console.error("Test 83 Failed: Loaded state missing matchStarted=true on resume:", resumedLoadedState);
+            process.exit(1);
+        }
+        if (gameState.match.liveInnings.score !== 16 || gameState.match.liveInnings.wickets !== 1) {
+            console.error("Test 83 Failed: Local gameState not hydrated to 16/1 on resume:", gameState.match.liveInnings);
+            process.exit(1);
+        }
+        if (localStorage.getItem(`liveWriteKey_${matchId}`) !== writeKey) {
+            console.error("Test 83 Failed: Write key not persisted to localStorage for resumed umpire session");
+            process.exit(1);
+        }
+        if (localStorage.getItem('activeLiveMatchId') !== matchId) {
+            console.error("Test 83 Failed: activeLiveMatchId not persisted to localStorage on resume");
+            process.exit(1);
+        }
+
+        // Verify cloud storage packet was NOT overwritten with blank state upon resume
+        const postResumePacket = await liveStorage.fetchPacket(matchId);
+        const postResumeDecompressed = unminifyState(postResumePacket.packet!.state);
+        if (postResumeDecompressed.match.liveInnings.score !== 16) {
+            console.error("Test 83 Failed: Cloud packet was overwritten with blank state during resume!", postResumeDecompressed);
+            process.exit(1);
+        }
+
+        // 6. Test scoring continuation on Device 2
+        // Umpire on Device 2 scores 4 runs (16 -> 20) and syncs
+        gameState.match.liveInnings.score = 20;
+        gameState.match.liveInnings.batsmen["D"].runs += 4;
+        await syncStateIfLive(gameState, true);
+
+        const updatedCloudPacket = await liveStorage.fetchPacket(matchId);
+        if (!updatedCloudPacket.success || !updatedCloudPacket.packet) {
+            console.error("Test 83 Failed: Failed to fetch updated cloud packet after Device 2 scoring:", updatedCloudPacket);
+            process.exit(1);
+        }
+        const updatedCloudDecompressed = unminifyState(updatedCloudPacket.packet.state);
+        if (updatedCloudDecompressed.match.liveInnings.score !== 20) {
+            console.error("Test 83 Failed: Cloud storage not updated after Device 2 scored 4 runs (expected 20):", updatedCloudDecompressed.match.liveInnings);
+            process.exit(1);
+        }
+        if (updatedCloudPacket.packet.seq !== 2) {
+            console.error("Test 83 Failed: Cloud packet sequence number should be 2 after first sync from Device 2, got:", updatedCloudPacket.packet.seq);
+            process.exit(1);
+        }
+
         stopLiveSync();
     }
 

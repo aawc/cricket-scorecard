@@ -341,3 +341,14 @@ Successfully injected 8 assets into dist/sw.js
 | **Service Worker API Bypass** | [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45) | Explicitly excluded `/api/match/`, `action=fetch`, `_t=`, and cloud backend hosts from Service Worker interception and caching. | `[PASS] Implemented` |
 | **Instant Manual Refresh Synchronization** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1820), [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2675) | Verified immediate score update upon spectator manual refresh action without stale caching or lag. | `[PASS] Implemented` |
 
+---
+
+## 9. Milestone 11: Multi-Device Umpire Link Resumption & State Preservation
+
+| Enhancement | Module | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **Umpire Session Resume Controller** | [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L408) | Implemented `resumeUmpireSession()` to safely fetch existing cloud match packets, verify write key authorization (`hashWriteKey`), decompress state, and restore sequence numbers without overwriting live data. | `[PASS] Implemented` |
+| **App Initialization Hydration** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L180) | Replaced premature `startLiveSession` in `init()` with `resumeUmpireSession` when `liveParams.matchId && liveParams.writeKey` are detected, hydrating `gameState`, unhiding scoreboards, applying themes, and preventing unstarted blank state overwrite. | `[PASS] Implemented` |
+| **Local Scoring Authority Persistence** | [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L457) | Hydrates `localStorage` keys (`cricket_scorecard_state`, `activeLiveMatchId`, `liveWriteKey_${matchId}`) upon resuming on a new device, allowing subsequent page reloads to retain scoring authority and offline recovery. | `[PASS] Implemented` |
+| **Automated Multi-Device Resumption Test (Test 83)** | [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2840) | Automated test simulating live match creation on Device 1, transferring umpire link to Device 2 with clean storage, verifying invalid key rejection, asserting state hydration (16/1 in 1.3 ov), verifying cloud packet preservation, and validating scoring continuation with sequence progression. | `[PASS] Implemented` |
+

@@ -370,7 +370,7 @@ export function startLiveSession(
         isLive: true,
         role: 'UMPIRE',
         writeKey,
-        seq: 1,
+        seq: 0,
         status: 'CONNECTING',
         lastSyncedAt: null,
         lastError: null,
@@ -398,6 +398,116 @@ export function startLiveSession(
     const umpireUrl = getUmpireUrl(matchId, writeKey);
 
     return { matchId, writeKey, spectatorUrl, umpireUrl };
+}
+
+/**
+ * Resumes an existing live scoring session as Umpire (Author role).
+ * Fetches the existing match state from the cloud storage provider, verifies write key authorization,
+ * hydrates the local game state, and restores the live session without overwriting existing data.
+ */
+export async function resumeUmpireSession(
+    matchId: string,
+    writeKey: string,
+    onStateLoaded: (state: GameState) => void,
+    onStatusChange?: (status: LiveSyncStatus, message?: string) => void
+): Promise<{ success: boolean; error?: string }> {
+    stopLiveSync();
+
+    updateLiveSession({
+        matchId,
+        isLive: true,
+        role: 'UMPIRE',
+        writeKey,
+        seq: 0,
+        status: 'CONNECTING',
+        lastSyncedAt: null,
+        lastError: null,
+        expiresAt: null
+    });
+
+    const res = await activeStorageProvider.fetchPacket(matchId);
+
+    if (res.success && res.packet) {
+        const packet = res.packet;
+
+        // Verify write key authorization
+        const expectedHash = hashWriteKey(writeKey);
+        if (packet.writeKeyHash && packet.writeKeyHash !== expectedHash) {
+            console.warn('[LiveSync] Write key verification failed on resume for match:', matchId);
+            updateLiveSession({
+                status: 'ERROR',
+                lastError: 'Unauthorized: Invalid write key for this match'
+            });
+            if (onStatusChange) onStatusChange('ERROR', 'Invalid write key for this match.');
+            return { success: false, error: 'Unauthorized: Invalid write key' };
+        }
+
+        try {
+            const decompressed = unminifyState(packet.state);
+            decompressed.matchStarted = true;
+
+            updateLiveSession({
+                seq: packet.seq,
+                status: 'SYNCED',
+                lastSyncedAt: packet.updatedAt,
+                expiresAt: packet.expiresAt,
+                lastError: null
+            });
+
+            // Persist write key and state in localStorage so umpire can refresh without losing auth
+            if (typeof localStorage !== 'undefined') {
+                try {
+                    localStorage.setItem(`liveWriteKey_${matchId}`, writeKey);
+                    localStorage.setItem('activeLiveMatchId', matchId);
+                    localStorage.setItem('cricket_scorecard_state', JSON.stringify(decompressed));
+                } catch (e: any) {
+                    console.warn('[LiveSync] Failed to persist session data to localStorage:', {
+                        errorType: e?.name || 'Error',
+                        message: e?.message || String(e),
+                        matchId
+                    });
+                }
+            }
+
+            onStateLoaded(decompressed);
+            return { success: true };
+        } catch (e: any) {
+            console.error('[LiveSync] Failed to unminify resumed umpire packet:', {
+                errorType: e?.name || 'Error',
+                message: e?.message || String(e),
+                matchId
+            });
+            updateLiveSession({
+                status: 'ERROR',
+                lastError: 'Corrupt match packet received'
+            });
+            if (onStatusChange) onStatusChange('ERROR', 'Corrupt match packet received.');
+            return { success: false, error: 'Corrupt match packet received' };
+        }
+    } else if (res.notFound) {
+        console.warn('[LiveSync] Match not found in cloud on resume:', matchId);
+        updateLiveSession({
+            status: 'ERROR',
+            lastError: 'Match not found in cloud.'
+        });
+        if (onStatusChange) onStatusChange('ERROR', 'Match not found in cloud.');
+        return { success: false, error: 'Match not found in cloud' };
+    } else if (res.expired) {
+        updateLiveSession({
+            status: 'ERROR',
+            lastError: 'Match record has expired (1-year retention period ended).'
+        });
+        if (onStatusChange) onStatusChange('ERROR', 'Match record has expired (1-year retention period ended).');
+        return { success: false, error: 'Match record has expired' };
+    } else {
+        console.warn('[LiveSync] Network error on resume:', res.error);
+        updateLiveSession({
+            status: 'OFFLINE_RETRY',
+            lastError: res.error || 'Network error fetching match state'
+        });
+        if (onStatusChange) onStatusChange('OFFLINE_RETRY', res.error || 'Network error.');
+        return { success: false, error: res.error || 'Network error' };
+    }
 }
 
 /**

@@ -185,6 +185,7 @@ async function loadModulesAndRun() {
     (global as any).lzDecompressFromEncodedURIComponent = storageMod.lzDecompressFromEncodedURIComponent;
     (global as any).archiveCompletedMatch = storageMod.archiveCompletedMatch;
     (global as any).getCompletedMatches = storageMod.getCompletedMatches;
+    (global as any).clearState = storageMod.clearState;
 
     (global as any).resetMatch = uiMod.resetMatch;
     (global as any).startMatch = uiMod.startMatch;
@@ -223,6 +224,7 @@ async function loadModulesAndRun() {
     // Live Streaming & 1-Year Sync globals
     const syncMod = await import('../src/sync.js');
     (global as any).startLiveSession = syncMod.startLiveSession;
+    (global as any).resumeUmpireSession = syncMod.resumeUmpireSession;
     (global as any).stopLiveSync = syncMod.stopLiveSync;
     (global as any).joinSpectatorSession = syncMod.joinSpectatorSession;
     (global as any).getLiveSession = syncMod.getLiveSession;
