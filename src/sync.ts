@@ -143,9 +143,7 @@ export class CloudflareKVStorageProvider implements LiveStorageProvider {
                 method: 'GET',
                 cache: 'no-store',
                 headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
+                    'Accept': 'application/json'
                 }
             });
 
@@ -228,12 +226,7 @@ export class GoogleSheetsStorageProvider implements LiveStorageProvider {
             const url = `${this.scriptUrl}${separator}action=fetch&matchId=${encodeURIComponent(matchId)}&${cacheBuster}`;
             const res = await fetch(url, {
                 method: 'GET',
-                cache: 'no-store',
-                headers: {
-                    'Accept': 'application/json',
-                    'Cache-Control': 'no-cache, no-store, must-revalidate',
-                    'Pragma': 'no-cache'
-                }
+                cache: 'no-store'
             });
 
             if (res.status === 404) {

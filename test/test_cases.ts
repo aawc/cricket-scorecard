@@ -2757,8 +2757,12 @@ console.log("Running Test 56...");
             console.error("Test 82 Failed: Cloudflare fetch URL missing cache-busting timestamp _t parameter:", lastFetchedUrl);
             process.exit(1);
         }
-        if (lastFetchOptions?.cache !== 'no-store' || lastFetchOptions?.headers?.['Cache-Control'] !== 'no-cache, no-store, must-revalidate') {
-            console.error("Test 82 Failed: Cloudflare fetch options missing cache: 'no-store' or Cache-Control headers:", lastFetchOptions);
+        if (lastFetchOptions?.cache !== 'no-store') {
+            console.error("Test 82 Failed: Cloudflare fetch options missing cache: 'no-store':", lastFetchOptions);
+            process.exit(1);
+        }
+        if (lastFetchOptions?.headers?.['Cache-Control'] || lastFetchOptions?.headers?.['Pragma']) {
+            console.error("Test 82 Failed: Cloudflare fetch must not send non-safelisted request headers (Cache-Control/Pragma) that trigger CORS preflight failure:", lastFetchOptions);
             process.exit(1);
         }
 
@@ -2774,8 +2778,8 @@ console.log("Running Test 56...");
             console.error("Test 82 Failed: Google Sheets fetch URL missing cache-busting timestamp _t parameter:", lastFetchedUrl);
             process.exit(1);
         }
-        if (lastFetchOptions?.cache !== 'no-store' || lastFetchOptions?.headers?.['Cache-Control'] !== 'no-cache, no-store, must-revalidate') {
-            console.error("Test 82 Failed: Google Sheets fetch options missing cache: 'no-store' or Cache-Control headers:", lastFetchOptions);
+        if (lastFetchOptions?.cache !== 'no-store') {
+            console.error("Test 82 Failed: Google Sheets fetch options missing cache: 'no-store':", lastFetchOptions);
             process.exit(1);
         }
 

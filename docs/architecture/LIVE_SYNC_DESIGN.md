@@ -161,8 +161,6 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
   ```
 - **Request Headers & Options**:
   - `Accept: application/json`
-  - `Cache-Control: no-cache, no-store, must-revalidate`
-  - `Pragma: no-cache`
   - `cache: 'no-store'`
 - **Response Headers**:
   - `Cache-Control: no-cache, no-store, must-revalidate, max-age=0`

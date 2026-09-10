@@ -13,7 +13,7 @@
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Write-Key',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Write-Key, Cache-Control, Pragma, Authorization, *',
   'Access-Control-Max-Age': '86400'
 };
 
