@@ -227,6 +227,10 @@ async function loadModulesAndRun() {
     (global as any).resumeUmpireSession = syncMod.resumeUmpireSession;
     (global as any).stopLiveSync = syncMod.stopLiveSync;
     (global as any).joinSpectatorSession = syncMod.joinSpectatorSession;
+    (global as any).onUmpireDemoted = syncMod.onUmpireDemoted;
+    (global as any).demoteUmpireToSpectator = syncMod.demoteUmpireToSpectator;
+    (global as any).checkUmpireTakeover = syncMod.checkUmpireTakeover;
+    (global as any).startUmpirePolling = syncMod.startUmpirePolling;
     (global as any).getLiveSession = syncMod.getLiveSession;
     (global as any).updateLiveSession = syncMod.updateLiveSession;
     (global as any).createLiveMatchPacket = syncMod.createLiveMatchPacket;

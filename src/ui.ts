@@ -10,6 +10,7 @@ import {
     joinSpectatorSession,
     getLiveSession,
     subscribeLiveSession,
+    onUmpireDemoted,
     parseLiveUrlParams,
     getSpectatorUrl,
     getUmpireUrl
@@ -174,6 +175,16 @@ export function initUI(): void {
     // Subscribe to live session updates for status badge synchronization
     subscribeLiveSession(() => {
         updateLiveIndicators();
+    });
+
+    // Register umpire demotion listener (triggers when another window connects as Umpire)
+    onUmpireDemoted((matchId) => {
+        updateUI();
+        updateLiveIndicators();
+        showAlert(
+            'Another window or device has connected with the Umpire key. This session has automatically switched to Spectator Mode.',
+            'Umpire Session Transferred'
+        );
     });
 
     // Check for Live Match URL parameters (?live=<id>&key=<key> or ?live=<id>)
@@ -1781,7 +1792,10 @@ export function triggerLiveModal(): void {
 }
 
 export function handleStartLiveStream(): void {
-    const res = startLiveSession(gameState);
+    const res = startLiveSession(gameState, undefined, undefined, (updatedState) => {
+        setGameState(updatedState);
+        updateUI();
+    });
     if (liveInactiveSection) liveInactiveSection.classList.add('d-none');
     if (liveActiveSection) liveActiveSection.classList.remove('d-none');
     if (spectatorUrlInput) spectatorUrlInput.value = res.spectatorUrl;

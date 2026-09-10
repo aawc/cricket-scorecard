@@ -238,7 +238,7 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
 
 ### 4.7 Multi-Device Umpire Link Resumption & State Hydration
 1. **Seamless Device Transfer & Scoring Resumption**:
-   - When an umpire opens an authorized umpire link (`?live=<matchId>&key=<writeKey>`) on a new device, a second phone, or a fresh browser context, `init()` invokes [`resumeUmpireSession()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L408).
+   - When an umpire opens an authorized umpire link (`?live=<matchId>&key=<writeKey>`) on a new device, a second phone, or a fresh browser context, `init()` invokes [`resumeUmpireSession()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L613).
 2. **Cloud State Fetch & Cryptographic Verification**:
    - Rather than initializing a new stream or pushing an unstarted local baseline, `resumeUmpireSession()` fetches the existing `LiveMatchPacket` from the active storage provider.
    - Verifies write authorization by hashing the incoming key (`hashWriteKey(writeKey) === packet.writeKeyHash`).
@@ -246,6 +246,24 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
    - Unminifies the remote payload (`unminifyState(packet.state)`), sets `matchStarted = true`, and sets sequence tracking to `seq = packet.seq`.
    - Hydrates `localStorage` (`cricket_scorecard_state`, `activeLiveMatchId`, `liveWriteKey_${matchId}`) to support page reloads.
    - Updates local UI components without pushing blank or unstarted states over the live cloud match record.
+
+### 4.8 Single-Umpire Role Enforcement & Automatic Demotion Protocol
+1. **Single-Writer Exclusivity**:
+   - There can only ever be 1 active Umpire per live match at any given moment.
+   - Each Umpire session generates a unique `umpireClientId` (`generateRandomString('c_', 12)`) stored in `LiveSessionState` and `LiveMatchPacket`.
+2. **Takeover Token Publishing**:
+   - When a new device or browser window opens with the Umpire key, `resumeUmpireSession()` creates and publishes a takeover packet containing its fresh `umpireClientId` and `seq: packet.seq + 1`.
+3. **Background Liveness & Takeover Detection**:
+   - Active Umpire sessions continuously monitor the storage provider via [`startUmpirePolling()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L482).
+   - If a poll reveals `remotePacket.umpireClientId !== currentSession.umpireClientId`, the session detects that another window has claimed the Umpire role.
+4. **Graceful Demotion to Spectator**:
+   - The displaced session invokes [`demoteUmpireToSpectator()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L385), which:
+     - Halts pending umpire write queues and timers.
+     - Removes `liveWriteKey_${matchId}` from `localStorage`.
+     - Sanitizes the browser URL via `history.replaceState` to strip `&key=...`.
+     - Switches `role` to `'SPECTATOR'` and clears write authorization.
+     - Triggers `onUmpireDemoted` listeners to display a user notice and locks all scoring controls.
+     - Automatically enters spectator polling mode to stream live updates from the new umpire.
 
 ---
 

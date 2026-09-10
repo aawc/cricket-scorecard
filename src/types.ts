@@ -84,6 +84,7 @@ export interface LiveMatchPacket {
   expiresAt: number;
   ttlSeconds: number;
   writeKeyHash: string;
+  umpireClientId?: string;
   state: any;
 }
 
@@ -92,6 +93,7 @@ export interface LiveSessionState {
   isLive: boolean;
   role: LiveRole;
   writeKey?: string | null;
+  umpireClientId?: string | null;
   seq: number;
   status: LiveSyncStatus;
   lastSyncedAt: number | null;

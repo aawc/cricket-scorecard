@@ -63,10 +63,15 @@ declare function initLiveProviderFromUrlOrStorage(): void;
 declare function createLiveMatchPacket(matchId: string, writeKey: string, seq: number, state: any, createdAt?: number): any;
 declare function setLiveStorageProvider(provider: any): void;
 declare function getLiveStorageProvider(): any;
-declare function startLiveSession(state: any, matchId?: string, writeKey?: string): any;
+declare function startLiveSession(state: any, matchId?: string, writeKey?: string, onStateUpdate?: (newState: any) => void): any;
 declare function resumeUmpireSession(matchId: string, writeKey: string, onStateLoaded: (state: any) => void, onStatusChange?: (status: any, message?: string) => void): Promise<{ success: boolean; error?: string }>;
 declare function stopLiveSync(): void;
 declare function joinSpectatorSession(matchId: string, onUpdate: (state: any) => void, onStatus?: (status: any, msg?: string) => void): () => void;
+declare function onUmpireDemoted(listener: (matchId: string) => void): () => void;
+declare function demoteUmpireToSpectator(matchId: string, remotePacket: any, onStateUpdate?: (state: any) => void): void;
+declare function checkUmpireTakeover(matchId: string, onStateUpdate?: (newState: any) => void): Promise<boolean>;
+declare function startUmpirePolling(matchId: string, onStateUpdate?: (newState: any) => void): () => void;
+declare function isSpectator(): boolean;
 declare function getLiveSession(): any;
 declare function updateLiveSession(partial: any): void;
 declare function syncStateIfLive(state: any, immediate?: boolean): Promise<boolean>;
@@ -2996,11 +3001,166 @@ console.log("Running Test 56...");
             console.error("Test 83 Failed: Cloud storage not updated after Device 2 scored 4 runs (expected 20):", updatedCloudDecompressed.match.liveInnings);
             process.exit(1);
         }
-        if (updatedCloudPacket.packet.seq !== 2) {
-            console.error("Test 83 Failed: Cloud packet sequence number should be 2 after first sync from Device 2, got:", updatedCloudPacket.packet.seq);
+        if (updatedCloudPacket.packet.seq !== 3) {
+            console.error("Test 83 Failed: Cloud packet sequence number should be 3 after takeover and scoring from Device 2, got:", updatedCloudPacket.packet.seq);
             process.exit(1);
         }
 
+        stopLiveSync();
+    }
+
+    // =========================================================================
+    // Test 84: Single-Umpire Role Enforcement, Automatic Takeover & Previous Umpire Demotion
+    // =========================================================================
+    {
+        console.log("Running Test 84: Single-Umpire Role Enforcement & Automatic Demotion to Spectator...");
+
+        const liveStorage = new MemoryStorageProvider();
+        setLiveStorageProvider(liveStorage);
+
+        // 1. Setup Match Baseline
+        const matchPayload = "N4IgDgFiBcIAoBkCCBNAkgOQOIH1McywGUQAaEAZxlAHswBLGAFnIFsaAjGAJnIEMKXaAEZyAUwA2QgAzkALlFgT6AcwhyQAXzbUQAY0Yjyejhui8Qc4boB2MEABUxfVgAJr5MDADaIJGRAAIQCAYRAAXXJ6O2hvcO1Lblt7JxdXJM8fEAARAIBRAIAxCKiYuITlXQo9GGEANnIAd1ryIQBOcQAPXUaAExhZEBsZVoBPAfIpAYSOPjNQAuhQACdahpAhAA5yADMJyn2+afJipZBV6EGhURA9y-Iqe5Ajy4Tcs4ur-bvBx8GX4SaGY0RoSXTBD61ADMrRg60aAGt9qx9n19sNjn5dBcYRsYLjES0QCinminhjXgkTNZYAVjBwkrBcvSaPZ-J4OKzYMFyJwssVIiAaAA3HygTn2HkbMGxEAZOUBeVKgJQiKaQU0GW+eUeEAAdRKt2asVAxpuj3qsNgxV5otgwgAdKr1Qk5CoYDYAK4SCRsLnSIFAA";
+        const decompressedJson = lzDecompressFromEncodedURIComponent(matchPayload);
+        const baselineState = unminifyState(JSON.parse(decompressedJson));
+
+        setGameState(JSON.parse(JSON.stringify(baselineState)));
+        updateUI();
+
+        const matchId = "m_single_umpire_enforce";
+        const writeKey = "k_authoritative_key_888";
+
+        // 2. Window 1 starts as Umpire A
+        let window1State: any = JSON.parse(JSON.stringify(baselineState));
+        let window1DemotedMatchId: string | null = null;
+
+        const session1 = startLiveSession(window1State, matchId, writeKey, (updated) => {
+            window1State = updated;
+        });
+
+        const unregisterDemoted1 = onUmpireDemoted((demotedId) => {
+            window1DemotedMatchId = demotedId;
+        });
+
+        const initialSession1 = getLiveSession();
+        if (initialSession1.role !== 'UMPIRE' || !initialSession1.umpireClientId) {
+            console.error("Test 84 Failed: Window 1 should be active UMPIRE with client ID:", initialSession1);
+            process.exit(1);
+        }
+        const window1ClientId = initialSession1.umpireClientId;
+
+        // Verify cloud packet has Window 1 client ID and seq 1
+        const cloudPacket1Res = await liveStorage.fetchPacket(matchId);
+        if (!cloudPacket1Res.success || !cloudPacket1Res.packet || cloudPacket1Res.packet.umpireClientId !== window1ClientId) {
+            console.error("Test 84 Failed: Cloud packet missing Window 1 client ID:", cloudPacket1Res);
+            process.exit(1);
+        }
+
+        // 3. Window 2 opens with the umpire key and claims Umpire role (Takeover)
+        let window2State: any = null;
+        const resumeRes = await resumeUmpireSession(matchId, writeKey, (loaded) => {
+            window2State = loaded;
+        });
+
+        if (!resumeRes.success) {
+            console.error("Test 84 Failed: Window 2 resume failed:", resumeRes);
+            process.exit(1);
+        }
+
+        const session2 = getLiveSession();
+        if (session2.role !== 'UMPIRE' || !session2.umpireClientId || session2.umpireClientId === window1ClientId) {
+            console.error("Test 84 Failed: Window 2 should be active UMPIRE with distinct client ID:", session2);
+            process.exit(1);
+        }
+        const window2ClientId = session2.umpireClientId;
+
+        // Verify cloud packet now reflects Window 2 as authoritative Umpire (seq 2)
+        const cloudPacket2Res = await liveStorage.fetchPacket(matchId);
+        if (!cloudPacket2Res.success || !cloudPacket2Res.packet || cloudPacket2Res.packet.umpireClientId !== window2ClientId) {
+            console.error("Test 84 Failed: Cloud packet not updated with Window 2 client ID:", cloudPacket2Res);
+            process.exit(1);
+        }
+
+        // 4. Simulate Window 1 checking remote status (polling / takeover check)
+        // Reset currentLiveSession temporarily to Window 1's perspective
+        updateLiveSession({
+            matchId,
+            isLive: true,
+            role: 'UMPIRE',
+            writeKey,
+            umpireClientId: window1ClientId,
+            seq: 1,
+            status: 'SYNCED'
+        });
+
+        // Trigger takeover check on Window 1
+        const wasDemoted = await checkUmpireTakeover(matchId, (updated) => {
+            window1State = updated;
+            setGameState(updated);
+            updateUI();
+        });
+
+        if (!wasDemoted) {
+            console.error("Test 84 Failed: checkUmpireTakeover should return true when demoting Window 1");
+            process.exit(1);
+        }
+
+        const demotedSession1 = getLiveSession();
+        if (demotedSession1.role !== 'SPECTATOR') {
+            console.error("Test 84 Failed: Window 1 role should be SPECTATOR after demotion, got:", demotedSession1.role);
+            process.exit(1);
+        }
+        if (demotedSession1.writeKey !== null) {
+            console.error("Test 84 Failed: Window 1 writeKey should be null after demotion, got:", demotedSession1.writeKey);
+            process.exit(1);
+        }
+        if (demotedSession1.umpireClientId !== null) {
+            console.error("Test 84 Failed: Window 1 umpireClientId should be null after demotion, got:", demotedSession1.umpireClientId);
+            process.exit(1);
+        }
+        if (window1DemotedMatchId !== matchId) {
+            console.error("Test 84 Failed: onUmpireDemoted callback was not triggered with matchId:", window1DemotedMatchId);
+            process.exit(1);
+        }
+        if (isSpectator() !== true) {
+            console.error("Test 84 Failed: isSpectator() should return true for demoted Window 1");
+            process.exit(1);
+        }
+
+        // 5. Attempting to score on demoted Window 1 should be completely rejected
+        const syncResultWindow1 = await syncStateIfLive(window1State, true);
+        if (syncResultWindow1 !== false) {
+            console.error("Test 84 Failed: Demoted Window 1 should not be allowed to sync state:", syncResultWindow1);
+            process.exit(1);
+        }
+
+        // 6. Window 2 scores a 6 (16 -> 22 runs) and syncs to cloud
+        updateLiveSession({
+            matchId,
+            isLive: true,
+            role: 'UMPIRE',
+            writeKey,
+            umpireClientId: window2ClientId,
+            seq: 2,
+            status: 'SYNCED'
+        });
+
+        window2State = JSON.parse(JSON.stringify(baselineState));
+        window2State.match.liveInnings.score = 22;
+        window2State.match.liveInnings.batsmen["D"].runs += 6;
+        await syncStateIfLive(window2State, true);
+
+        const cloudPacket3Res = await liveStorage.fetchPacket(matchId);
+        if (!cloudPacket3Res.success || !cloudPacket3Res.packet) {
+            console.error("Test 84 Failed: Failed to fetch cloud packet after Window 2 scoring:", cloudPacket3Res);
+            process.exit(1);
+        }
+        const cloud3State = unminifyState(cloudPacket3Res.packet.state);
+        if (cloud3State.match.liveInnings.score !== 22 || cloudPacket3Res.packet.seq !== 3) {
+            console.error("Test 84 Failed: Cloud state score or seq mismatch after Window 2 scoring (expected 22 runs, seq 3):", cloud3State.match.liveInnings, cloudPacket3Res.packet.seq);
+            process.exit(1);
+        }
+
+        unregisterDemoted1();
         stopLiveSync();
     }
 

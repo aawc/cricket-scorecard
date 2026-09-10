@@ -284,6 +284,7 @@ let currentLiveSession: LiveSessionState = {
     isLive: false,
     role: 'NONE',
     writeKey: null,
+    umpireClientId: null,
     seq: 0,
     status: 'DISCONNECTED',
     lastSyncedAt: null,
@@ -293,9 +294,11 @@ let currentLiveSession: LiveSessionState = {
 
 let syncDebounceTimer: any = null;
 let spectatorPollingTimer: any = null;
+let umpirePollingTimer: any = null;
 let isDirty = false;
 let pendingStateToSync: GameState | null = null;
 let statusChangeListeners: Array<(session: LiveSessionState) => void> = [];
+let umpireDemotedListeners: Array<(matchId: string) => void> = [];
 
 export function getLiveSession(): LiveSessionState {
     return { ...currentLiveSession };
@@ -307,6 +310,26 @@ export function subscribeLiveSession(listener: (session: LiveSessionState) => vo
     return () => {
         statusChangeListeners = statusChangeListeners.filter(l => l !== listener);
     };
+}
+
+export function onUmpireDemoted(listener: (matchId: string) => void): () => void {
+    umpireDemotedListeners.push(listener);
+    return () => {
+        umpireDemotedListeners = umpireDemotedListeners.filter(l => l !== listener);
+    };
+}
+
+function notifyUmpireDemotedListeners(matchId: string): void {
+    umpireDemotedListeners.forEach(listener => {
+        try {
+            listener(matchId);
+        } catch (e: any) {
+            console.error('[LiveSync] Error in umpire demoted listener:', {
+                errorType: e?.name || 'Error',
+                message: e?.message || String(e)
+            });
+        }
+    });
 }
 
 function notifyLiveSessionListeners(): void {
@@ -336,10 +359,12 @@ export function createLiveMatchPacket(
     writeKey: string,
     seq: number,
     state: GameState,
-    createdAt: number = Date.now()
+    createdAt: number = Date.now(),
+    umpireClientId?: string
 ): LiveMatchPacket {
     const now = Date.now();
     const minState = minifyState(state);
+    const clientId = umpireClientId || currentLiveSession.umpireClientId || undefined;
     return {
         version: 1,
         matchId,
@@ -349,7 +374,181 @@ export function createLiveMatchPacket(
         expiresAt: createdAt + ONE_YEAR_MS,
         ttlSeconds: ONE_YEAR_SECONDS,
         writeKeyHash: hashWriteKey(writeKey),
+        umpireClientId: clientId,
         state: minState
+    };
+}
+
+/**
+ * Demotes the active session from Umpire to Spectator when another client claims the umpire role.
+ */
+export function demoteUmpireToSpectator(
+    matchId: string,
+    remotePacket: LiveMatchPacket,
+    onStateUpdate?: (state: GameState) => void
+): void {
+    console.warn('[LiveSync] Demoting current Umpire to Spectator: Another window claimed the Umpire role', {
+        matchId,
+        previousClientId: currentLiveSession.umpireClientId,
+        newClientId: remotePacket.umpireClientId
+    });
+
+    if (syncDebounceTimer) {
+        clearTimeout(syncDebounceTimer);
+        syncDebounceTimer = null;
+    }
+    if (umpirePollingTimer) {
+        clearTimeout(umpirePollingTimer);
+        umpirePollingTimer = null;
+    }
+    isDirty = false;
+    pendingStateToSync = null;
+
+    if (typeof localStorage !== 'undefined') {
+        try {
+            localStorage.removeItem(`liveWriteKey_${matchId}`);
+        } catch (e: any) {
+            console.warn('[LiveSync] Failed to clear writeKey from localStorage on demotion:', e);
+        }
+    }
+
+    if (typeof window !== 'undefined' && window.history && window.history.replaceState) {
+        try {
+            const cleanUrl = `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(matchId)}`;
+            window.history.replaceState({}, '', cleanUrl);
+        } catch (e: any) {
+            console.warn('[LiveSync] Failed to sanitize URL on demotion:', e);
+        }
+    }
+
+    updateLiveSession({
+        role: 'SPECTATOR',
+        writeKey: null,
+        umpireClientId: null,
+        seq: remotePacket.seq,
+        status: 'SYNCED',
+        lastSyncedAt: remotePacket.updatedAt,
+        expiresAt: remotePacket.expiresAt,
+        lastError: null
+    });
+
+    try {
+        const decompressed = unminifyState(remotePacket.state);
+        decompressed.matchStarted = true;
+        if (typeof localStorage !== 'undefined') {
+            try {
+                localStorage.setItem('cricket_scorecard_state', JSON.stringify(decompressed));
+            } catch (e: any) {
+                // Ignore storage quota error
+            }
+        }
+        if (onStateUpdate) {
+            onStateUpdate(decompressed);
+        }
+    } catch (e: any) {
+        console.error('[LiveSync] Failed to unminify remote state on demotion:', e);
+    }
+
+    notifyUmpireDemotedListeners(matchId);
+}
+
+/**
+ * Checks if another client has taken over as Umpire, demoting the local session if needed.
+ * Returns true if demoted to spectator, false otherwise.
+ */
+export async function checkUmpireTakeover(
+    matchId: string,
+    onStateUpdate?: (newState: GameState) => void
+): Promise<boolean> {
+    if (!currentLiveSession.isLive || currentLiveSession.role !== 'UMPIRE' || currentLiveSession.matchId !== matchId) {
+        return false;
+    }
+
+    const res = await activeStorageProvider.fetchPacket(matchId);
+    if (res.success && res.packet) {
+        const packet = res.packet;
+        if (packet.umpireClientId && currentLiveSession.umpireClientId && packet.umpireClientId !== currentLiveSession.umpireClientId) {
+            demoteUmpireToSpectator(matchId, packet, onStateUpdate);
+            joinSpectatorSession(matchId, onStateUpdate || (() => {}));
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Starts continuous polling during an active Umpire session to monitor for takeover by another umpire.
+ */
+export function startUmpirePolling(
+    matchId: string,
+    onStateUpdate?: (newState: GameState) => void
+): () => void {
+    if (umpirePollingTimer) {
+        clearTimeout(umpirePollingTimer);
+        umpirePollingTimer = null;
+    }
+
+    let isPolling = true;
+
+    const poll = async () => {
+        if (!isPolling || !currentLiveSession.isLive || currentLiveSession.role !== 'UMPIRE' || currentLiveSession.matchId !== matchId) {
+            return;
+        }
+
+        const res = await activeStorageProvider.fetchPacket(matchId);
+
+        if (res.success && res.packet) {
+            const packet = res.packet;
+            // Check if another client took over the umpire role
+            if (packet.umpireClientId && currentLiveSession.umpireClientId && packet.umpireClientId !== currentLiveSession.umpireClientId) {
+                isPolling = false;
+                if (umpirePollingTimer) {
+                    clearTimeout(umpirePollingTimer);
+                    umpirePollingTimer = null;
+                }
+                demoteUmpireToSpectator(matchId, packet, onStateUpdate);
+                joinSpectatorSession(matchId, onStateUpdate || (() => {}));
+                return;
+            }
+
+            if (packet.seq > currentLiveSession.seq) {
+                updateLiveSession({
+                    seq: packet.seq,
+                    status: 'SYNCED',
+                    lastSyncedAt: packet.updatedAt
+                });
+            }
+        }
+
+        if (isPolling && currentLiveSession.role === 'UMPIRE' && currentLiveSession.matchId === matchId) {
+            const isHidden = typeof document !== 'undefined' && document.visibilityState === 'hidden';
+            const interval = isHidden ? BACKGROUND_POLL_INTERVAL_MS : ACTIVE_POLL_INTERVAL_MS;
+            umpirePollingTimer = setTimeout(poll, interval);
+        }
+    };
+
+    umpirePollingTimer = setTimeout(poll, ACTIVE_POLL_INTERVAL_MS);
+
+    const visibilityHandler = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible' && isPolling && currentLiveSession.role === 'UMPIRE') {
+            if (umpirePollingTimer) clearTimeout(umpirePollingTimer);
+            poll();
+        }
+    };
+
+    if (typeof document !== 'undefined' && document.addEventListener) {
+        document.addEventListener('visibilitychange', visibilityHandler);
+    }
+
+    return () => {
+        isPolling = false;
+        if (umpirePollingTimer) {
+            clearTimeout(umpirePollingTimer);
+            umpirePollingTimer = null;
+        }
+        if (typeof document !== 'undefined' && document.removeEventListener) {
+            document.removeEventListener('visibilitychange', visibilityHandler);
+        }
     };
 }
 
@@ -359,10 +558,12 @@ export function createLiveMatchPacket(
 export function startLiveSession(
     state: GameState,
     existingMatchId?: string,
-    existingWriteKey?: string
+    existingWriteKey?: string,
+    onStateUpdate?: (newState: GameState) => void
 ): { matchId: string; writeKey: string; spectatorUrl: string; umpireUrl: string } {
     const matchId = existingMatchId || generateMatchId();
     const writeKey = existingWriteKey || generateWriteKey();
+    const umpireClientId = generateRandomString('c_', 12);
     const now = Date.now();
 
     updateLiveSession({
@@ -370,6 +571,7 @@ export function startLiveSession(
         isLive: true,
         role: 'UMPIRE',
         writeKey,
+        umpireClientId,
         seq: 0,
         status: 'CONNECTING',
         lastSyncedAt: null,
@@ -394,6 +596,9 @@ export function startLiveSession(
     // Immediately push initial state
     syncStateIfLive(state, true);
 
+    // Start background takeover monitoring
+    startUmpirePolling(matchId, onStateUpdate);
+
     const spectatorUrl = getSpectatorUrl(matchId);
     const umpireUrl = getUmpireUrl(matchId, writeKey);
 
@@ -403,7 +608,7 @@ export function startLiveSession(
 /**
  * Resumes an existing live scoring session as Umpire (Author role).
  * Fetches the existing match state from the cloud storage provider, verifies write key authorization,
- * hydrates the local game state, and restores the live session without overwriting existing data.
+ * hydrates the local game state, and claims the single-umpire token without overwriting existing data.
  */
 export async function resumeUmpireSession(
     matchId: string,
@@ -413,11 +618,14 @@ export async function resumeUmpireSession(
 ): Promise<{ success: boolean; error?: string }> {
     stopLiveSync();
 
+    const newUmpireClientId = generateRandomString('c_', 12);
+
     updateLiveSession({
         matchId,
         isLive: true,
         role: 'UMPIRE',
         writeKey,
+        umpireClientId: newUmpireClientId,
         seq: 0,
         status: 'CONNECTING',
         lastSyncedAt: null,
@@ -446,11 +654,29 @@ export async function resumeUmpireSession(
             const decompressed = unminifyState(packet.state);
             decompressed.matchStarted = true;
 
+            const takeoverSeq = packet.seq + 1;
+
+            // Create takeover packet claiming the umpire role with newUmpireClientId
+            const takeoverPacket = createLiveMatchPacket(
+                matchId,
+                writeKey,
+                takeoverSeq,
+                decompressed,
+                packet.createdAt || Date.now(),
+                newUmpireClientId
+            );
+
+            // Save takeover packet to announce new umpire to remote store
+            const saveRes = await activeStorageProvider.savePacket(matchId, writeKey, takeoverPacket);
+            if (!saveRes.success) {
+                console.warn('[LiveSync] Failed to publish takeover packet on resume:', saveRes.error);
+            }
+
             updateLiveSession({
-                seq: packet.seq,
+                seq: takeoverSeq,
                 status: 'SYNCED',
-                lastSyncedAt: packet.updatedAt,
-                expiresAt: packet.expiresAt,
+                lastSyncedAt: Date.now(),
+                expiresAt: takeoverPacket.expiresAt,
                 lastError: null
             });
 
@@ -470,6 +696,10 @@ export async function resumeUmpireSession(
             }
 
             onStateLoaded(decompressed);
+
+            // Start background takeover monitoring
+            startUmpirePolling(matchId, onStateLoaded);
+
             return { success: true };
         } catch (e: any) {
             console.error('[LiveSync] Failed to unminify resumed umpire packet:', {
@@ -707,6 +937,10 @@ export function stopLiveSync(): void {
         clearTimeout(spectatorPollingTimer);
         spectatorPollingTimer = null;
     }
+    if (umpirePollingTimer) {
+        clearTimeout(umpirePollingTimer);
+        umpirePollingTimer = null;
+    }
     isDirty = false;
     pendingStateToSync = null;
 
@@ -715,6 +949,7 @@ export function stopLiveSync(): void {
         isLive: false,
         role: 'NONE',
         writeKey: null,
+        umpireClientId: null,
         seq: 0,
         status: 'DISCONNECTED',
         lastSyncedAt: null,

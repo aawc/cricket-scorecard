@@ -250,7 +250,7 @@ All tests passed!
   2. **Remote Cloud Overwrite**: `startLiveSession()` immediately pushed the local state via `syncStateIfLive(state, true)`, permanently overwriting the live cloud storage packet with the unstarted blank state.
   3. **Missing Umpire Remote State Hydration**: There was no dedicated mechanism to fetch the remote `LiveMatchPacket`, verify write key authorization (`hashWriteKey(writeKey) === packet.writeKeyHash`), unminify and hydrate the match state into local `gameState` and `localStorage`, and synchronize sequence numbers before allowing new scoring actions.
 - **Resolution**:
-  1. Implemented and exported [`resumeUmpireSession()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L408) in `src/sync.ts`:
+  1. Implemented and exported [`resumeUmpireSession()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L613) in `src/sync.ts`:
      - Halts existing timers via `stopLiveSync()`.
      - Fetches existing `LiveMatchPacket` from the active cloud storage provider.
      - Performs cryptographic authentication by asserting `hashWriteKey(writeKey) === packet.writeKeyHash`.
@@ -258,7 +258,30 @@ All tests passed!
      - Updates `currentLiveSession` with `role: 'UMPIRE'`, `seq: packet.seq`, `status: 'SYNCED'`, and timestamp metadata.
      - Hydrates `localStorage` keys (`cricket_scorecard_state`, `activeLiveMatchId`, `liveWriteKey_${matchId}`) so page reloads on the new device maintain scoring credentials.
      - Invokes `onStateLoaded(decompressed)` callback to hydrate UI.
-  2. Updated `init()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L180) to invoke `resumeUmpireSession` when `liveParams.matchId && liveParams.writeKey` are present in the URL, updating `gameState`, unhiding scoreboard/flip-container, applying saved theme, and re-rendering UI without pushing unstarted state.
-- **Verification**: `[PASS]` Verified by automated Test 83 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2840) creating a match on Device 1, simulating Device 2 with blank state/cleared storage, verifying unauthorized write key rejection, verifying authorized resumption and state hydration (16/1 in 1.3 ov), asserting cloud packet is never overwritten with blank state, scoring 4 runs on Device 2, and verifying cloud packet synchronization with sequence number 2.
+  2. Updated `init()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L195) to invoke `resumeUmpireSession` when `liveParams.matchId && liveParams.writeKey` are present in the URL, updating `gameState`, unhiding scoreboard/flip-container, applying saved theme, and re-rendering UI without pushing unstarted state.
+- **Verification**: `[PASS]` Verified by automated Test 83 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2845) creating a match on Device 1, simulating Device 2 with blank state/cleared storage, verifying unauthorized write key rejection, verifying authorized resumption and state hydration (16/1 in 1.3 ov), asserting cloud packet is never overwritten with blank state, scoring 4 runs on Device 2, and verifying cloud packet synchronization with sequence number 3.
+
+---
+
+### 11. Single-Umpire Role Enforcement & Automatic Demotion to Spectator
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Test 84)
+- **Affected Components**: [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L385), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L181)
+- **Requirement / Problem**:
+  - The live sync architecture requires strict single-writer enforcement (only 1 active Umpire per match). If an umpire link is opened in a new window, browser tab, or second device, the previous umpire session must automatically detect the takeover, revoke its write credentials, transition to Spectator mode, lock scoring controls, and continue receiving real-time live score updates.
+- **Resolution**:
+  1. **Unique Client Instance Identification (`umpireClientId`)**: Added `umpireClientId` generation (`generateRandomString('c_', 12)`) in `src/sync.ts` attached to `LiveSessionState` and `LiveMatchPacket`.
+  2. **Takeover Announcement & Sequence Progression**: When `resumeUmpireSession` is invoked with a valid write key on a new device, it generates a new `umpireClientId`, creates a takeover packet with `seq: packet.seq + 1`, and publishes it to the storage provider to claim the active umpire token.
+  3. **Continuous Takeover Polling & Liveness Monitoring**: Implemented `startUmpirePolling()` in [`src/sync.ts#L482`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L482) running an active polling loop during Umpire sessions.
+  4. **Automatic Demotion Controller (`demoteUmpireToSpectator`)**: When the previous umpire client detects `packet.umpireClientId !== currentLiveSession.umpireClientId`, it executes [`demoteUmpireToSpectator()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L385):
+     - Halts pending umpire write queues and timers.
+     - Clears `liveWriteKey_${matchId}` from `localStorage`.
+     - Sanitizes the browser URL via `history.replaceState` to strip `&key=...`.
+     - Transitions `role` to `'SPECTATOR'` and clears write authorization.
+     - Decompresses and updates local state from the latest remote packet.
+     - Triggers demotion listeners (`onUmpireDemoted`) which display an alert/toast to the user and locks all scoring controls via `updateUI()`.
+     - Transitions seamlessly into spectator polling to continue streaming subsequent deliveries scored by the new umpire.
+  5. **Write Guardrail**: Disallows any write operations in `executeSync()` or `syncStateIfLive()` when `role !== 'UMPIRE'`.
+- **Verification**: `[PASS]` Verified by automated Test 84 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L3013) simulating Window 1 starting as Umpire A, Window 2 claiming Umpire role as Umpire B, Window 1 automatically demoting to Spectator on takeover check, asserting writeKey removal from storage and URL sanitization, asserting control lock, and validating that Window 2 scores a 6 while Window 1 observes as a Spectator.
 
 
