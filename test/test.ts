@@ -248,12 +248,16 @@ async function loadModulesAndRun() {
     (global as any).DEFAULT_TTL_MS = syncMod.DEFAULT_TTL_MS;
     (global as any).FOUR_WEEKS_SECONDS = syncMod.FOUR_WEEKS_SECONDS;
     (global as any).FOUR_WEEKS_MS = syncMod.FOUR_WEEKS_MS;
+    (global as any).ACTIVE_POLL_INTERVAL_MS = syncMod.ACTIVE_POLL_INTERVAL_MS;
+    (global as any).BACKGROUND_POLL_INTERVAL_MS = syncMod.BACKGROUND_POLL_INTERVAL_MS;
+    (global as any).DEBOUNCE_SYNC_MS = syncMod.DEBOUNCE_SYNC_MS;
 
     (global as any).triggerLiveModal = uiMod.triggerLiveModal;
     (global as any).handleStartLiveStream = uiMod.handleStartLiveStream;
     (global as any).handleStopLiveStream = uiMod.handleStopLiveStream;
     (global as any).handleCopySpectatorUrl = uiMod.handleCopySpectatorUrl;
     (global as any).handleCopyUmpireUrl = uiMod.handleCopyUmpireUrl;
+    (global as any).handleSpectatorManualRefresh = uiMod.handleSpectatorManualRefresh;
     (global as any).updateLiveIndicators = uiMod.updateLiveIndicators;
 
     // Version & Release Management globals

@@ -7,9 +7,9 @@ export const DEFAULT_TTL_SECONDS = ONE_YEAR_SECONDS;
 export const DEFAULT_TTL_MS = ONE_YEAR_MS;
 export const FOUR_WEEKS_SECONDS = ONE_YEAR_SECONDS; // Deprecated alias kept for backwards compatibility
 export const FOUR_WEEKS_MS = ONE_YEAR_MS;
-export const ACTIVE_POLL_INTERVAL_MS = 3500;
-export const BACKGROUND_POLL_INTERVAL_MS = 15000;
-export const DEBOUNCE_SYNC_MS = 250;
+export const ACTIVE_POLL_INTERVAL_MS = 1500;
+export const BACKGROUND_POLL_INTERVAL_MS = 10000;
+export const DEBOUNCE_SYNC_MS = 150;
 
 /**
  * Generates a clean, URL-safe random alphanumeric string of given length.
@@ -136,10 +136,17 @@ export class CloudflareKVStorageProvider implements LiveStorageProvider {
 
     async fetchPacket(matchId: string): Promise<{ success: boolean; packet?: LiveMatchPacket; notFound?: boolean; expired?: boolean; error?: string }> {
         try {
-            const url = `${this.endpoint}match/${matchId}`;
+            const cacheBuster = `_t=${Date.now()}`;
+            const separator = this.endpoint.includes('?') ? '&' : '?';
+            const url = `${this.endpoint}match/${encodeURIComponent(matchId)}${separator}${cacheBuster}`;
             const res = await fetch(url, {
                 method: 'GET',
-                headers: { 'Accept': 'application/json' }
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
             });
 
             if (res.status === 404) {
@@ -216,10 +223,17 @@ export class GoogleSheetsStorageProvider implements LiveStorageProvider {
 
     async fetchPacket(matchId: string): Promise<{ success: boolean; packet?: LiveMatchPacket; notFound?: boolean; expired?: boolean; error?: string }> {
         try {
+            const cacheBuster = `_t=${Date.now()}`;
             const separator = this.scriptUrl.includes('?') ? '&' : '?';
-            const url = `${this.scriptUrl}${separator}action=fetch&matchId=${encodeURIComponent(matchId)}`;
+            const url = `${this.scriptUrl}${separator}action=fetch&matchId=${encodeURIComponent(matchId)}&${cacheBuster}`;
             const res = await fetch(url, {
-                method: 'GET'
+                method: 'GET',
+                cache: 'no-store',
+                headers: {
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
+                }
             });
 
             if (res.status === 404) {

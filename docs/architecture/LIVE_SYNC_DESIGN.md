@@ -152,19 +152,27 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
   ```
 - **1-Year Expiration Header/Param**: `ttl=31536000` instructs the KV backend to automatically evict the key after exactly 365 days (31,536,000 seconds).
 - **Debounced Umpire Synchronization**:
-  - Ball-by-ball updates are debounced by **250 ms** ([`DEBOUNCE_SYNC_MS = 250`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L12)) to coalesce rapid consecutive actions (e.g. wide + extra runs) into a single atomic network dispatch.
+  - Ball-by-ball updates are debounced by **150 ms** ([`DEBOUNCE_SYNC_MS = 150`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L12)) to coalesce rapid consecutive actions (e.g. wide + extra runs) into a single atomic network dispatch.
 
 #### B. Spectator State Ingestion (Reader)
 - **HTTP Method & URL**:
   ```http
-  GET https://cricket-scorecard-live.khaneja.org/api/match/{matchId}
+  GET https://cricket-scorecard-live.khaneja.org/api/match/{matchId}?_t={timestamp}
   ```
-- **Request Headers**:
+- **Request Headers & Options**:
   - `Accept: application/json`
+  - `Cache-Control: no-cache, no-store, must-revalidate`
+  - `Pragma: no-cache`
+  - `cache: 'no-store'`
+- **Response Headers**:
+  - `Cache-Control: no-cache, no-store, must-revalidate, max-age=0`
+  - `Pragma: no-cache`
+  - `Expires: 0`
 - **Response**: HTTP 200 with the latest [`LiveMatchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L79) payload.
-- **Adaptive Polling Intervals**:
-  - **Active Tab Focus**: Polled every **3.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 3500`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10)).
-  - **Background / Hidden Tab**: Throttled to every **15 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 15000`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L11)) via `document.visibilityState` listeners.
+- **Adaptive Polling Intervals & Cache Elimination**:
+  - **Active Tab Focus**: Polled every **1.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 1500`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10)).
+  - **Background / Hidden Tab**: Throttled to every **10 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 10000`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L11)) via `document.visibilityState` listeners.
+  - **Cache Elimination**: All client requests include a dynamic `_t={Date.now()}` query parameter, ensuring spectator polling and manual refreshes never serve stale CDN or browser cache.
 
 ### 4.3 Role Separation & URL Schema
 1. **Spectator (Viewer) Link**:

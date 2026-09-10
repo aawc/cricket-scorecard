@@ -328,3 +328,16 @@ Successfully injected 8 assets into dist/sw.js
 | **2nd Innings State Transition Handler** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575) | Implemented `startNextInnings()` dispatching `START_NEXT_INNINGS` to flip batting/bowling teams, reset live figures, and populate 2nd innings rosters. | `[PASS] Implemented` |
 | **Innings Summary Duplicate Prevention** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L770) | Prevents duplicate rendering of live innings alongside archived Innings 1 in Full Scorecard mode during innings breaks. | `[PASS] Implemented` |
 | **Automated Bug Reproduction & Verification (Test 81)** | [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2595) | Recreated exact user diagnostic payload verifying banner display, control locking, clean 2nd innings transition, and player dropdown population. | `[PASS] Implemented` |
+
+---
+
+## 8. Milestone 10: Live Sync Polling Cadence, Edge Cache Elimination & Instant Refresh
+
+| Enhancement | Module | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **Edge Cache Elimination** | [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L84) | Replaced `stale-while-revalidate=4` with `Cache-Control: no-cache, no-store, must-revalidate, max-age=0`, `Pragma: no-cache`, `Expires: 0` to prevent CDN and browser caching of live matches. | `[PASS] Implemented` |
+| **Client-Side Cache-Busting & no-store** | [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L137), [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L224) | Added dynamic `?_t=${Date.now()}` query parameter, `cache: 'no-store'`, and `Pragma: no-cache` headers to all storage provider `fetchPacket` requests. | `[PASS] Implemented` |
+| **Optimized Polling & Debounce Cadence** | [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10) | Reduced active polling interval from 3500ms to 1500ms (1.5s) and debounce from 250ms to 150ms for sub-2s score delivery to spectators. | `[PASS] Implemented` |
+| **Service Worker API Bypass** | [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45) | Explicitly excluded `/api/match/`, `action=fetch`, `_t=`, and cloud backend hosts from Service Worker interception and caching. | `[PASS] Implemented` |
+| **Instant Manual Refresh Synchronization** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1820), [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2675) | Verified immediate score update upon spectator manual refresh action without stale caching or lag. | `[PASS] Implemented` |
+

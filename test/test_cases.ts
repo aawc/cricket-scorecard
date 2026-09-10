@@ -48,6 +48,9 @@ declare var DEFAULT_TTL_SECONDS: number;
 declare var DEFAULT_TTL_MS: number;
 declare var FOUR_WEEKS_SECONDS: number;
 declare var FOUR_WEEKS_MS: number;
+declare var ACTIVE_POLL_INTERVAL_MS: number;
+declare var BACKGROUND_POLL_INTERVAL_MS: number;
+declare var DEBOUNCE_SYNC_MS: number;
 declare type LiveStorageProvider = any;
 declare function generateMatchId(): string;
 declare function generateWriteKey(): string;
@@ -70,6 +73,7 @@ declare function handleStartLiveStream(): void;
 declare function handleStopLiveStream(): void;
 declare function handleCopySpectatorUrl(): void;
 declare function handleCopyUmpireUrl(): void;
+declare function handleSpectatorManualRefresh(): void;
 declare function updateLiveIndicators(): void;
 
 const doc = document as any;
@@ -2671,6 +2675,159 @@ console.log("Running Test 56...");
     if (gameState.match.liveInnings.score !== 4 || gameState.match.liveInnings.batsmen["A"].runs !== 4) {
         console.error("Test 81 Failed: Scoring 4 runs in 2nd innings failed, got score:", gameState.match.liveInnings.score);
         process.exit(1);
+    }
+
+    // Test 82: Live Sync Polling Cadence, HTTP Cache Elimination & Manual Refresh
+    {
+        console.log("Running Test 82 (Live Sync Polling Cadence, Cache Elimination & Instant Refresh)...");
+        resetTestState();
+
+        // 1. Verify Polling & Debounce Constants
+        if (ACTIVE_POLL_INTERVAL_MS !== 1500) {
+            console.error("Test 82 Failed: ACTIVE_POLL_INTERVAL_MS must be 1500ms, got:", ACTIVE_POLL_INTERVAL_MS);
+            process.exit(1);
+        }
+        if (BACKGROUND_POLL_INTERVAL_MS !== 10000) {
+            console.error("Test 82 Failed: BACKGROUND_POLL_INTERVAL_MS must be 10000ms, got:", BACKGROUND_POLL_INTERVAL_MS);
+            process.exit(1);
+        }
+        if (DEBOUNCE_SYNC_MS !== 150) {
+            console.error("Test 82 Failed: DEBOUNCE_SYNC_MS must be 150ms, got:", DEBOUNCE_SYNC_MS);
+            process.exit(1);
+        }
+
+        // 2. Decode and verify reported bug state permalink
+        const bugPermalinkPayload = "N4IgDgFiBcIAoBkCCBNAkgOQOIH1McywGUQAaEAZxlAHswBLGAFnIFsaAjGAJnIEMKXaAEZyAUwA2QgAzkALlFgT6AcwhyQAXzbUQAY0Yjyejhui8Qc4boB2MEABUxfVgAJr5MDADaIJGRAAIQCAYRAAXXJ6O2hvcO1Lblt7JxdXJM8fEAARAIBRAIAxCKiYuITlXQo9GGEANnIAd1ryIQBOcQAPXUaAExhZEBsZVoBPAfIpAYSOPjNQAuhQACdahpAhAA5yADMJyn2+afJipZBV6EGhURA9y-Iqe5Ajy4Tcs4ur-bvBx8GX4SaGY0RoSXTBD61ADMrRg60aAGt9qx9n19sNjn5dBcYRsYLjES0QCinminhjXgkTNZYAVjBwkrBcvSaPZ-J4OKzYMFyJwssVIiAaAA3HygTn2HkbMGxEAZOUBeVKgJQiKaQU0GW+eUeEAAdRKt2asVAxpuj3qsNgxV5otgwgAdKr1Qk5CoYDYAK4SCRsLnSIFAA";
+        const decompressedJson = lzDecompressFromEncodedURIComponent(bugPermalinkPayload);
+        const parsedMinified = JSON.parse(decompressedJson);
+        const restoredGameState = unminifyState(parsedMinified);
+
+        if (restoredGameState.match.team1.name !== "Team 1" || restoredGameState.match.team2.name !== "Team 2") {
+            console.error("Test 82 Failed: Team names mismatch from reported payload:", restoredGameState.match.team1, restoredGameState.match.team2);
+            process.exit(1);
+        }
+        if (restoredGameState.match.liveInnings.score !== 16 || restoredGameState.match.liveInnings.wickets !== 1) {
+            console.error("Test 82 Failed: Score mismatch from reported payload (expected 16/1):", restoredGameState.match.liveInnings);
+            process.exit(1);
+        }
+        if (restoredGameState.match.liveInnings.balls !== 9 || restoredGameState.match.liveInnings.overs.length !== 1) {
+            console.error("Test 82 Failed: Balls count mismatch from reported payload (expected 9 balls / 1 completed over):", restoredGameState.match.liveInnings.balls, restoredGameState.match.liveInnings.overs.length);
+            process.exit(1);
+        }
+
+        // 3. Verify Cache-Busting Query Parameter and no-store Headers on CloudflareKVStorageProvider.fetchPacket
+        let lastFetchedUrl = '';
+        let lastFetchOptions: any = null;
+        const originalFetch = (global as any).fetch;
+
+        (global as any).fetch = async (url: string, options: any) => {
+            lastFetchedUrl = url;
+            lastFetchOptions = options;
+            const mockPacket = {
+                version: 1,
+                matchId: "m_test_cache",
+                seq: 1,
+                updatedAt: Date.now(),
+                createdAt: Date.now(),
+                expiresAt: Date.now() + 31536000000,
+                ttlSeconds: 31536000,
+                writeKeyHash: "test_hash",
+                state: minifyState(restoredGameState)
+            };
+            return {
+                ok: true,
+                status: 200,
+                json: async () => {
+                    if (url.includes('script.google.com') || url.includes('action=fetch')) {
+                        return { success: true, packet: mockPacket };
+                    }
+                    return mockPacket;
+                }
+            };
+        };
+
+        const cfProvider = new CloudflareKVStorageProvider('https://cricket-scorecard-live.khaneja.org/api/');
+        const cfFetchResult = await cfProvider.fetchPacket('m_test_cache');
+
+        if (!cfFetchResult.success || !cfFetchResult.packet) {
+            console.error("Test 82 Failed: cfProvider.fetchPacket failed:", cfFetchResult);
+            process.exit(1);
+        }
+        if (!lastFetchedUrl.includes('_t=') || !lastFetchedUrl.includes('/api/match/m_test_cache')) {
+            console.error("Test 82 Failed: Cloudflare fetch URL missing cache-busting timestamp _t parameter:", lastFetchedUrl);
+            process.exit(1);
+        }
+        if (lastFetchOptions?.cache !== 'no-store' || lastFetchOptions?.headers?.['Cache-Control'] !== 'no-cache, no-store, must-revalidate') {
+            console.error("Test 82 Failed: Cloudflare fetch options missing cache: 'no-store' or Cache-Control headers:", lastFetchOptions);
+            process.exit(1);
+        }
+
+        // 4. Verify Cache-Busting Query Parameter on GoogleSheetsStorageProvider.fetchPacket
+        const gsProvider = new GoogleSheetsStorageProvider('https://script.google.com/macros/s/AKfycbz_test/exec');
+        const gsFetchResult = await gsProvider.fetchPacket('m_test_gs');
+
+        if (!gsFetchResult.success || !gsFetchResult.packet) {
+            console.error("Test 82 Failed: gsProvider.fetchPacket failed:", gsFetchResult);
+            process.exit(1);
+        }
+        if (!lastFetchedUrl.includes('_t=') || !lastFetchedUrl.includes('action=fetch') || !lastFetchedUrl.includes('matchId=m_test_gs')) {
+            console.error("Test 82 Failed: Google Sheets fetch URL missing cache-busting timestamp _t parameter:", lastFetchedUrl);
+            process.exit(1);
+        }
+        if (lastFetchOptions?.cache !== 'no-store' || lastFetchOptions?.headers?.['Cache-Control'] !== 'no-cache, no-store, must-revalidate') {
+            console.error("Test 82 Failed: Google Sheets fetch options missing cache: 'no-store' or Cache-Control headers:", lastFetchOptions);
+            process.exit(1);
+        }
+
+        // Restore fetch
+        (global as any).fetch = originalFetch;
+
+        // 5. Test Live Streaming Flow & Instant Manual Refresh Synchronization
+        const liveMemoryStore = new MemoryStorageProvider();
+        setLiveStorageProvider(liveMemoryStore);
+
+        setGameState(JSON.parse(JSON.stringify(restoredGameState)));
+        updateUI();
+
+        // Start live session as Umpire
+        const sessionInfo = startLiveSession(gameState, 'm_sync_refresh_test', 'k_secret_write_key_123');
+        if (!sessionInfo.matchId || !sessionInfo.writeKey) {
+            console.error("Test 82 Failed: startLiveSession failed to return match credentials:", sessionInfo);
+            process.exit(1);
+        }
+        await syncStateIfLive(gameState, true);
+
+        // Spectator joins match
+        let spectatorReceivedState: any = null;
+        const unsubSpectator = joinSpectatorSession(sessionInfo.matchId, (received) => {
+            spectatorReceivedState = received;
+        });
+
+        // Initial fetch should synchronize initial score 16/1
+        await new Promise(r => setTimeout(r, 50));
+        if (!spectatorReceivedState || spectatorReceivedState.match.liveInnings.score !== 16) {
+            console.error("Test 82 Failed: Spectator initial sync failed, expected score 16, got:", spectatorReceivedState?.match?.liveInnings?.score);
+            process.exit(1);
+        }
+
+        // Remote umpire scores 4 runs (16 -> 20) and syncs packet to edge store
+        const updatedGameState = JSON.parse(JSON.stringify(restoredGameState));
+        updatedGameState.match.liveInnings.score = 20;
+        updatedGameState.match.liveInnings.batsmen["D"].runs += 4;
+        const updatedPacket = createLiveMatchPacket(sessionInfo.matchId, sessionInfo.writeKey, 2, updatedGameState);
+        await liveMemoryStore.savePacket(sessionInfo.matchId, sessionInfo.writeKey, updatedPacket);
+
+        // Spectator executes instant manual refresh
+        handleSpectatorManualRefresh();
+        await new Promise(r => setTimeout(r, 50));
+
+        if (gameState.match.liveInnings.score !== 20) {
+            console.error("Test 82 Failed: Spectator manual refresh failed to instantly update score to 20, got:", gameState.match.liveInnings.score);
+            process.exit(1);
+        }
+
+        unsubSpectator();
+        stopLiveSync();
     }
 
     console.log("All tests passed!");

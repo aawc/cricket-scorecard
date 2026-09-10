@@ -43,6 +43,20 @@ self.addEventListener('activate', event => {
 
 // Fetch Event
 self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+
+    // Bypass caching for live sync API endpoints and dynamic cloud storage providers
+    if (
+        url.pathname.includes('/api/match/') ||
+        url.searchParams.has('action') ||
+        url.searchParams.has('_t') ||
+        url.hostname.includes('script.google.com') ||
+        url.hostname.includes('workers.dev') ||
+        url.hostname.includes('khaneja.org')
+    ) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then(cachedResponse => {
@@ -54,3 +68,4 @@ self.addEventListener('fetch', event => {
             })
     );
 });
+

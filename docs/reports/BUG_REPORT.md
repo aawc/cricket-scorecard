@@ -2,7 +2,7 @@
 
 **Repository**: `cricket-scorecard-pwa`  
 **Date**: 2026-09-07  
-**Status**: `[PASS]` All 41 Automated Tests Passing  
+**Status**: `[PASS]` Automated Tests Passing  
 **Build**: `v20260907-001`  
 
 ---
@@ -214,5 +214,27 @@ All tests passed!
   4. Updated `populateDropdown` handling during `INNINGS_BREAK` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870) to prompt "Innings Break - Click 'Start 2nd Innings'".
   5. Updated `generateScorecardSummary()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L770) to prevent duplicate innings rendering during `INNINGS_BREAK`.
 - **Verification**: `[PASS]` Verified by automated Test 81 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2595) reproducing the exact bug report state payload and asserting banner visibility, control locking, clean 2nd innings transition, and player dropdown population for both teams.
+
+---
+
+### 9. Live Sync Polling Lag & Stale HTTP Cache on Spectator Refresh
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Test 82)
+- **Affected Components**: [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10), [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L84), [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45)
+- **Diagnostic Context**:
+  - Bug Report: 2026-09-10T06:36:30.325Z | App Version `v20260908-004`
+  - Feedback: "Score updates are so slow that they appear to not be happening automatically - there seems to be a 10+ second lag, and the score doesn't always update even after hitting refresh (shows stale state still)"
+  - Payload: Score `16 / 1` in 1.3 overs (Team 2 batting, Team 1 bowling).
+- **Root Cause**:
+  1. **Edge CDN `Cache-Control` Header in Edge Worker** ([`backend/cloudflare/worker.js#L84`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L84)): Returned `'Cache-Control': 'public, max-age=1, stale-while-revalidate=4'`. When spectators polled or refreshed, the browser and edge CDN served stale cached responses for up to 4–5 seconds instead of querying the Cloudflare KV store.
+  2. **Missing `cache: 'no-store'` & Timestamp Query Parameter in Storage Providers** ([`src/sync.ts#L137`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L137), [`src/sync.ts#L224`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L224)): In `CloudflareKVStorageProvider.fetchPacket` and `GoogleSheetsStorageProvider.fetchPacket`, `fetch()` was invoked without cache-busting timestamp queries (`?_t=...`), `cache: 'no-store'`, or `Pragma: no-cache` headers. Repeated requests hit the browser memory/disk cache.
+  3. **Overly Conservative Polling Cadence** ([`src/sync.ts#L10`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10)): Active tab polling was set to 3500ms and umpire sync debounce to 250ms. Compounded by 4–5s stale HTTP caching, spectator score updates took 10+ seconds.
+  4. **Service Worker Interception** ([`public/sw.js#L45`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45)): `public/sw.js` fetch listener did not explicitly bypass live sync API endpoints (`/api/match/`, `action=fetch`, `_t=`, `script.google.com`, `workers.dev`, `khaneja.org`).
+- **Resolution**:
+  1. Updated [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L84) GET handler to return `'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0'`, `'Pragma': 'no-cache'`, and `'Expires': '0'`.
+  2. Updated [`CloudflareKVStorageProvider.fetchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L137) and [`GoogleSheetsStorageProvider.fetchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L224) in `src/sync.ts` to append dynamic `_t=${Date.now()}` query parameters, pass `cache: 'no-store'`, and set request headers `'Cache-Control': 'no-cache, no-store, must-revalidate'` and `'Pragma': 'no-cache'`.
+  3. Optimized polling cadence in [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10): Decreased `ACTIVE_POLL_INTERVAL_MS` to 1500ms (1.5s) for real-time live score propagation, `DEBOUNCE_SYNC_MS` to 150ms for umpire action streaming, and `BACKGROUND_POLL_INTERVAL_MS` to 10000ms (10s) for background tabs.
+  4. Added explicit bypass in [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45) fetch listener for `/api/match/`, `action=fetch`, `_t=`, and cloud backend hosts.
+- **Verification**: `[PASS]` Verified by automated Test 82 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2675) reproducing the reported payload, validating cache-busting headers and query parameters, and asserting immediate state synchronization on manual refresh.
 
 

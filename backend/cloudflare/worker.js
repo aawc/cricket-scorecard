@@ -82,7 +82,9 @@ export default {
       }
 
       return jsonResponse(packet, 200, {
-        'Cache-Control': 'public, max-age=1, stale-while-revalidate=4'
+        'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
       });
     }
 
