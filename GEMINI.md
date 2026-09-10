@@ -29,6 +29,7 @@ The codebase is organized into modular TypeScript units under `src/`:
 8. **Release Notes View (`src/release_notes.ts`)**: Dynamic modal rendering for changelogs, highlights, commit lists, and version badge interactions.
 9. **Diagnostic Feedback (`src/feedback.ts`)**: In-app bug report compiler, runtime error logger, and GitHub Issue generator.
 10. **UI Controller (`src/ui.ts`)**: DOM event binding, scoring keypad, player selectors, scoreboard tables, and flip card animation.
+11. **v2 Event-Sourced Core & Analytics (`src/v2/`)**: Event-sourced `DeliveryEvent` stream, pure mathematical statistical projection engine (`src/v2/stats.ts`), zero-dependency SVG charts (`src/v2/charts.ts`), hardware integration (`src/v2/hardware.ts`), data portability exports (`src/v2/export.ts`), and legacy adapter bridge (`src/v2/bridge.ts`).
 
 ---
 

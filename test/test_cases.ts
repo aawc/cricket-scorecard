@@ -3164,6 +3164,12 @@ console.log("Running Test 56...");
         stopLiveSync();
     }
 
+    // =========================================================================
+    // V2 Architecture & Feature Suite Tests (Tests 85 - 89)
+    // =========================================================================
+    const { runV2Tests } = await import('./v2_test_cases.js');
+    await runV2Tests();
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {

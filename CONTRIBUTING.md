@@ -40,6 +40,7 @@ The Cricket Scorecard is built as a zero-cost, offline-first Progressive Web App
 | **Release Notes Controller** | [`src/release_notes.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/release_notes.ts#L1) | Dynamic modal rendering for changelogs, highlights, commit lists, and version badge interactions. |
 | **Diagnostic Feedback** | [`src/feedback.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L1) | In-app bug report compiler, runtime error logger, and GitHub Issue generator. |
 | **UI Orchestration** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1) | DOM event binding, scoring keypad, player selectors, scoreboard tables, and flip card animation. |
+| **v2 Event-Sourced Core & Analytics** | [`src/v2/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2#L1) | Delivery event streaming, pure statistical projection engine (`stats.ts`), SVG visual charts (`charts.ts`), hardware integrations (`hardware.ts`), CSV/JSON exporters (`export.ts`), and adapter bridge (`bridge.ts`). |
 
 ---
 

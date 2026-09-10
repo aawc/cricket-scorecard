@@ -20,6 +20,7 @@ The application is structured as a TypeScript Progressive Web App, utilizing Vit
   - `src/release_notes.ts`: Release notes modal rendering, highlights, commit manifest streams, and version badge event bindings.
   - `src/feedback.ts`: Bug reporting engine and diagnostic Markdown generator.
   - `src/ui.ts`: Cached DOM selectors, event listeners, and UI rendering bindings.
+  - `src/v2/`: Event-sourced domain architecture, pure projection engine, SVG charts, hardware integration, and data exporters (see [`docs/architecture/V2_ARCHITECTURE_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/V2_ARCHITECTURE_REPORT.md#L1)).
   - `scripts/release.js`: Automated release management CLI with semantic tagging, commit compilation, and git tag push.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
 - **PWA Capabilities**: Service Worker (`sw.js`) compiled into `dist/` root, caching static assets for offline capability; Web App Manifest (`manifest.json`) for installation.

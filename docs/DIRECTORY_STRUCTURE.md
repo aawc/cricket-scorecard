@@ -28,7 +28,8 @@ cricket-scorecard/
 │   ├── DIRECTORY_STRUCTURE.md       # This file: Authoritative repository layout rules
 │   ├── architecture/                # System designs & state machine specifications
 │   │   ├── DESIGN.md                # Cricket scoring rules & UI/UX architecture
-│   │   └── LIVE_SYNC_DESIGN.md      # Zero-cost live streaming architecture & sync protocol
+│   │   ├── LIVE_SYNC_DESIGN.md      # Zero-cost live streaming architecture & sync protocol
+│   │   └── V2_ARCHITECTURE_REPORT.md # Comprehensive v2 domain & event-sourced architecture blueprint
 │   ├── deployment/                  # Hosting & cloud infrastructure guides
 │   │   └── DEPLOYMENT_AND_BACKEND_SETUP.md # Deployment manual for Pages, Workers, and GAS
 │   ├── reports/                     # Bug ledgers & improvement roadmaps
@@ -58,10 +59,18 @@ cricket-scorecard/
 │   ├── sync.ts                      # Cloudflare KV & Apps Script live streaming sync provider
 │   ├── types.ts                     # TypeScript domain interfaces & action types
 │   ├── ui.ts                        # DOM event controller, scoreboard & keypad bindings
-│   └── version.ts                   # Semantic versioning authority (v$yyyy.$mm.$nnn)
+│   ├── version.ts                   # Semantic versioning authority (v$yyyy.$mm.$nnn)
+│   └── v2/                          # v2 Event-Sourced Domain & Analytics Modules
+│       ├── bridge.ts                # Legacy GameState <-> DeliveryEvent stream adapter
+│       ├── charts.ts                # Zero-dependency SVG Match Worm & Manhattan charts
+│       ├── export.ts                # Monospace ASCII, ball-by-ball CSV & JSON match exports
+│       ├── hardware.ts              # Screen Wake Lock, Web Haptics & Audio Synthesizer
+│       ├── stats.ts                 # Pure projection engine (wickets, maidens, partnerships)
+│       └── types.ts                 # Event-sourced DeliveryEvent schemas & interfaces
 ├── test/                            # Automated Unit & Regression Test Suites
 │   ├── test.ts                      # Test harness & JSDOM test runner
-│   └── test_cases.ts                # Test cases asserting cricket logic, live sync, and state transitions
+│   ├── test_cases.ts                # Core regression test cases (Tests 1–84)
+│   └── v2_test_cases.ts             # v2 Architecture & Analytics test suite (Tests 85–89)
 ├── .gitignore                       # Git ignore patterns
 ├── CONTRIBUTING.md                  # Comprehensive developer & contributor onboarding guide
 ├── GEMINI.md                        # AI developer pairing guide & workspace rules

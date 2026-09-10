@@ -35,6 +35,14 @@
                         <span class="pill-icon">➕</span>
                         <span class="pill-label">New Match</span>
                     </button>
+                    <button id="wakelock-btn" class="nav-pill-btn" title="Keep screen awake (Screen Wake Lock)">
+                        <span class="pill-icon">💡</span>
+                        <span class="pill-label">Screen On</span>
+                    </button>
+                    <button id="haptics-btn" class="nav-pill-btn" title="Toggle tactile haptics & audio feedback">
+                        <span class="pill-icon">📳</span>
+                        <span class="pill-label">Haptics</span>
+                    </button>
                     <button id="live-stream-btn" class="nav-pill-btn" title="Live broadcast & stream">
                         <span class="pill-icon">📡</span>
                         <span class="pill-label">Live</span>
@@ -203,104 +211,145 @@
                                 </button>
                             </div>
 
-                            <!-- Live Scorecard Tables -->
-                            <div class="live-tables-container">
-                                <!-- Batters Scorecard Table -->
-                                <div class="cric-table-card">
-                                    <div class="cric-table-head">
-                                        <span class="col-batter">Batter</span>
-                                        <span class="col-stat">R (B)</span>
+                            <!-- Subtabs Nav for Scoring vs Analytics -->
+                            <div class="cric-subtabs-nav" role="tablist">
+                                <button id="tab-scoring-btn" class="cric-subtab-btn active" role="tab" aria-selected="true" aria-controls="pane-scoring">
+                                    🏏 Scoring
+                                </button>
+                                <button id="tab-analytics-btn" class="cric-subtab-btn" role="tab" aria-selected="false" aria-controls="pane-analytics">
+                                    📈 Analytics & Charts
+                                </button>
+                            </div>
+
+                            <!-- Pane 1: Scoring Center -->
+                            <div id="pane-scoring" class="cric-subtab-pane">
+                                <!-- Live Scorecard Tables -->
+                                <div class="live-tables-container">
+                                    <!-- Batters Scorecard Table -->
+                                    <div class="cric-table-card">
+                                        <div class="cric-table-head">
+                                            <span class="col-batter">Batter</span>
+                                            <span class="col-stat">R (B)</span>
+                                        </div>
+
+                                        <!-- Striker Row (Batsman 1) -->
+                                        <div id="batsman1-container" class="cric-player-row batsman">
+                                            <div class="player-select-wrap">
+                                                <span class="strike-marker">●</span>
+                                                <select id="batsman1-select" class="cric-player-select" aria-label="Select Striker Batsman"></select>
+                                            </div>
+                                            <div class="player-stat-wrap">
+                                                <span id="batsman1-stats" class="cric-stat-badge">0 (0)</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Non-Striker Row (Batsman 2) -->
+                                        <div id="batsman2-container" class="cric-player-row batsman">
+                                            <div class="player-select-wrap">
+                                                <span class="strike-marker">●</span>
+                                                <select id="batsman2-select" class="cric-player-select" aria-label="Select Non-Striker Batsman"></select>
+                                            </div>
+                                            <div class="player-stat-wrap">
+                                                <span id="batsman2-stats" class="cric-stat-badge">0 (0)</span>
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    <!-- Striker Row (Batsman 1) -->
-                                    <div id="batsman1-container" class="cric-player-row batsman">
-                                        <div class="player-select-wrap">
-                                            <span class="strike-marker">●</span>
-                                            <select id="batsman1-select" class="cric-player-select" aria-label="Select Striker Batsman"></select>
+                                    <!-- Bowler Scorecard Table -->
+                                    <div class="cric-table-card">
+                                        <div class="cric-table-head">
+                                            <span class="col-bowler">Current Bowler</span>
+                                            <span class="col-stat">W/R (Ov)</span>
                                         </div>
-                                        <div class="player-stat-wrap">
-                                            <span id="batsman1-stats" class="cric-stat-badge">0 (0)</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Non-Striker Row (Batsman 2) -->
-                                    <div id="batsman2-container" class="cric-player-row batsman">
-                                        <div class="player-select-wrap">
-                                            <span class="strike-marker">●</span>
-                                            <select id="batsman2-select" class="cric-player-select" aria-label="Select Non-Striker Batsman"></select>
-                                        </div>
-                                        <div class="player-stat-wrap">
-                                            <span id="batsman2-stats" class="cric-stat-badge">0 (0)</span>
+                                        <div class="cric-player-row bowler bowler-display">
+                                            <div class="player-select-wrap">
+                                                <span class="bowler-badge-icon">🎯</span>
+                                                <select id="bowler-select" class="cric-player-select" aria-label="Select Bowler"></select>
+                                            </div>
+                                            <div class="player-stat-wrap">
+                                                <span id="bowler-stats" class="cric-stat-badge">0/0 (0.0)</span>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <!-- Bowler Scorecard Table -->
-                                <div class="cric-table-card">
-                                    <div class="cric-table-head">
-                                        <span class="col-bowler">Current Bowler</span>
-                                        <span class="col-stat">W/R (Ov)</span>
+                                <!-- Recent Deliveries Strip -->
+                                <div class="recent-balls-card">
+                                    <div class="recent-label">RECENT</div>
+                                    <div id="over-log" class="recent-chips-stream"></div>
+                                </div>
+
+                                <!-- Extras Summary Strip -->
+                                <div class="cric-extras-strip">
+                                    Extras: <strong id="extras-total">0</strong> 
+                                    <span class="extras-details">(Wd: <span id="wides-display">0</span>, Nb: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, Lb: <span id="legbyes-display">0</span>)</span>
+                                </div>
+
+                                <!-- Selection Helper Banner -->
+                                <div id="selection-warning" class="cric-selection-alert d-none">
+                                    ⚠️ Select active batsmen and bowler above to begin scoring
+                                </div>
+
+                                <!-- Umpire Scoring Console (Tactile Keypad) -->
+                                <div id="controls-section" class="cric-keypad-console">
+                                    <!-- Primary Runs Row -->
+                                    <div class="keypad-grid-runs">
+                                        <button class="run-btn cric-key key-dot" data-runs="0">0</button>
+                                        <button class="run-btn cric-key key-single" data-runs="1">1</button>
+                                        <button class="run-btn cric-key key-double" data-runs="2">2</button>
+                                        <button class="run-btn cric-key key-triple" data-runs="3">3</button>
+                                        <button class="run-btn cric-key key-four" data-runs="4">4</button>
+                                        <button class="run-btn cric-key key-six" data-runs="6">6</button>
                                     </div>
-                                    <div class="cric-player-row bowler bowler-display">
-                                        <div class="player-select-wrap">
-                                            <span class="bowler-badge-icon">🎯</span>
-                                            <select id="bowler-select" class="cric-player-select" aria-label="Select Bowler"></select>
-                                        </div>
-                                        <div class="player-stat-wrap">
-                                            <span id="bowler-stats" class="cric-stat-badge">0/0 (0.0)</span>
-                                        </div>
+
+                                    <!-- Primary Deliveries Row -->
+                                    <div class="keypad-grid-deliveries">
+                                        <button id="wide-btn" class="cric-key key-extra-wide" title="Wide ball (+1 run, extra ball)">+1 Wd</button>
+                                        <button id="noball-btn" class="cric-key key-extra-noball" title="No ball (+1 run penalty)">+1 Nb</button>
+                                        <button id="wicket-btn" class="cric-key key-wicket-btn" title="Wicket (Bowled, Caught, LBW, Stumped)">Wkt</button>
+                                        <button id="runout-btn" class="cric-key key-runout-btn" title="Run out dismissal">Run Out</button>
+                                    </div>
+
+                                    <!-- Secondary Scoring Actions -->
+                                    <div class="keypad-grid-aux">
+                                        <button id="bye-btn" class="cric-key key-aux-btn" title="Bye runs">Bye</button>
+                                        <button id="legbye-btn" class="cric-key key-aux-btn" title="Leg bye runs">Leg Bye</button>
+                                        <button id="undo-btn" class="cric-key key-aux-undo" title="Undo last delivery">⤺ Undo</button>
+                                        <button id="trigger-end-innings-btn" class="cric-key key-aux-end" title="End innings early">End Innings</button>
                                     </div>
                                 </div>
+
+                                <!-- Completed Overs Collapsible Stream -->
+                                <div id="completed-overs-section" class="cric-completed-overs-container"></div>
                             </div>
 
-                            <!-- Recent Deliveries Strip -->
-                            <div class="recent-balls-card">
-                                <div class="recent-label">RECENT</div>
-                                <div id="over-log" class="recent-chips-stream"></div>
-                            </div>
-
-                            <!-- Extras Summary Strip -->
-                            <div class="cric-extras-strip">
-                                Extras: <strong id="extras-total">0</strong> 
-                                <span class="extras-details">(Wd: <span id="wides-display">0</span>, Nb: <span id="noballs-display">0</span>, B: <span id="byes-display">0</span>, Lb: <span id="legbyes-display">0</span>)</span>
-                            </div>
-
-                            <!-- Selection Helper Banner -->
-                            <div id="selection-warning" class="cric-selection-alert d-none">
-                                ⚠️ Select active batsmen and bowler above to begin scoring
-                            </div>
-
-                            <!-- Umpire Scoring Console (Tactile Keypad) -->
-                            <div id="controls-section" class="cric-keypad-console">
-                                <!-- Primary Runs Row -->
-                                <div class="keypad-grid-runs">
-                                    <button class="run-btn cric-key key-dot" data-runs="0">0</button>
-                                    <button class="run-btn cric-key key-single" data-runs="1">1</button>
-                                    <button class="run-btn cric-key key-double" data-runs="2">2</button>
-                                    <button class="run-btn cric-key key-triple" data-runs="3">3</button>
-                                    <button class="run-btn cric-key key-four" data-runs="4">4</button>
-                                    <button class="run-btn cric-key key-six" data-runs="6">6</button>
+                            <!-- Pane 2: Analytics & Charts -->
+                            <div id="pane-analytics" class="cric-subtab-pane d-none">
+                                <div class="cric-analytics-card">
+                                    <div class="analytics-card-head">
+                                        <span class="analytics-title">📊 Scoring Trajectory (Worm Chart)</span>
+                                    </div>
+                                    <div id="worm-chart-box" class="chart-embed-box"></div>
                                 </div>
-
-                                <!-- Primary Deliveries Row -->
-                                <div class="keypad-grid-deliveries">
-                                    <button id="wide-btn" class="cric-key key-extra-wide" title="Wide ball (+1 run, extra ball)">+1 Wd</button>
-                                    <button id="noball-btn" class="cric-key key-extra-noball" title="No ball (+1 run penalty)">+1 Nb</button>
-                                    <button id="wicket-btn" class="cric-key key-wicket-btn" title="Wicket (Bowled, Caught, LBW, Stumped)">Wkt</button>
-                                    <button id="runout-btn" class="cric-key key-runout-btn" title="Run out dismissal">Run Out</button>
+                                <div class="cric-analytics-card mt-3">
+                                    <div class="analytics-card-head">
+                                        <span class="analytics-title">📶 Over-by-Over Runs (Manhattan Chart)</span>
+                                    </div>
+                                    <div id="manhattan-chart-box" class="chart-embed-box"></div>
                                 </div>
-
-                                <!-- Secondary Scoring Actions -->
-                                <div class="keypad-grid-aux">
-                                    <button id="bye-btn" class="cric-key key-aux-btn" title="Bye runs">Bye</button>
-                                    <button id="legbye-btn" class="cric-key key-aux-btn" title="Leg bye runs">Leg Bye</button>
-                                    <button id="undo-btn" class="cric-key key-aux-undo" title="Undo last delivery">⤺ Undo</button>
-                                    <button id="trigger-end-innings-btn" class="cric-key key-aux-end" title="End innings early">End Innings</button>
+                                <div class="cric-analytics-card mt-3">
+                                    <div class="analytics-card-head">
+                                        <span class="analytics-title">🤝 Wicket Partnerships Breakdown</span>
+                                    </div>
+                                    <div id="partnerships-chart-box" class="chart-embed-box"></div>
+                                </div>
+                                <div class="cric-analytics-card mt-3">
+                                    <div class="analytics-card-head">
+                                        <span class="analytics-title">🎯 Run Rate Telemetry & Projections</span>
+                                    </div>
+                                    <div id="telemetry-box" class="p-3"></div>
                                 </div>
                             </div>
-
-                            <!-- Completed Overs Collapsible Stream -->
-                            <div id="completed-overs-section" class="cric-completed-overs-container"></div>
                         </section>
                     </div>
 
@@ -314,6 +363,7 @@
                                 </div>
                                 <div class="summary-btn-group">
                                     <button id="copy-summary-text-btn" class="btn-cric-outline">📋 Copy Text</button>
+                                    <button id="export-csv-btn" class="btn-cric-outline">📊 Export CSV</button>
                                     <button id="exit-screenshot-mode-btn" class="btn-cric-accent">✕ Exit Scorecard</button>
                                 </div>
                             </div>
