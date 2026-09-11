@@ -24,7 +24,7 @@ export function formatMonospaceScorecard(
   lines.push(divider);
 
   function printInnings(inngs: InningsProjection) {
-    lines.push(`\n📊 ${inngs.battingTeamName.toUpperCase()} - ${inngs.totalScore}/${inngs.totalWickets} (${inngs.oversFormatted} ov)`);
+    lines.push(`\n📊 ${inngs.battingTeamName.toUpperCase()} - ${inngs.totalScore}/${inngs.totalWickets} (${inngs.oversFormatted} / ${inngs.oversPerInnings} ov)`);
     lines.push(subDivider);
     lines.push(`BATSMAN                R    B   4s  6s     SR`);
     lines.push(subDivider);
@@ -44,7 +44,7 @@ export function formatMonospaceScorecard(
 
     lines.push(subDivider);
     lines.push(`Extras: ${inngs.extras.total} (wd: ${inngs.extras.wides}, nb: ${inngs.extras.noballs}, b: ${inngs.extras.byes}, lb: ${inngs.extras.legbyes})`);
-    lines.push(`Total:  ${inngs.totalScore}/${inngs.totalWickets} (${inngs.oversFormatted} Overs, CRR: ${inngs.runRate.toFixed(2)})`);
+    lines.push(`Total:  ${inngs.totalScore}/${inngs.totalWickets} (${inngs.oversFormatted} / ${inngs.oversPerInnings} Overs, CRR: ${inngs.runRate.toFixed(2)})`);
     lines.push(subDivider);
 
     if (inngs.bowlersList.length > 0) {

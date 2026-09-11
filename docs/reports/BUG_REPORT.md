@@ -300,5 +300,26 @@ All tests passed!
   3. Refactored `.flip-container`, `.front-face`, and `.back-face` in [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1091) so the currently active card face is in normal document flow (`position: relative`), allowing `.flip-container` to dynamically match the exact height of `#pane-analytics` and eliminate scrolling lockups.
 - **Verification**: `[PASS]` Verified by automated Test 90 in [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L325) asserting 2nd innings 0-run 1-ball partnership calculation and `0 (1b)` SVG rendering.
 
+---
+
+### 13. Projected Total Calculation Mismatch & Innings Total Overs Display
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Test 91)
+- **Affected Components**: [`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L496), [`src/v2/types.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/types.ts#L122), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L955), [`src/v2/export.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/export.ts#L27)
+- **Diagnostic Context**:
+  - Bug Report / Problem:
+    1. Projected Total in the Analytics telemetry card was displaying completely inflated numbers (e.g. 121 in a 4-over match where the team was 58/1 in 3.5 overs).
+    2. Scoreboard header and summary cards displayed current overs without indicating total overs in the innings (e.g. `Overs: 3.5` instead of `Overs: 3.5 / 4`).
+- **Root Cause Analysis**:
+  1. **Hardcoded Projected Total Reference**: In [`src/ui.ts#L956`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L956), the telemetry stat card displayed `activeInngs.projectedScores.at8Overs` regardless of match settings (`oversPerInnings`). In a 4-over match at CRR 15.13 rpo, it computed `15.13 * 8 = 121` instead of `15.13 * 4 = 61`.
+  2. **Missing Match Total Overs in Inngs Projections**: `projectedScores` lacked a dynamic `totalOvers` field calculated as $\text{round}(\text{CRR} \times \text{oversPerInnings})$, and `InningsProjection` omitted `oversPerInnings`.
+  3. **Overs Text Formatting**: In [`src/ui.ts#L1005`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1005), `oversDisplay.textContent` set `Overs: ${overs}.${balls}` without showing ` / ${totalOvers}`.
+- **Resolution**:
+  1. Updated `projectInnings()` in [`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L496) to compute dynamic `totalOvers` projection: `isCompleted ? totalScore : (legalBalls > 0 ? Math.round(crr * oversPerInnings) : 0)`, and added `oversPerInnings` to `InningsProjection`.
+  2. Updated `renderVisualAnalytics()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L955) to display `Projected Total (${gameState.settings.oversPerInnings} ov)` and bind `activeInngs.projectedScores.totalOvers`.
+  3. Updated `updateUI()` and `generateSummaryView()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1002) to format overs as `Overs: ${overs}.${balls} / ${totalOvers}` and `(${overs}.${balls} / ${totalOvers} ov)`.
+  4. Updated monospace scorecard export in [`src/v2/export.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/export.ts#L27) to output `(${inngs.oversFormatted} / ${inngs.oversPerInnings} ov)`.
+- **Verification**: `[PASS]` Verified by automated Test 91 in [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L371) asserting `oversPerInnings === 4`, `projectedScores.totalOvers === 61`, zero-ball edge case safety, and monospace scorecard format.
+
 
 

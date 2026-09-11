@@ -761,7 +761,8 @@ export function generateSummaryView(): void {
             const scoreP = document.createElement('p');
             const overs = Math.floor(inningsData.balls / 6);
             const balls = inningsData.balls % 6;
-            scoreP.innerHTML = `<strong>Score:</strong> ${inningsData.score}/${inningsData.wickets} (${overs}.${balls} ov)`;
+            const totalOvers = gameState.settings.oversPerInnings;
+            scoreP.innerHTML = `<strong>Score:</strong> ${inningsData.score}/${inningsData.wickets} (${overs}.${balls} / ${totalOvers} ov)`;
             inningsDiv.appendChild(scoreP);
 
             const batsmenTable = document.createElement('table');
@@ -952,8 +953,8 @@ export function renderAnalyticsCharts(): void {
                             </div>
                         ` : `
                             <div class="telemetry-stat-card">
-                                <div class="telemetry-stat-label">Projected Total</div>
-                                <div class="telemetry-stat-val">${activeInngs.projectedScores.at8Overs}</div>
+                                <div class="telemetry-stat-label">Projected Total (${gameState.settings.oversPerInnings} ov)</div>
+                                <div class="telemetry-stat-val">${activeInngs.projectedScores.totalOvers}</div>
                             </div>
                         `}
                         <div class="telemetry-stat-card">
@@ -1002,7 +1003,8 @@ export function updateUI(): void {
     
     const overs = Math.floor(live.balls / 6);
     const balls = live.balls % 6;
-    if (oversDisplay) oversDisplay.textContent = `Overs: ${overs}.${balls}`;
+    const totalOvers = gameState.settings.oversPerInnings;
+    if (oversDisplay) oversDisplay.textContent = `Overs: ${overs}.${balls} / ${totalOvers}`;
 
     // Target and status displays
     const isChasing = gameState.settings.totalInnings === 1 && gameState.match.currentInnings === 2;

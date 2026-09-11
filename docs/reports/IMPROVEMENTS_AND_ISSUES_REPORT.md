@@ -391,5 +391,17 @@ Successfully injected 8 assets into dist/sw.js
 | **3D Card Flip Height & Scrolling Fix** | [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1091) | Refactored `.flip-container`, `.front-face`, and `.back-face` so the currently active card face is in normal document flow (`position: relative`), allowing `.flip-container` to dynamically match the full height of `#pane-analytics` and prevent scrolling lockups. | `[PASS] Implemented` |
 | **Automated Regression Test (Test 90)** | [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L325) | Loaded user diagnostic payload verifying 2nd innings 0-run 1-ball partnership calculation and `0 (1b)` SVG rendering. | `[PASS] Implemented` |
 
+---
+
+## 13. Milestone 15: Projected Total & Total Overs Governance
+
+| Enhancement | Module | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **Dynamic Projected Total Engine** | [`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L496) | Replaced hardcoded 8-over calculation with dynamic `totalOvers` projection: `isCompleted ? totalScore : (legalBalls > 0 ? Math.round(crr * oversPerInnings) : 0)`, and added `oversPerInnings` to `InningsProjection`. | `[PASS] Implemented` |
+| **Telemetry Projected Stat Card** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L955) | Updated visual analytics telemetry card to display `Projected Total (${gameState.settings.oversPerInnings} ov)` and bind `activeInngs.projectedScores.totalOvers`. | `[PASS] Implemented` |
+| **Innings Total Overs Display** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1002) | Updated main live scoreboard (`#overs-display`) and innings summary views to show `Overs: ${overs}.${balls} / ${totalOvers}` and `(${overs}.${balls} / ${totalOvers} ov)`. | `[PASS] Implemented` |
+| **Monospace Scorecard Total Overs** | [`src/v2/export.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/export.ts#L27) | Included `(${inngs.oversFormatted} / ${inngs.oversPerInnings} ov)` in ASCII scorecard export. | `[PASS] Implemented` |
+| **Automated Regression Test (Test 91)** | [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L371) | Ingested diagnostic payload verifying `oversPerInnings === 4`, `projectedScores.totalOvers === 61`, zero-ball safety, and scorecard formatting. | `[PASS] Implemented` |
+
 
 
