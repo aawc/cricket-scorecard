@@ -63,17 +63,49 @@ export function synthesizeEventsFromLiveInnings(
 
       const norm = ballNotation.trim();
 
-      if (norm === 'W' || norm.startsWith('W(')) {
+      // Run-out tokens emitted by executeRunOutWicket in src/reducer.ts:
+      //   'W-RO'      => run out, no runs completed
+      //   '{N}+W-RO'  => N runs completed and credited to the striker
+      //   '{N}b+W-RO' => N runs completed and recorded as byes
+      // The delivery is legal and counts towards the over in every case.
+      const isRunOut = norm === 'W-RO' || norm.endsWith('+W-RO');
+
+      if (norm === 'W' || norm.startsWith('W(') || isRunOut) {
         isLegal = true;
         legalBallInOver++;
         const fowRecord = fowList[wicketIdx];
         const dismissedPlayer = fowRecord?.batsman || fowRecord?.b || activeStriker;
         wicketIdx++;
 
+        let completedRuns = 0;
+        if (isRunOut && norm !== 'W-RO') {
+          // Validate rather than slice blindly, and surface anomalies instead of
+          // silently degrading to 'bye with 0 runs'.
+          const parsedRunOut = norm.match(/^(\d+)(b?)\+W-RO$/);
+          if (!parsedRunOut) {
+            console.warn('[bridge] Unparseable run-out token; treating as 0 completed runs:', norm);
+          } else {
+            completedRuns = parseInt(parsedRunOut[1], 10);
+            if (parsedRunOut[2] === 'b') {
+              extraType = 'bye';
+              runsExtra = completedRuns;
+            } else {
+              runsBat = completedRuns;
+            }
+            // Runs physically completed before the dismissal rotate the strike.
+            if (completedRuns % 2 !== 0) strikeRotated = true;
+          }
+        }
+
         wicket = {
-          kind: norm.includes('ro') ? 'runout' : 'bowled',
+          // Only the '-RO' suffix denotes a run out. A bare substring probe for
+          // 'ro' would match any fielder or bowler name inside a 'W(...)' token
+          // (Root, Rohit, Rossouw), misclassifying a genuine bowled or caught
+          // dismissal as a run out and denying the bowler a wicket he earned.
+          // 'runout' is excluded from isBowlerWicket(), so credit is withheld.
+          kind: isRunOut ? 'runout' : 'bowled',
           dismissedPlayer,
-          runsCompletedBeforeDismissal: 0
+          runsCompletedBeforeDismissal: completedRuns
         };
       } else if (norm.startsWith('wd') || norm.startsWith('nb')) {
         // Legacy notation grammar emitted by the FINALIZE_DELIVERY reducer branch:

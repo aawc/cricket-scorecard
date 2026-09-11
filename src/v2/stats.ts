@@ -98,8 +98,11 @@ export function formatDismissalText(kind: DismissalKind, bowler: string, fielder
 export function formatDeliveryNotation(ball: DeliveryEvent): string {
   if (ball.wicket) {
     if (ball.wicket.kind === 'runout') {
+      // Mirror executeRunOutWicket in src/reducer.ts: 'W-RO', '{N}+W-RO' for
+      // runs credited to the striker, '{N}b+W-RO' when they were byes.
       const runs = ball.wicket.runsCompletedBeforeDismissal || 0;
-      return runs > 0 ? `${runs}+ro` : `W(ro)`;
+      if (runs <= 0) return 'W-RO';
+      return ball.extraType === 'bye' ? `${runs}b+W-RO` : `${runs}+W-RO`;
     }
     return 'W';
   }

@@ -555,5 +555,126 @@ export async function runV2Tests(): Promise<void> {
     }
   }
 
+  // =========================================================================
+  // Test 93: v2 Regression - Run-Out Notation Parsing & Bowler Wicket Credit
+  // =========================================================================
+  {
+    console.log("Running Test 93 (v2 Regression: Run-Out Notation Parsing & Bowler Wicket Credit)...");
+
+    // Four-man batting side so replacements exist. Over log exercises all three
+    // run-out forms:
+    //   '3+W-RO'  -> 3 bat runs completed, then the NON-striker (B) is run out.
+    //                Odd runs, so the strike rotates.
+    //   '2b+W-RO' -> 2 byes completed, then the striker (E) is run out.
+    //   'W-RO'    -> no runs, striker (F) run out.
+    // Because B is run out while A is on strike, the fall-of-wickets name can
+    // only come from the `fw` records; the activeStriker fallback would say 'A'.
+    const rawMinified = {"ph":"PLAYING_INNINGS","s":{"opi":4,"mob":2,"asb":0,"elb":0,"th":"light"},"m":{"ci":1,"cbt":1,"t1":{"n":"Team 1","p":["A","B","E","F"],"in":[]},"t2":{"n":"Team 2","p":["C","D"],"in":[]},"li":{"sc":5,"w":3,"b":3,"ex":{"wd":0,"nb":0,"by":2,"lb":0},"bat":{"A":{"r":3,"b":1,"f":0,"s":0,"a":1},"B":{"r":0,"b":0,"f":0,"s":0,"a":0},"E":{"r":0,"b":1,"f":0,"s":0,"a":0},"F":{"r":0,"b":1,"f":0,"s":0,"a":0}},"bowl":{"C":{"r":3,"b":3,"wk":0,"m":0,"wd":0,"nb":0}},"cb1":"A","cb2":"B","cbo":"C","pbo":"","ob":[],"ov":[],"ol":["3+W-RO","2b+W-RO","W-RO"],"fw":[{"w":1,"s":3,"b":"B","ov":"0.1"},{"w":2,"s":5,"b":"E","ov":"0.2"},{"w":3,"s":5,"b":"F","ov":"0.3"}]},"tg":null,"mo":0}};
+
+    const state = unminifyState(rawMinified);
+    const projections = getProjectionsFromGameState(state);
+    const inngs = projections.innings1;
+
+    // All three run-outs must register. Previously 'W-RO' matched no branch and
+    // was dropped, while '2b+W-RO' was captured by the bye branch and read as 2
+    // plain byes with the wicket lost entirely.
+    if (inngs.totalWickets !== 3) {
+      console.error("Test 93 Failed: Expected 3 run-out wickets, got:", inngs.totalWickets);
+      process.exit(1);
+    }
+    if (inngs.totalScore !== 5 || inngs.oversFormatted !== '0.3') {
+      console.error("Test 93 Failed: Expected 5 runs off 0.3 overs, got:", inngs.totalScore, inngs.oversFormatted);
+      process.exit(1);
+    }
+
+    // Only the '2b+W-RO' runs are extras; the '3+W-RO' runs belong to the bat.
+    if (inngs.extras.byes !== 2 || inngs.extras.total !== 2) {
+      console.error("Test 93 Failed: Expected 2 byes / 2 total extras, got:", inngs.extras);
+      process.exit(1);
+    }
+
+    // A run-out is never the bowler's wicket (isBowlerWicket excludes 'runout').
+    // Bat runs completed before a run out ARE charged to the bowler; byes are not.
+    const bowlerC = inngs.bowlers['C'];
+    if (!bowlerC || bowlerC.wickets !== 0) {
+      console.error("Test 93 Failed: Bowler must NOT be credited with a run-out, got:", bowlerC);
+      process.exit(1);
+    }
+    if (bowlerC.balls !== 3 || bowlerC.runsConceded !== 3) {
+      console.error("Test 93 Failed: Bowler C should be 0.3-0-3-0, got:", bowlerC);
+      process.exit(1);
+    }
+
+    // B was run out as NON-striker without ever facing a ball. This can only be
+    // derived from the `fw` records - the striker fallback would have named 'A'.
+    const batB = inngs.batsmen['B'];
+    if (!batB || !batB.isOut || batB.balls !== 0) {
+      console.error("Test 93 Failed: B should be out having faced 0 balls, got:", batB);
+      process.exit(1);
+    }
+    // A survived the first run out and keeps the 3 completed runs.
+    const batA = inngs.batsmen['A'];
+    if (!batA || batA.runs !== 3 || batA.balls !== 1 || batA.isOut) {
+      console.error("Test 93 Failed: A should be 3 (1b) not out, got:", batA);
+      process.exit(1);
+    }
+    // E faced the byes delivery; byes credit the batsman nothing.
+    const batE = inngs.batsmen['E'];
+    if (!batE || batE.runs !== 0 || batE.balls !== 1 || !batE.isOut) {
+      console.error("Test 93 Failed: E should be 0 (1b) and out, got:", batE);
+      process.exit(1);
+    }
+
+    if (inngs.fallOfWickets.length !== 3 ||
+        inngs.fallOfWickets[0].batsman !== 'B' ||
+        inngs.fallOfWickets[1].batsman !== 'E' ||
+        inngs.fallOfWickets[2].batsman !== 'F') {
+      console.error("Test 93 Failed: Fall of wickets mismatch:", inngs.fallOfWickets);
+      process.exit(1);
+    }
+
+    const roEvents = projections.events1.filter(e => e.wicket?.kind === 'runout');
+    if (roEvents.length !== 3) {
+      console.error("Test 93 Failed: Expected 3 synthesized run-out events, got:", roEvents.length);
+      process.exit(1);
+    }
+
+    // '3+W-RO': bat runs, no extra type, and odd runs must rotate the strike.
+    if (roEvents[0].runsBat !== 3 || roEvents[0].runsExtra !== 0 || roEvents[0].extraType !== undefined) {
+      console.error("Test 93 Failed: '3+W-RO' should carry 3 bat runs and no extras, got:", roEvents[0]);
+      process.exit(1);
+    }
+    if (!roEvents[0].strikeRotated) {
+      console.error("Test 93 Failed: 3 completed runs (odd) must rotate the strike, got:", roEvents[0]);
+      process.exit(1);
+    }
+    // '2b+W-RO': byes, no bat runs, even runs so no rotation.
+    if (roEvents[1].extraType !== 'bye' || roEvents[1].runsExtra !== 2 || roEvents[1].runsBat !== 0) {
+      console.error("Test 93 Failed: '2b+W-RO' should carry 2 byes and no bat runs, got:", roEvents[1]);
+      process.exit(1);
+    }
+    if (roEvents[1].strikeRotated) {
+      console.error("Test 93 Failed: 2 completed runs (even) must not rotate the strike, got:", roEvents[1]);
+      process.exit(1);
+    }
+    // Every run-out is a legal delivery counting towards the over.
+    for (const ro of roEvents) {
+      if (!ro.isLegalDelivery) {
+        console.error("Test 93 Failed: run-out deliveries are legal, got:", ro);
+        process.exit(1);
+      }
+    }
+
+    // Notation must round-trip into the reducer's grammar, not the old '{N}+ro'.
+    const expectedNotations = ['3+W-RO', '2b+W-RO', 'W-RO'];
+    for (let i = 0; i < expectedNotations.length; i++) {
+      const rendered = formatDeliveryNotation(roEvents[i]);
+      if (rendered !== expectedNotations[i]) {
+        console.error(`Test 93 Failed: Expected '${expectedNotations[i]}', got:`, rendered);
+        process.exit(1);
+      }
+    }
+  }
+
   console.log("All v2 tests passed successfully!");
 }
