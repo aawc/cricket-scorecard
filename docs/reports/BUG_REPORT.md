@@ -321,5 +321,52 @@ All tests passed!
   4. Updated monospace scorecard export in [`src/v2/export.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/export.ts#L27) to output `(${inngs.oversFormatted} / ${inngs.oversPerInnings} ov)`.
 - **Verification**: `[PASS]` Verified by automated Test 91 in [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L371) asserting `oversPerInnings === 4`, `projectedScores.totalOvers === 61`, zero-ball edge case safety, and monospace scorecard format.
 
+---
+
+### 14. Wide + Bye Run Attribution Loss, Duplicated Partnership Batsman & Manhattan Colour Ambiguity
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Test 92)
+- **Affected Components**: [`src/v2/bridge.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L78), [`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L305), [`src/v2/charts.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L153), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L956)
+- **Diagnostic Context**:
+  - Reported state: `29 / 1` in `1.1 / 4` overs, 2nd innings, extras `wd 1, by 4`.
+  - Bug Report / Problem:
+    1. Partnership 1 rendered as **28** runs when the innings total was **29**.
+    2. Extras rendered as **4** when the scoreboard recorded **5**.
+    3. Manhattan chart colour coding was unreadable — wicket markers were the same hue as expensive overs.
+    4. The Analytics telemetry label `Projected Total (4 ov)` was too long for the stat card.
+- **Root Cause Analysis**:
+  1. **Notation Grammar Mismatch in the v2 Bridge** ([`src/v2/bridge.ts#L78`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L78)): The over-log grammar is authoritatively emitted by the `FINALIZE_DELIVERY` case at [`src/reducer.ts#L212`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L212), specifically the wide handler at [`src/reducer.ts#L236`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L236) and the no-ball handler at [`src/reducer.ts#L259`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L259). The previous parser evaluated `parseInt('wd+4b'.replace('wd', ''), 10)`, which resolves to `4` (JavaScript accepts the leading `+`) and silently discarded the mandatory 1-run wide penalty. The token `wd+4b` therefore contributed 4 runs instead of 5, understating both the innings total and the partnership by exactly one run, and misfiling all four physically-run runs as wides rather than byes. The reducer's own inverse parser at [`src/reducer.ts#L499`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L499) already discriminated these tokens with `startsWith`, so the bridge was the sole outlier.
+
+     | Token | Total runs | Attribution |
+     | --- | --- | --- |
+     | `wd` | 1 | Wide penalty |
+     | `wd+N` | 1 + N | 1 wide + N credited to the striker |
+     | `wd+Nb` | 1 + N | 1 wide + N byes |
+     | `nb` | 1 | No-ball penalty |
+     | `nb+N` | 1 + N | 1 no-ball + N credited to the striker |
+     | `nb+Nb` | 1 + N | 1 no-ball + N byes |
+
+  2. **Non-Striker Fallback Duplicated the Striker** ([`src/v2/bridge.ts#L47`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L47)): `synthesizeEventsFromLiveInnings()` derived the opening non-striker by indexing `battingTeamPlayers[1]` unconditionally. When batting slot 1 already held that same player (`currentBatsman1 === 'D'` in a `["C", "D"]` roster), both partnership slots resolved to `D`, so the surviving batsman's contribution could not be attributed.
+  3. **Wide Extras Recorded as a Single Aggregate** ([`src/v2/stats.ts#L305`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L305)): `projectInnings()` added the entire `runsExtra` value to both `extras.wides` and `bowler.wides`. In the legacy model these are not the same kind of quantity: `bowler.wides` is a delivery count ([`src/reducer.ts#L225`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L225), `+1` per wide), while `live.extras.wides` accumulates penalty runs ([`src/reducer.ts#L222`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L222), `+= settings.widePenalty`) and therefore only equals the delivery count while `widePenalty === 1`. Adding the full `runsExtra` to both inflated the wide count to 5 and left `extras.byes` at zero.
+  4. **Wicket Marker Shared the "Expensive Over" Hue** ([`src/v2/charts.ts#L153`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L153)): `renderManhattanChartSVG()` painted wicket pins `#D55E00`, the identical value used for high-scoring bars, and shipped no legend at all — so bar colour carried information that was never explained and collided with the wicket encoding.
+- **Resolution**:
+  1. Rewrote the illegal-delivery branch of `synthesizeEventsFromLiveInnings()` in [`src/v2/bridge.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L78) to match the suffix against `/^\+(\d+)(b?)$/`, always reserving the penalty run (`runsExtra = 1 + byes`) and routing the remainder to either byes or the striker. Strike rotation now mirrors `physicalRuns` in [`src/reducer.ts#L297`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L297).
+  2. Changed the non-striker fallback in [`src/v2/bridge.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L47) to `battingTeamPlayers.find(p => p !== activeStriker)`, which cannot duplicate the striker regardless of roster ordering.
+  3. Split wide accounting in [`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L305) so `extras.wides` and `bowler.wides` increment by one delivery while the surplus runs land in `extras.byes`. The bowler remains charged the full `runsExtra`, matching the reducer.
+  4. Made `formatDeliveryNotation()` in [`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L107) round-trip wides faithfully as `wd`, `wd+N`, or `wd+Nb` instead of the misleading aggregate `5wd`.
+  5. Added an explicit run-bracket legend and a dedicated wicket hue to [`src/v2/charts.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L153). Bar fills and legend swatches now share a single `bracketFor()` source of truth, and wickets use magenta `#CC79A7`, which is distinguishable from every run bracket under red-green colour blindness.
+
+     | Encoding | Colour | Meaning |
+     | --- | --- | --- |
+     | Sky Blue | `#56B4E9` | `0-7 runs` |
+     | Blue | `#0072B2` | `8-14 runs` |
+     | Orange | `#D55E00` | `15+ runs` |
+     | Magenta pin marked `W` | `#CC79A7` | Wicket |
+
+  6. Shortened the telemetry label to `Projected (N ov)` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L956).
+- **Verification**: `[PASS]` Verified by automated Test 92 in [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L421), which replays the reported payload and asserts `29/1` in `1.1` overs, extras `total 5 / wides 1 / byes 4`, a single `D` & `C` partnership of 29 runs off 7 balls, bowler figures `0.1-0-5-1`, the `wd+4b` notation round-trip, and the presence of every Manhattan legend token.
+  - Red-state evidence (fixes reverted via `git stash`): Test 92 reported `Expected 29/1 in 1.1 ov, got: 28 1 1.1`, and the emitted Manhattan SVG contained both a 24-run bar and a wicket pin rendered `fill="#D55E00"`.
+
+
 
 

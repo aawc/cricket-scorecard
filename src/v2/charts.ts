@@ -129,10 +129,11 @@ export function renderManhattanChartSVG(
   }
 
   const width = options.width || 600;
-  const height = options.height || 260;
+  const height = options.height || 280;
   const padL = 40;
   const padR = 20;
-  const padT = 30;
+  // Extra top padding reserves a band for the colour-coding legend.
+  const padT = 56;
   const padB = 40;
 
   const plotW = width - padL - padR;
@@ -146,6 +147,44 @@ export function renderManhattanChartSVG(
   const barW = Math.max(12, Math.min(28, slotW * 0.65));
 
   const scaleY = (runs: number) => padT + plotH - (runs / roundedMax) * plotH;
+
+  // Colour-coding brackets. Wickets deliberately use a separate hue (magenta) so a
+  // wicket marker can never be confused with an expensive (orange) over.
+  const RUN_BRACKETS = [
+    { label: '0-7 runs', min: 0, color: '#56B4E9' },
+    { label: '8-14 runs', min: 8, color: '#0072B2' },
+    { label: '15+ runs', min: 15, color: '#D55E00' }
+  ];
+  const WICKET_COLOR = '#CC79A7';
+
+  const bracketFor = (runs: number): string => {
+    let color = RUN_BRACKETS[0].color;
+    for (const bracket of RUN_BRACKETS) {
+      if (runs >= bracket.min) color = bracket.color;
+    }
+    return color;
+  };
+
+  // Legend: swatch + label for each run bracket, plus the wicket marker.
+  // The 5.6px/char figure approximates the advance width at font-size 10. Since
+  // this SVG sets no font-family it inherits the page face, so the estimate can
+  // drift; suppress the legend entirely rather than overflow the viewBox.
+  const legendW = RUN_BRACKETS.reduce((acc, b) => acc + 14 + b.label.length * 5.6 + 16, 0) + 60;
+  const showLegend = padL + legendW <= width - padR;
+
+  let legendSvg = '';
+  let legendX = padL;
+  const legendY = 16;
+  if (showLegend) {
+    RUN_BRACKETS.forEach((bracket) => {
+      legendSvg += `<rect x="${legendX}" y="${legendY - 8}" width="10" height="10" rx="2" fill="${bracket.color}" />`;
+      legendSvg += `<text x="${legendX + 14}" y="${legendY + 1}" font-size="10" fill="currentColor" fill-opacity="0.8">${bracket.label}</text>`;
+      legendX += 14 + bracket.label.length * 5.6 + 16;
+    });
+    legendSvg += `<circle cx="${legendX + 5}" cy="${legendY - 3}" r="5" fill="${WICKET_COLOR}" stroke="#ffffff" stroke-width="1" />`;
+    legendSvg += `<text x="${legendX + 5}" y="${legendY}" font-size="7" font-weight="bold" fill="#ffffff" text-anchor="middle">W</text>`;
+    legendSvg += `<text x="${legendX + 16}" y="${legendY + 1}" font-size="10" fill="currentColor" fill-opacity="0.8">Wicket</text>`;
+  }
 
   // Grid Lines
   let gridLines = '';
@@ -165,7 +204,7 @@ export function renderManhattanChartSVG(
     const h = (padT + plotH) - y;
 
     // Bar rectangle
-    const fillColor = bar.runs >= 15 ? '#D55E00' : bar.runs >= 8 ? '#0072B2' : '#56B4E9';
+    const fillColor = bracketFor(bar.runs);
     barsSvg += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="${fillColor}" />`;
 
     // Runs label on bar
@@ -179,15 +218,20 @@ export function renderManhattanChartSVG(
     // Wickets pins
     if (bar.wickets > 0) {
       for (let w = 0; w < bar.wickets; w++) {
-        const pinY = y - 14 - (w * 10);
-        barsSvg += `<circle cx="${cx}" cy="${pinY}" r="4" fill="#D55E00" stroke="#ffffff" stroke-width="1" />`;
+        // Clamp the stack out of the legend band. A 15+ run over with 4 wickets
+        // otherwise places the 4th pin at y=8, underneath the legend.
+        const pinY = Math.max(legendY + 14, y - 14 - (w * 10));
+        barsSvg += `<circle cx="${cx}" cy="${pinY}" r="4" fill="${WICKET_COLOR}" stroke="#ffffff" stroke-width="1" />`;
         barsSvg += `<text x="${cx}" y="${pinY + 3}" font-size="8" font-weight="bold" fill="#ffffff" text-anchor="middle">W</text>`;
       }
     }
   });
 
   return `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" class="cric-svg-chart manhattan-chart" role="img" aria-label="Manhattan Chart of runs per over">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" class="cric-svg-chart manhattan-chart" role="img" aria-label="Manhattan Chart of runs per over, colour coded by run bracket with wicket markers">
+      <!-- Legend -->
+      ${legendSvg}
+
       <!-- Grid -->
       ${gridLines}
 

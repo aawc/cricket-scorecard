@@ -953,7 +953,7 @@ export function renderAnalyticsCharts(): void {
                             </div>
                         ` : `
                             <div class="telemetry-stat-card">
-                                <div class="telemetry-stat-label">Projected Total (${gameState.settings.oversPerInnings} ov)</div>
+                                <div class="telemetry-stat-label">Projected (${gameState.settings.oversPerInnings} ov)</div>
                                 <div class="telemetry-stat-val">${activeInngs.projectedScores.totalOvers}</div>
                             </div>
                         `}
