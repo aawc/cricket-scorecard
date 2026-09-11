@@ -37,8 +37,15 @@ export function synthesizeEventsFromLiveInnings(
     });
   }
 
+  const fowList = innings.fow || (innings as any).fw || (innings as any).fallOfWickets || [];
+  let wicketIdx = 0;
+
+  const usedBatsmen = new Set<string>();
   let activeStriker = innings.currentBatsman1 || battingTeamPlayers[0] || 'Batter 1';
-  let activeNonStriker = innings.currentBatsman2 || battingTeamPlayers[1] || 'Batter 2';
+  let activeNonStriker = innings.currentBatsman2 || (battingTeamPlayers.length > 1 ? battingTeamPlayers[1] : '');
+  
+  if (activeStriker) usedBatsmen.add(activeStriker);
+  if (activeNonStriker) usedBatsmen.add(activeNonStriker);
 
   allOvers.forEach((overRecord, overIdx) => {
     let legalBallInOver = 0;
@@ -57,9 +64,13 @@ export function synthesizeEventsFromLiveInnings(
       if (norm === 'W' || norm.startsWith('W(')) {
         isLegal = true;
         legalBallInOver++;
+        const fowRecord = fowList[wicketIdx];
+        const dismissedPlayer = fowRecord?.batsman || fowRecord?.b || activeStriker;
+        wicketIdx++;
+
         wicket = {
           kind: norm.includes('ro') ? 'runout' : 'bowled',
-          dismissedPlayer: activeStriker,
+          dismissedPlayer,
           runsCompletedBeforeDismissal: 0
         };
       } else if (norm.includes('wd')) {
@@ -120,6 +131,30 @@ export function synthesizeEventsFromLiveInnings(
         strikeRotated,
         overCompleted
       });
+
+      // Handle wicket batsman transitions
+      if (wicket) {
+        const dismissed = wicket.dismissedPlayer;
+        const nextBatsman = battingTeamPlayers.find(p => !usedBatsmen.has(p));
+        if (nextBatsman) {
+          usedBatsmen.add(nextBatsman);
+          if (dismissed === activeStriker) {
+            activeStriker = nextBatsman;
+          } else if (dismissed === activeNonStriker) {
+            activeNonStriker = nextBatsman;
+          } else {
+            activeStriker = nextBatsman;
+          }
+        } else {
+          // No remaining batsmen (single batsman mode or all out)
+          if (dismissed === activeStriker) {
+            activeStriker = activeNonStriker;
+            activeNonStriker = '';
+          } else if (dismissed === activeNonStriker) {
+            activeNonStriker = '';
+          }
+        }
+      }
 
       if (strikeRotated) {
         const temp = activeStriker;

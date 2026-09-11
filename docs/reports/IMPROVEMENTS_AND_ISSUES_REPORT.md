@@ -380,4 +380,16 @@ Successfully injected 8 assets into dist/sw.js
 | **UI Subtabs & Scoring Telemetry** | [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L35), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1855), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L18) | Added `Scoring` vs `Analytics` subtabs, Wake Lock / Haptics toggles, Export CSV action, and live SVG chart rendering. | `[PASS] Implemented` |
 | **Automated Test Suite (Tests 85–89)** | [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L1) | 5 comprehensive automated tests asserting statistical projections, partnership tracking, SVG chart generation, data export formats, and hardware abstractions. | `[PASS] Implemented` |
 
+---
+
+## 12. Milestone 14: 0-Run Partnership Balls Display & Analytics Scrolling Fix
+
+| Enhancement | Module | Description | Status |
+| :--- | :--- | :--- | :--- |
+| **0-Run Dynamic Balls Display** | [`src/v2/charts.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L253) | Replaced hardcoded `0 (0b)` string in `renderPartnershipChartSVG()` with `${pship.totalRuns} (${pship.totalBalls}b)` so 0-run partnerships faced over 1+ balls render correctly (e.g. `0 (1b)`). | `[PASS] Implemented` |
+| **FOW Dismissal & Striker Alignment** | [`src/v2/bridge.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L37) | Enhanced `synthesizeEventsFromLiveInnings()` to look up `innings.fow` records and accurately advance striker/non-striker allocations on dismissals in single-batsman or final delivery scenarios. | `[PASS] Implemented` |
+| **3D Card Flip Height & Scrolling Fix** | [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1091) | Refactored `.flip-container`, `.front-face`, and `.back-face` so the currently active card face is in normal document flow (`position: relative`), allowing `.flip-container` to dynamically match the full height of `#pane-analytics` and prevent scrolling lockups. | `[PASS] Implemented` |
+| **Automated Regression Test (Test 90)** | [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L325) | Loaded user diagnostic payload verifying 2nd innings 0-run 1-ball partnership calculation and `0 (1b)` SVG rendering. | `[PASS] Implemented` |
+
+
 

@@ -280,8 +280,25 @@ All tests passed!
      - Transitions `role` to `'SPECTATOR'` and clears write authorization.
      - Decompresses and updates local state from the latest remote packet.
      - Triggers demotion listeners (`onUmpireDemoted`) which display an alert/toast to the user and locks all scoring controls via `updateUI()`.
-     - Transitions seamlessly into spectator polling to continue streaming subsequent deliveries scored by the new umpire.
-  5. **Write Guardrail**: Disallows any write operations in `executeSync()` or `syncStateIfLive()` when `role !== 'UMPIRE'`.
-- **Verification**: `[PASS]` Verified by automated Test 84 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L3013) simulating Window 1 starting as Umpire A, Window 2 claiming Umpire role as Umpire B, Window 1 automatically demoting to Spectator on takeover check, asserting writeKey removal from storage and URL sanitization, asserting control lock, and validating that Window 2 scores a 6 while Window 1 observes as a Spectator.
+---
+
+### 12. 0-Run Wicket Partnership Balls Display & Analytics Pane Scrolling Lock
+- **Severity**: `[MEDIUM]`
+- **Status**: `[PASS]` Resolved & Verified (Test 90)
+- **Affected Components**: [`src/v2/charts.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L253), [`src/v2/bridge.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L37), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1091)
+- **Diagnostic Context**:
+  - Bug Report / Problem:
+    1. In the second innings, the final partnership (e.g. 0 runs off 1 ball) displays as `0 runs off 0 balls` (`0 (0b)`) instead of `0 runs off 1 ball` (`0 (1b)`).
+    2. The analytics page sometimes stops scrolling until a hard refresh occurs.
+- **Root Cause Analysis**:
+  1. **Hardcoded 0-Run Partnership Label** ([`src/v2/charts.ts#L253`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L253)): In `renderPartnershipChartSVG()`, when `pship.totalRuns === 0`, the label string was hardcoded to `0 (0b)` rather than dynamically interpolating `${pship.totalRuns} (${pship.totalBalls}b)`.
+  2. **Fall of Wickets Batsman Dismissal Alignment** ([`src/v2/bridge.ts#L37`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L37)): `synthesizeEventsFromLiveInnings()` did not consult `innings.fow` records during event synthesis to attribute which batsman was dismissed, causing single-batsman final deliveries to lose their incoming/surviving striker attribution.
+  3. **3D Flip Container Height Collapse & Scrolling Lock** ([`src/style.css#L1091`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1091)): `.front-face` and `.back-face` both had `position: absolute`, causing `.flip-container` to collapse to its min-height (`540px`). When tall analytics charts (~1100px) loaded, the content overflowed the container, causing mobile/desktop touch/mouse scrolling to trap or fail until page refresh.
+- **Resolution**:
+  1. Updated `renderPartnershipChartSVG()` in [`src/v2/charts.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L253) to dynamically format `${pship.totalRuns} (${pship.totalBalls}b)`.
+  2. Enhanced `synthesizeEventsFromLiveInnings()` in [`src/v2/bridge.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/bridge.ts#L37) to look up `innings.fow` records and accurately advance striker/non-striker allocations on dismissals.
+  3. Refactored `.flip-container`, `.front-face`, and `.back-face` in [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L1091) so the currently active card face is in normal document flow (`position: relative`), allowing `.flip-container` to dynamically match the exact height of `#pane-analytics` and eliminate scrolling lockups.
+- **Verification**: `[PASS]` Verified by automated Test 90 in [`test/v2_test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/v2_test_cases.ts#L325) asserting 2nd innings 0-run 1-ball partnership calculation and `0 (1b)` SVG rendering.
+
 
 
