@@ -7,6 +7,7 @@ import { DeliveryEvent } from '../src/v2/types.js';
 import {
   projectInnings,
   formatOvers,
+  formatDeliveryNotation,
   calculateRunRate,
   calculateStrikeRate,
   calculateEconomy,
@@ -412,6 +413,144 @@ export async function runV2Tests(): Promise<void> {
     const zeroBallsInngs = projectInnings([], 'Team 1', 'Team 2', 1, 6, null);
     if (zeroBallsInngs.projectedScores.totalOvers !== 0 || isNaN(zeroBallsInngs.projectedScores.totalOvers)) {
       console.error("Test 91 Failed: Zero balls projected score must be 0, got:", zeroBallsInngs.projectedScores.totalOvers);
+      process.exit(1);
+    }
+  }
+
+  // =========================================================================
+  // Test 92: v2 Regression - Wide + Bye Attribution, Partnership Totals & Manhattan Legend
+  // =========================================================================
+  {
+    console.log("Running Test 92 (v2 Regression: Wide+Bye Attribution, Partnership Totals & Manhattan Legend)...");
+
+    const rawMinified = {"ph":"PLAYING_INNINGS","s":{"opi":4,"mob":2,"asb":1,"elb":0,"th":"light"},"m":{"ci":2,"cbt":2,"t1":{"n":"Team 1","p":["A","B"],"in":[{"sc":58,"w":2,"b":24,"ex":{"wd":0,"nb":1,"by":0,"lb":0},"bat":{"B":{"r":26,"b":14,"f":1,"s":1,"a":0},"A":{"r":31,"b":11,"f":0,"s":3,"a":0}},"bowl":{"C":{"r":33,"b":12,"wk":0,"m":0,"wd":0,"nb":0},"D":{"r":25,"b":12,"wk":2,"m":0,"wd":0,"nb":1}},"cb1":"","cb2":"","cbo":"D","pbo":"C","ob":["B","A"],"ov":[{"bo":"C","bl":["1","1","1","2","2","2"]},{"bo":"D","bl":["2","2","2","2","2","2"]},{"bo":"C","bl":["6","6","6","2","3","1"]},{"bo":"D","bl":["1","1","4","6","nb","W","W"]}],"ol":[],"fw":[{"w":1,"s":58,"b":"B","ov":"3.5"},{"w":2,"s":58,"b":"A","ov":"4.0"}]}]},"t2":{"n":"Team 2","p":["C","D"],"in":[]},"li":{"sc":29,"w":1,"b":7,"ex":{"wd":1,"nb":0,"by":4,"lb":0},"bat":{"D":{"r":24,"b":6,"f":6,"s":0,"a":1},"C":{"r":0,"b":1,"f":0,"s":0,"a":0}},"bowl":{"A":{"r":24,"b":6,"wk":0,"m":0,"wd":0,"nb":0},"B":{"r":5,"b":1,"wk":1,"m":0,"wd":1,"nb":0}},"cb1":"D","cb2":"","cbo":"B","pbo":"A","ob":["C"],"ov":[{"bo":"A","bl":["4","4","4","4","4","4"]}],"ol":["wd+4b","W"],"fw":[{"w":1,"s":29,"b":"C","ov":"1.1"}]},"tg":59,"mo":0}};
+
+    const state = unminifyState(rawMinified);
+    const projections = getProjectionsFromGameState(state);
+
+    const chase = projections.innings2;
+    if (!chase) {
+      console.error("Test 92 Failed: Innings 2 projection missing");
+      process.exit(1);
+    }
+
+    // 'wd+4b' is 1 wide penalty run PLUS 4 byes = 5 runs. Total 24 + 5 = 29.
+    if (chase.totalScore !== 29 || chase.totalWickets !== 1 || chase.oversFormatted !== '1.1') {
+      console.error("Test 92 Failed: Expected 29/1 in 1.1 ov, got:", chase.totalScore, chase.totalWickets, chase.oversFormatted);
+      process.exit(1);
+    }
+
+    // Extras: 5 total, split as 1 wide penalty + 4 byes (NOT 4 wides).
+    const ex = chase.extras;
+    if (ex.total !== 5 || ex.wides !== 1 || ex.byes !== 4 || ex.noballs !== 0 || ex.legbyes !== 0) {
+      console.error("Test 92 Failed: Extras should be total 5 (wd 1, by 4), got:", ex);
+      process.exit(1);
+    }
+
+    // Single completed partnership: D & C, 29 runs off 7 balls (the wide is not a ball faced).
+    if (chase.partnerships.length !== 1) {
+      console.error("Test 92 Failed: Expected exactly 1 completed partnership, got:", chase.partnerships);
+      process.exit(1);
+    }
+    const pship = chase.partnerships[0];
+    if (pship.totalRuns !== 29 || pship.totalBalls !== 7) {
+      console.error("Test 92 Failed: Partnership should be 29 runs off 7 balls, got:", pship);
+      process.exit(1);
+    }
+    // The non-striker fallback must not duplicate the striker ('D' & 'D').
+    if (pship.player1Name !== 'D' || pship.player2Name !== 'C') {
+      console.error("Test 92 Failed: Partnership should be between 'D' and 'C', got:", pship.player1Name, pship.player2Name);
+      process.exit(1);
+    }
+    if (pship.player1Runs !== 24 || pship.player1Balls !== 6 || pship.player2Runs !== 0 || pship.player2Balls !== 1) {
+      console.error("Test 92 Failed: Individual partnership contributions mismatch:", pship);
+      process.exit(1);
+    }
+
+    // Bowler B is charged all 5 runs off the wide and credited with 1 wide DELIVERY (not 5).
+    const bowlerB = chase.bowlers['B'];
+    if (!bowlerB || bowlerB.runsConceded !== 5 || bowlerB.wides !== 1 || bowlerB.wickets !== 1 || bowlerB.balls !== 1) {
+      console.error("Test 92 Failed: Bowler B figures mismatch (expect 0.1-0-5-1, wd 1), got:", bowlerB);
+      process.exit(1);
+    }
+    const bowlerA = chase.bowlers['A'];
+    if (!bowlerA || bowlerA.balls !== 6 || bowlerA.runsConceded !== 24) {
+      console.error("Test 92 Failed: Bowler A figures mismatch (expect 1-0-24-0), got:", bowlerA);
+      process.exit(1);
+    }
+
+    // Batsman figures must mirror the legacy scorecard.
+    const batD = chase.batsmen['D'];
+    const batC = chase.batsmen['C'];
+    if (!batD || batD.runs !== 24 || batD.balls !== 6 || batD.fours !== 6) {
+      console.error("Test 92 Failed: Batsman D should be 24 (6b, 6x4), got:", batD);
+      process.exit(1);
+    }
+    if (!batC || batC.runs !== 0 || batC.balls !== 1) {
+      console.error("Test 92 Failed: Batsman C should be 0 (1b), got:", batC);
+      process.exit(1);
+    }
+
+    // Notation must round-trip faithfully instead of collapsing to the misleading '5wd'.
+    const wideEvent = projections.events2.find(e => e.extraType === 'wide');
+    if (!wideEvent) {
+      console.error("Test 92 Failed: No wide delivery event synthesized from over log 'wd+4b'");
+      process.exit(1);
+    }
+    if (wideEvent.runsExtra !== 5 || wideEvent.runsBat !== 0 || wideEvent.isLegalDelivery) {
+      console.error("Test 92 Failed: Wide event should carry runsExtra 5 / runsBat 0 / illegal, got:", wideEvent);
+      process.exit(1);
+    }
+    const notation = formatDeliveryNotation(wideEvent);
+    if (notation !== 'wd+4b') {
+      console.error("Test 92 Failed: formatDeliveryNotation should render 'wd+4b', got:", notation);
+      process.exit(1);
+    }
+
+    // Notation must distinguish byes from bat runs for BOTH illegal delivery
+    // types. 'nb+4' means 4 runs to the striker; byes must carry the 'b' suffix,
+    // otherwise the token is well-formed but states the opposite attribution.
+    const notationCases: Array<[Partial<typeof wideEvent>, string]> = [
+      [{ extraType: 'wide', runsExtra: 1, runsBat: 3 }, 'wd+3'],
+      [{ extraType: 'wide', runsExtra: 1, runsBat: 0 }, 'wd'],
+      [{ extraType: 'noball', runsExtra: 5, runsBat: 0 }, 'nb+4b'],
+      [{ extraType: 'noball', runsExtra: 1, runsBat: 4 }, 'nb+4'],
+      [{ extraType: 'noball', runsExtra: 1, runsBat: 0 }, 'nb']
+    ];
+    for (const [overrides, expected] of notationCases) {
+      const rendered = formatDeliveryNotation({ ...wideEvent, ...overrides });
+      if (rendered !== expected) {
+        console.error(`Test 92 Failed: formatDeliveryNotation should render '${expected}', got:`, rendered);
+        process.exit(1);
+      }
+    }
+
+    // Manhattan chart must carry an explicit run-bracket legend and a distinct wicket hue.
+    const manhattanSvg = renderManhattanChartSVG(projections.manhattan2);
+    for (const token of ['0-7 runs', '8-14 runs', '15+ runs', 'Wicket']) {
+      if (!manhattanSvg.includes(token)) {
+        console.error(`Test 92 Failed: Manhattan SVG missing legend token '${token}':\n`, manhattanSvg);
+        process.exit(1);
+      }
+    }
+
+    // The wicket hue must appear at least twice: once as the legend swatch and
+    // once as an actual pin. Asserting mere presence is inert, because the
+    // legend emits the hue unconditionally regardless of what the pins use.
+    const wicketHueCount = manhattanSvg.split('#CC79A7').length - 1;
+    if (wicketHueCount < 2) {
+      console.error(`Test 92 Failed: expected wicket hue in legend AND at least one pin, found ${wicketHueCount} occurrence(s):\n`, manhattanSvg);
+      process.exit(1);
+    }
+
+    // The 24-run over must use the 15+ bracket, and no wicket pin may reuse that
+    // hue - that collision is precisely the reported unreadability.
+    if (!manhattanSvg.includes('fill="#D55E00"')) {
+      console.error("Test 92 Failed: 24-run bar should use the 15+ bracket hue #D55E00:\n", manhattanSvg);
+      process.exit(1);
+    }
+    if (/<circle[^>]*fill="#D55E00"/.test(manhattanSvg)) {
+      console.error("Test 92 Failed: wicket pin must not reuse the expensive-over hue #D55E00:\n", manhattanSvg);
       process.exit(1);
     }
   }

@@ -105,13 +105,14 @@ export function formatDeliveryNotation(ball: DeliveryEvent): string {
   }
 
   if (ball.extraType === 'wide') {
-    const totalExtra = ball.runsExtra;
-    return totalExtra === 1 ? 'wd' : `${totalExtra}wd`;
+    if (ball.runsBat > 0) return `wd+${ball.runsBat}`;
+    if (ball.runsExtra > 1) return `wd+${ball.runsExtra - 1}b`;
+    return 'wd';
   }
 
   if (ball.extraType === 'noball') {
-    if (ball.runsBat > 0) return `${ball.runsBat}nb`;
-    if (ball.runsExtra > 1) return `nb+${ball.runsExtra - 1}`;
+    if (ball.runsBat > 0) return `nb+${ball.runsBat}`;
+    if (ball.runsExtra > 1) return `nb+${ball.runsExtra - 1}b`;
     return 'nb';
   }
 
@@ -302,11 +303,17 @@ export function projectInnings(
     // Bowler runs (Bat runs + Wides + No-balls). Byes & Leg Byes do NOT penalize bowler (Law 21.18)
     let bowlerChargedRuns = event.runsBat;
     if (event.extraType === 'wide') {
+      // A wide charges the bowler for every run on the delivery, including byes.
       bowlerChargedRuns += event.runsExtra;
-      extras.wides += event.runsExtra;
-      bowler.wides += event.runsExtra;
+      // 1 penalty run is recorded as a wide; the delivery counter increments once.
+      extras.wides += 1;
+      bowler.wides += 1;
       extras.total += event.runsExtra;
       currentPshipRuns += event.runsExtra;
+      // Additional runs physically run off the wide are byes (see 'wd+Nb').
+      if (event.runsExtra > 1) {
+        extras.byes += (event.runsExtra - 1);
+      }
     } else if (event.extraType === 'noball') {
       // 1 penalty run charged to bowler
       bowlerChargedRuns += 1;

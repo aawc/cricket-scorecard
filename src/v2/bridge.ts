@@ -42,7 +42,9 @@ export function synthesizeEventsFromLiveInnings(
 
   const usedBatsmen = new Set<string>();
   let activeStriker = innings.currentBatsman1 || battingTeamPlayers[0] || 'Batter 1';
-  let activeNonStriker = innings.currentBatsman2 || (battingTeamPlayers.length > 1 ? battingTeamPlayers[1] : '');
+  // Fall back to the first team-mate who is not already the striker. Indexing
+  // blindly at [1] duplicates the striker whenever slot 1 holds that same player.
+  let activeNonStriker = innings.currentBatsman2 || battingTeamPlayers.find(p => p !== activeStriker) || '';
   
   if (activeStriker) usedBatsmen.add(activeStriker);
   if (activeNonStriker) usedBatsmen.add(activeNonStriker);
@@ -73,21 +75,35 @@ export function synthesizeEventsFromLiveInnings(
           dismissedPlayer,
           runsCompletedBeforeDismissal: 0
         };
-      } else if (norm.includes('wd')) {
+      } else if (norm.startsWith('wd') || norm.startsWith('nb')) {
+        // Legacy notation grammar emitted by the FINALIZE_DELIVERY reducer branch:
+        //   'wd'    => 1 wide penalty run
+        //   'wd+N'  => 1 wide penalty run + N runs credited to the striker
+        //   'wd+Nb' => 1 wide penalty run + N byes
+        //   'nb'    => 1 no-ball penalty run
+        //   'nb+N'  => 1 no-ball penalty run + N runs credited to the striker
+        //   'nb+Nb' => 1 no-ball penalty run + N byes
+        // The trailing 'b' marks the additional runs as byes rather than bat runs.
         isLegal = false;
-        extraType = 'wide';
-        const count = parseInt(norm.replace('wd', ''), 10);
-        runsExtra = isNaN(count) ? 1 : count;
-      } else if (norm.includes('nb')) {
-        isLegal = false;
-        extraType = 'noball';
-        const count = parseInt(norm.replace('nb', ''), 10);
-        if (!isNaN(count)) {
-          runsBat = count;
-          runsExtra = 1;
-        } else {
-          runsExtra = 1;
-        }
+        extraType = norm.startsWith('wd') ? 'wide' : 'noball';
+
+        const suffix = norm.slice(2);
+        const parsedSuffix = suffix.match(/^\+(\d+)(b?)$/);
+        const additionalRuns = parsedSuffix ? parseInt(parsedSuffix[1], 10) : 0;
+        const accruedToByes = !!parsedSuffix && parsedSuffix[2] === 'b';
+
+        // The penalty run is always an extra. Additional runs are either byes
+        // (kept in runsExtra so the bowler is still charged) or bat runs.
+        // NOTE: assumes settings.widePenalty === settings.noBallPenalty === 1,
+        // the only values the app produces today. synthesizeEventsFromLiveInnings
+        // does not receive settings; if either penalty becomes configurable this
+        // parser and projectInnings() must read them, as reducer.ts L220/L238 do.
+        const PENALTY_RUN = 1;
+        runsExtra = PENALTY_RUN + (accruedToByes ? additionalRuns : 0);
+        runsBat = accruedToByes ? 0 : additionalRuns;
+
+        // Only physically-run runs rotate the strike (mirrors `physicalRuns` in reducer.ts).
+        if (additionalRuns % 2 !== 0) strikeRotated = true;
       } else if (norm.includes('lb')) {
         isLegal = true;
         legalBallInOver++;
@@ -95,7 +111,9 @@ export function synthesizeEventsFromLiveInnings(
         const count = parseInt(norm.replace('lb', ''), 10);
         runsExtra = isNaN(count) ? 1 : count;
         if (runsExtra % 2 !== 0) strikeRotated = true;
-      } else if (norm.includes('b') && !norm.includes('lb')) {
+      } else if (norm.includes('b')) {
+        // Ordering is load-bearing: the 'lb' branch above has already consumed
+        // every leg-bye token, so no additional guard is needed here.
         isLegal = true;
         legalBallInOver++;
         extraType = 'bye';
