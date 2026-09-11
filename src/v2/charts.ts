@@ -250,7 +250,7 @@ export function renderPartnershipChartSVG(
       // Total label on right
       rowsSvg += `<text x="${padL + totalW + 8}" y="${y + 14}" font-size="10" font-weight="bold" fill="currentColor">${pship.totalRuns} (${pship.totalBalls}b)</text>`;
     } else {
-      rowsSvg += `<text x="${padL + 8}" y="${y + 14}" font-size="10" fill="currentColor" fill-opacity="0.5">0 (0b)</text>`;
+      rowsSvg += `<text x="${padL + 8}" y="${y + 14}" font-size="10" fill="currentColor" fill-opacity="0.5">${pship.totalRuns} (${pship.totalBalls}b)</text>`;
     }
   });
 

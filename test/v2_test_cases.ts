@@ -30,6 +30,7 @@ import {
   audioSynth
 } from '../src/v2/hardware.js';
 import { getProjectionsFromGameState, synthesizeEventsFromLiveInnings } from '../src/v2/bridge.js';
+import { unminifyState } from '../src/storage.js';
 
 export async function runV2Tests(): Promise<void> {
   // =========================================================================
@@ -320,6 +321,50 @@ export async function runV2Tests(): Promise<void> {
     audioSynth.playKeyClick();
     audioSynth.playBoundary();
     audioSynth.playWicket();
+  }
+
+  // =========================================================================
+  // Test 90: v2 Regression - 2nd Innings 0-Run Partnership Balls & FOW Replay
+  // =========================================================================
+  {
+    console.log("Running Test 90 (v2 Regression: 2nd Innings 0-Run Partnership Balls & FOW Replay)...");
+
+    const rawMinified = {"ph":"MATCH_OVER","s":{"opi":4,"mob":2,"asb":1,"elb":0,"th":"light"},"m":{"ci":2,"cbt":2,"t1":{"n":"Team 1","p":["A","B"],"in":[{"sc":43,"w":1,"b":24,"ex":{"wd":0,"nb":0,"by":0,"lb":0},"bat":{"A":{"r":30,"b":15,"f":0,"s":0,"a":1},"B":{"r":13,"b":9,"f":0,"s":0,"a":0}},"bowl":{"C":{"r":20,"b":12,"wk":0,"m":0,"wd":0,"nb":0},"D":{"r":23,"b":12,"wk":1,"m":0,"wd":0,"nb":0}},"cb1":"A","cb2":"","cbo":"D","pbo":"C","ob":["B"],"ov":[{"bo":"C","bl":["3","3","2","1","0","0"]},{"bo":"D","bl":["2","2","2","2","2","2"]},{"bo":"C","bl":["2","2","2","1","1","3"]},{"bo":"D","bl":["W","1","1","3","3","3"]}],"ol":[],"fw":[{"w":1,"s":32,"b":"B","ov":"3.1"}]}]},"t2":{"n":"Team 2","p":["C","D"],"in":[{"sc":43,"w":2,"b":20,"ex":{"wd":0,"nb":0,"by":0,"lb":0},"bat":{"D":{"r":24,"b":11,"f":0,"s":0,"a":0},"C":{"r":19,"b":9,"f":0,"s":0,"a":0}},"bowl":{"B":{"r":30,"b":12,"wk":0,"m":0,"wd":0,"nb":0},"A":{"r":13,"b":8,"wk":2,"m":0,"wd":0,"nb":0}},"cb1":"","cb2":"","cbo":"A","pbo":"B","ob":["D","C"],"ov":[{"bo":"B","bl":["2","2","2","2","2","2"]},{"bo":"A","bl":["2","2","2","1","3","3"]},{"bo":"B","bl":["3","3","3","3","3","3"]},{"bo":"A","bl":["W","W"]}],"ol":[],"fw":[{"w":1,"s":43,"b":"D","ov":"3.1"},{"w":2,"s":43,"b":"C","ov":"3.2"}]}]},"li":{"sc":43,"w":2,"b":20,"ex":{"wd":0,"nb":0,"by":0,"lb":0},"bat":{"D":{"r":24,"b":11,"f":0,"s":0,"a":0},"C":{"r":19,"b":9,"f":0,"s":0,"a":0}},"bowl":{"B":{"r":30,"b":12,"wk":0,"m":0,"wd":0,"nb":0},"A":{"r":13,"b":8,"wk":2,"m":0,"wd":0,"nb":0}},"cb1":"","cb2":"","cbo":"A","pbo":"B","ob":["D","C"],"ov":[{"bo":"B","bl":["2","2","2","2","2","2"]},{"bo":"A","bl":["2","2","2","1","3","3"]},{"bo":"B","bl":["3","3","3","3","3","3"]},{"bo":"A","bl":["W","W"]}],"ol":[],"fw":[{"w":1,"s":43,"b":"D","ov":"3.1"},{"w":2,"s":43,"b":"C","ov":"3.2"}]},"tg":44,"mo":1}};
+
+    const state = unminifyState(rawMinified);
+    const projections = getProjectionsFromGameState(state);
+
+    if (!projections.innings2) {
+      console.error("Test 90 Failed: Innings 2 projection missing");
+      process.exit(1);
+    }
+
+    const pships = projections.innings2.partnerships;
+    if (pships.length !== 2) {
+      console.error("Test 90 Failed: Expected 2 partnerships in Innings 2, got:", pships);
+      process.exit(1);
+    }
+
+    // 1st Wicket Partnership: 43 runs in 19 balls
+    const p1 = pships[0];
+    if (p1.totalRuns !== 43 || p1.totalBalls !== 19) {
+      console.error("Test 90 Failed: 1st partnership figures mismatch:", p1);
+      process.exit(1);
+    }
+
+    // 2nd Wicket Partnership: 0 runs in 1 ball (faced by Player C on 3.2 ov)
+    const p2 = pships[1];
+    if (p2.totalRuns !== 0 || p2.totalBalls !== 1) {
+      console.error("Test 90 Failed: 2nd partnership should be 0 runs off 1 ball, got:", p2);
+      process.exit(1);
+    }
+
+    // SVG Chart rendering verification: must display "0 (1b)" and not "0 (0b)"
+    const pshipSvg = renderPartnershipChartSVG(pships);
+    if (!pshipSvg.includes('0 (1b)')) {
+      console.error("Test 90 Failed: Partnership SVG should render '0 (1b)', got:\n", pshipSvg);
+      process.exit(1);
+    }
   }
 
   console.log("All v2 tests passed successfully!");
