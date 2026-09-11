@@ -496,8 +496,13 @@ export function projectInnings(
 
   // Projected scores at current run rate
   const crr = runRate;
+  const projectedTotal = isCompleted
+    ? totalScore
+    : (legalBalls > 0 ? Math.round(crr * oversPerInnings) : 0);
+
   const projectedScores = {
     currentCRR: crr,
+    totalOvers: projectedTotal,
     at6Overs: Math.round(crr * 6),
     at8Overs: Math.round(crr * 8),
     at10Overs: Math.round(crr * 10),
@@ -512,6 +517,7 @@ export function projectInnings(
     totalWickets,
     legalBalls,
     oversFormatted: formatOvers(legalBalls),
+    oversPerInnings,
     runRate,
     requiredRunRate,
     target,

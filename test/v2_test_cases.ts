@@ -367,5 +367,54 @@ export async function runV2Tests(): Promise<void> {
     }
   }
 
+  // =========================================================================
+  // Test 91: v2 Regression - Projected Total & Innings Total Overs Governance
+  // =========================================================================
+  {
+    console.log("Running Test 91 (v2 Regression: Projected Total & Innings Total Overs Governance)...");
+
+    const rawMinified = {"ph":"PLAYING_INNINGS","s":{"opi":4,"mob":2,"asb":1,"elb":0,"th":"light"},"m":{"ci":1,"cbt":1,"t1":{"n":"Team 1","p":["A","B"],"in":[]},"t2":{"n":"Team 2","p":["C","D"],"in":[]},"li":{"sc":58,"w":1,"b":23,"ex":{"wd":0,"nb":1,"by":0,"lb":0},"bat":{"B":{"r":26,"b":14,"f":1,"s":1,"a":0},"A":{"r":31,"b":10,"f":0,"s":3,"a":1}},"bowl":{"C":{"r":33,"b":12,"wk":0,"m":0,"wd":0,"nb":0},"D":{"r":25,"b":11,"wk":1,"m":0,"wd":0,"nb":1}},"cb1":"A","cb2":"","cbo":"D","pbo":"C","ob":["B"],"ov":[{"bo":"C","bl":["1","1","1","2","2","2"]},{"bo":"D","bl":["2","2","2","2","2","2"]},{"bo":"C","bl":["6","6","6","2","3","1"]}],"ol":["1","1","4","6","nb","W"],"fw":[{"w":1,"s":58,"b":"B","ov":"3.5"}]},"tg":null,"mo":0}};
+
+    const state = unminifyState(rawMinified);
+    const projections = getProjectionsFromGameState(state);
+
+    if (!projections.innings1) {
+      console.error("Test 91 Failed: Innings 1 projection missing");
+      process.exit(1);
+    }
+
+    const inngs1 = projections.innings1;
+    if (inngs1.oversPerInnings !== 4) {
+      console.error("Test 91 Failed: Expected oversPerInnings === 4, got:", inngs1.oversPerInnings);
+      process.exit(1);
+    }
+
+    if (inngs1.oversFormatted !== '3.5') {
+      console.error("Test 91 Failed: Expected oversFormatted === '3.5', got:", inngs1.oversFormatted);
+      process.exit(1);
+    }
+
+    // CRR = 58 / (23 / 6) = 15.130435 rpo.
+    // Projected score at 4 overs = round(15.130435 * 4) = 61 (NOT 121!).
+    if (inngs1.projectedScores.totalOvers !== 61) {
+      console.error("Test 91 Failed: Expected projectedScores.totalOvers === 61, got:", inngs1.projectedScores.totalOvers);
+      process.exit(1);
+    }
+
+    // Monospace scorecard output must show "(3.5 / 4 ov)"
+    const textScorecard = formatMonospaceScorecard(inngs1, null);
+    if (!textScorecard.includes('3.5 / 4 ov') || !textScorecard.includes('3.5 / 4 Overs')) {
+      console.error("Test 91 Failed: Monospace scorecard should include '3.5 / 4 ov', got:\n", textScorecard);
+      process.exit(1);
+    }
+
+    // Zero balls bowled test: projected score should be 0 without throwing or NaN
+    const zeroBallsInngs = projectInnings([], 'Team 1', 'Team 2', 1, 6, null);
+    if (zeroBallsInngs.projectedScores.totalOvers !== 0 || isNaN(zeroBallsInngs.projectedScores.totalOvers)) {
+      console.error("Test 91 Failed: Zero balls projected score must be 0, got:", zeroBallsInngs.projectedScores.totalOvers);
+      process.exit(1);
+    }
+  }
+
   console.log("All v2 tests passed successfully!");
 }

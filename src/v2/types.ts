@@ -122,6 +122,7 @@ export interface InningsProjection {
   totalWickets: number;
   legalBalls: number;
   oversFormatted: string;     // e.g. "5.2"
+  oversPerInnings: number;    // e.g. 8 (Total overs limit for the innings)
   runRate: number;            // Current Run Rate (CRR)
   requiredRunRate: number | null; // Required Run Rate (RRR)
   target: number | null;
@@ -143,6 +144,7 @@ export interface InningsProjection {
   activeBowler: string | null;
   projectedScores: {
     currentCRR: number;
+    totalOvers: number;
     at6Overs: number;
     at8Overs: number;
     at10Overs: number;
