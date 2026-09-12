@@ -66,7 +66,7 @@ Append `?endpoint=` or `?backend=` to your PWA URL:
   https://varun.khaneja.org/cricket-scorecard/?endpoint=https://script.google.com/macros/s/AKfycb.../exec
   ```
 
-[`initLiveProviderFromUrlOrStorage()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L619) automatically detects whether the endpoint is Google Apps Script (`script.google.com`) or Cloudflare KV, initializes the matching provider ([`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L175) or [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98)), and caches the choice in `localStorage`.
+[`initLiveProviderFromUrlOrStorage()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L971) automatically detects whether the endpoint is Google Apps Script (`script.google.com`) or Cloudflare KV, initializes the matching provider ([`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L180) or [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98)), and caches the choice in `localStorage`.
 
 #### Method 2: Browser LocalStorage Configuration
 Open your browser developer console (F12) and run:
@@ -80,7 +80,7 @@ localStorage.setItem('custom_live_endpoint', 'https://script.google.com/macros/s
 ```
 
 #### Method 3: TypeScript Source Default Configuration
-In [`src/sync.ts:L264`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L264), update the default instance initialized or call [`setLiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L266):
+In [`src/sync.ts:L264`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L264), update the default instance initialized or call [`setLiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L273):
 
 ```typescript
 // Default to your Cloudflare Worker:
@@ -94,7 +94,7 @@ setLiveStorageProvider(new GoogleSheetsStorageProvider('https://script.google.co
 
 ## 2. Step-by-Step Setup: Cloudflare Workers KV
 
-All source files for Cloudflare deployment are pre-packaged in the [`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare#L1) directory:
+All source files for Cloudflare deployment are pre-packaged in the [`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare) directory:
 - Worker Script: [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)
 - Wrangler Configuration: [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1)
 
