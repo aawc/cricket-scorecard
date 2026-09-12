@@ -3,13 +3,16 @@ on:
   push:
     branches: [ main, v2 ]
   workflow_dispatch:
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: "pages"
-  cancel-in-progress: true
+  cancel-in-progress: false
+
 jobs:
   deploy:
     environment:
@@ -17,22 +20,55 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # 1. Checkout main (Production Root) and v2 (Preview Subdirectory /v2/)
+      - name: Checkout main branch
         uses: actions/checkout@v4
-      - name: Set up Node
+        with:
+          ref: main
+          path: main-src
+
+      - name: Checkout v2 branch
+        uses: actions/checkout@v4
+        with:
+          ref: v2
+          path: v2-src
+
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install dependencies
-        run: npm install
-      - name: Build
-        run: npm run build
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      # 2. Build main branch (Root /)
+      - name: Build main branch (Root /)
+        run: |
+          cd main-src
+          npm ci || npm install
+          npm run build
+          cd ..
+          mkdir -p dist
+          cp -a main-src/dist/. dist/
+
+      # 3. Build v2 branch (Subdirectory /v2/)
+      - name: Build v2 branch (Subdirectory /v2/)
+        run: |
+          cd v2-src
+          npm ci || npm install
+          npm run build
+          cd ..
+          mkdir -p dist/v2
+          cp -a v2-src/dist/. dist/v2/
+
+      # 4. Deploy Combined Distribution Artifact to GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
-      - name: Upload artifact
+
+      - name: Upload Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
