@@ -113,7 +113,7 @@ We evaluate six potential architectures across latency, cost, setup friction, 1-
 
 ### 4.1 Storage Hosting Infrastructure & Endpoints
 
-Live match scorecards are persisted remotely using a serverless **REST Key-Value (KV) Storage Architecture** implemented via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98) (and [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L175)):
+Live match scorecards are persisted remotely using a serverless **REST Key-Value (KV) Storage Architecture** implemented via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98) (and [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L180)):
 
 1. **Remote Cloud Storage Endpoint**:
    - **Primary Service Provider (Cloudflare Workers KV)**:
@@ -166,7 +166,7 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
   - `Cache-Control: no-cache, no-store, must-revalidate, max-age=0`
   - `Pragma: no-cache`
   - `Expires: 0`
-- **Response**: HTTP 200 with the latest [`LiveMatchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L79) payload.
+- **Response**: HTTP 200 with the latest [`LiveMatchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L78) payload.
 - **Adaptive Polling Intervals & Cache Elimination**:
   - **Active Tab Focus**: Polled every **1.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 1500`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10)).
   - **Background / Hidden Tab**: Throttled to every **10 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 10000`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L11)) via `document.visibilityState` listeners.

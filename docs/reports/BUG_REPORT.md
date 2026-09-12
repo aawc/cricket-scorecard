@@ -20,7 +20,7 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
 ### 1. Dual Active / Inactive Batsmen on Slot Replacement & Dismissal
 - **Severity**: `[CRITICAL]`
 - **Affected Components**: [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L241-L246), [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L541-L555)
-- **Primary Symbols**: [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L373), [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332), [`autoSelectEligiblePlayers`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L602)
+- **Primary Symbols**: [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L523), [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482), [`autoSelectEligiblePlayers`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L793)
 - **Root Cause**:
   1. `CHANGE_BATSMAN` and `autoSelectEligiblePlayers` hardcoded `active: true` when `slot === 1` and `active: false` when `slot === 2`, under the flawed assumption that Slot 1 is permanently the striker and Slot 2 is permanently the non-striker.
   2. Because strike rotates dynamically throughout an innings, Slot 2 frequently becomes the active striker (`active: true`) while Slot 1 becomes the non-striker (`active: false`).
@@ -28,8 +28,8 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
   4. Conversely, if the striker in Slot 2 was dismissed while Slot 1 was `active: false`, assigning a replacement in Slot 2 set `active: false`, leaving **both batsmen marked as `active: false`**.
   5. The striker lookup formula `(live.currentBatsman1 && live.batsmen[live.currentBatsman1]?.active) ? live.currentBatsman1 : (live.currentBatsman2 || '')` always favored Slot 1 when both were `active: true`. When a wicket fell on the next ball, Slot 1 was dismissed regardless of who was actually on strike.
 - **Resolution**:
-  - Implemented [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L373) which contextually assigns `active = !otherBatsman.active` whenever a batsman is selected or replaced, maintaining the single-active-batsman invariant.
-  - Implemented [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332) with automatic corruption self-healing across all delivery handlers.
+  - Implemented [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L523) which contextually assigns `active = !otherBatsman.active` whenever a batsman is selected or replaced, maintaining the single-active-batsman invariant.
+  - Implemented [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482) with automatic corruption self-healing across all delivery handlers.
 - **Verification**: `[PASS]` Verified by Tests 35, 36, and 37 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L997-L1100).
 
 ---
@@ -43,7 +43,7 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
   1. Incrementing the active striker's balls faced (`activeB.balls++`).
   2. Rotating the strike on the completed 1 run (`rotateStrike(live)`).
 - **Resolution**:
-  - Identified the active striker via [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L332), incremented `activeB.balls++`, and invoked [`rotateStrike`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L354).
+  - Identified the active striker via [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482), incremented `activeB.balls++`, and invoked [`rotateStrike`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L504).
 - **Verification**: `[PASS]` Verified by Test 38 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1102-L1130).
 
 ---
@@ -66,11 +66,11 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
 ### 4. Omitted Strike Rotation for Odd Extra Runs Completed on Run Outs
 - **Severity**: `[MEDIUM]`
 - **Affected Component**: [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L540-L600)
-- **Primary Symbol**: [`executeRunOutWicket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L540)
+- **Primary Symbol**: [`executeRunOutWicket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L730)
 - **Root Cause**:
   When batsmen completed an odd number of runs (e.g. 1 completed run) before a run out occurred, `executeRunOutWicket` failed to adjust the surviving batsman's strike state to reflect that the batsmen had crossed ends.
 - **Resolution**:
-  - Updated [`executeRunOutWicket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L540) to assign `live.batsmen[survivingBatsman].active = (extraRuns % 2 !== 0) ? isStriker : !isStriker`.
+  - Updated [`executeRunOutWicket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L730) to assign `live.batsmen[survivingBatsman].active = (extraRuns % 2 !== 0) ? isStriker : !isStriker`.
 - **Verification**: `[PASS]` Verified by Test 40 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1149-L1180).
 
 ---
@@ -78,7 +78,7 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
 ### 5. Final Dismissal Missing from `outBatsmen` on All-Out Transitions
 - **Severity**: `[MEDIUM]`
 - **Affected Component**: [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L154-L167), [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L569-L586)
-- **Primary Symbols**: `ADD_WICKET`, [`executeRunOutWicket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L540)
+- **Primary Symbols**: `ADD_WICKET`, [`executeRunOutWicket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L730)
 - **Root Cause**:
   In both `ADD_WICKET` and `executeRunOutWicket`, `handleAllOut(nextState)` was evaluated and returned *before* `live.outBatsmen.push(outBatsmanName)` and slot clearing were executed. Consequently, the last dismissed batsman was omitted from `outBatsmen` in archived innings.
 - **Resolution**:
@@ -90,7 +90,7 @@ All identified defects have been fixed in [`src/reducer.ts`](file:///usr/local/g
 ### 6. Incorrect Winning Margin in Match Status Display for Single Batsman Mode
 - **Severity**: `[LOW]`
 - **Affected Component**: [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L732-L738)
-- **Primary Symbol**: [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L580)
+- **Primary Symbol**: [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1012)
 - **Root Cause**:
   Line 735 hardcoded `totalPlayers - 1 - live.wickets` for the winning wicket margin, assuming standard 2-batsman play where maximum wickets equals `totalPlayers - 1`. In Single Batsman mode, maximum wickets equals `totalPlayers`, causing the UI to report 1 fewer winning wicket than actual.
 - **Resolution**:
@@ -197,7 +197,7 @@ All tests passed!
 ### 8. Empty Batsman Dropdown during Innings Break & Missing 2nd Innings Start Controls
 - **Severity**: `[HIGH]`
 - **Status**: `[PASS]` Resolved & Verified (Test 81)
-- **Affected Components**: [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L985), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1135), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575), [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645)
+- **Affected Components**: [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L748), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L910), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1301), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1802), [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645)
 - **Diagnostic Context**:
   - Bug Report: 2026-09-09T02:05:42.934Z | App Version `v20260908-004`
   - Feedback: "After the first team got all out, there were no batsmen left to select. Expected: show batsmen from the second team in the drop-down."
@@ -209,10 +209,10 @@ All tests passed!
   4. In `generateScorecardSummary()`, `liveInnings` was rendered alongside archived Innings 1 during `INNINGS_BREAK`, causing duplicate summary display.
 - **Resolution**:
   1. Added an interactive `#innings-break-banner` in [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182) and [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645) displaying the match target, chasing team requirement, and a prominent `▶ Start 2nd Innings` button (`#start-next-innings-btn`).
-  2. Implemented and exported [`startNextInnings()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575) in `src/ui.ts` which dispatches `START_NEXT_INNINGS` to transition the state machine to `PLAYING_INNINGS`, advance `currentInnings` to 2, flip `currentBattingTeam` to the chasing team, reset `liveInnings`, and clear `outBatsmen`.
-  3. Updated `checkControlsState()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1135) to lock keypad scoring controls and player dropdowns during `INNINGS_BREAK` while keeping `start-next-innings-btn` and `undo-btn` enabled (with spectator mode locks).
-  4. Updated `populateDropdown` handling during `INNINGS_BREAK` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870) to prompt "Innings Break - Click 'Start 2nd Innings'".
-  5. Updated `generateScorecardSummary()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L770) to prevent duplicate innings rendering during `INNINGS_BREAK`.
+  2. Implemented and exported [`startNextInnings()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1802) in `src/ui.ts` which dispatches `START_NEXT_INNINGS` to transition the state machine to `PLAYING_INNINGS`, advance `currentInnings` to 2, flip `currentBattingTeam` to the chasing team, reset `liveInnings`, and clear `outBatsmen`.
+  3. Updated `checkControlsState()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1301) to lock keypad scoring controls and player dropdowns during `INNINGS_BREAK` while keeping `start-next-innings-btn` and `undo-btn` enabled (with spectator mode locks).
+  4. Updated `populateDropdown` handling during `INNINGS_BREAK` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L910) to prompt "Innings Break - Click 'Start 2nd Innings'".
+  5. Updated `generateSummaryView()` in [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L748) to prevent duplicate innings rendering during `INNINGS_BREAK`.
 - **Verification**: `[PASS]` Verified by automated Test 81 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2595) reproducing the exact bug report state payload and asserting banner visibility, control locking, clean 2nd innings transition, and player dropdown population for both teams.
 
 ---
@@ -232,7 +232,7 @@ All tests passed!
   4. **Service Worker Interception** ([`public/sw.js#L45`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45)): `public/sw.js` fetch listener did not explicitly bypass live sync API endpoints (`/api/match/`, `action=fetch`, `_t=`, `script.google.com`, `workers.dev`, `khaneja.org`).
 - **Resolution**:
   1. Updated [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L84) GET handler to return `'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0'`, `'Pragma': 'no-cache'`, and `'Expires': '0'`.
-  2. Updated [`CloudflareKVStorageProvider.fetchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L137) and [`GoogleSheetsStorageProvider.fetchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L224) in `src/sync.ts` to append dynamic `_t=${Date.now()}` query parameters, pass `cache: 'no-store'`, and rely strictly on CORS-safelisted request headers (`Accept: application/json`) to avoid CORS preflight rejection.
+  2. Updated [`CloudflareKVStorageProvider.fetchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L137) and [`GoogleSheetsStorageProvider.fetchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L222) in `src/sync.ts` to append dynamic `_t=${Date.now()}` query parameters, pass `cache: 'no-store'`, and rely strictly on CORS-safelisted request headers (`Accept: application/json`) to avoid CORS preflight rejection.
   3. Optimized polling cadence in [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10): Decreased `ACTIVE_POLL_INTERVAL_MS` to 1500ms (1.5s) for real-time live score propagation, `DEBOUNCE_SYNC_MS` to 150ms for umpire action streaming, and `BACKGROUND_POLL_INTERVAL_MS` to 10000ms (10s) for background tabs.
   4. Added explicit bypass in [`public/sw.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public/sw.js#L45) fetch listener for `/api/match/`, `action=fetch`, `_t=`, and cloud backend hosts.
 - **Verification**: `[PASS]` Verified by automated Test 82 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2675) reproducing the reported payload, validating cache-busting headers and query parameters, and asserting immediate state synchronization on manual refresh.

@@ -54,14 +54,14 @@ Fully functional, overhauled, and verified. Standardized Release Management & dy
 
 This project follows an enterprise modular directory organization system:
 
-- **[`src/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src#L1)**: Modular TypeScript client source code (state machine, UI controller, modal manager, live sync, storage compression, and semantic versioning).
-- **[`src/v2/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2#L1)**: Event-sourced v2 architecture modules (delivery types, pure projection engine, SVG charts, hardware controllers, CSV/JSON exporters, and adapter bridge).
-- **[`backend/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend#L1)**: Serverless cloud backends and edge streaming integrations ([`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare#L1) and [`backend/google-apps-script/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script#L1)).
-- **[`docs/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs#L1)**: Comprehensive documentation repository. See [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) for governance rules and [`docs/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/README.md#L1) for the index.
-- **[`scripts/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts#L1)**: Build, release automation (`npm run release`), service worker compiler, and release notes extractors.
-- **[`.github/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/.github#L1)**: GitHub Actions CI/CD workflows (`ci.yml`, `release.yml`, `deploy.yml`) and issue templates.
-- **[`public/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public#L1)**: Static assets, icons, manifest, and service worker shell.
-- **[`test/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test#L1)**: Automated unit and regression test suites.
+- **[`src/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src)**: Modular TypeScript client source code (state machine, UI controller, modal manager, live sync, storage compression, and semantic versioning).
+- **[`src/v2/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2)**: Event-sourced v2 architecture modules (delivery types, pure projection engine, SVG charts, hardware controllers, CSV/JSON exporters, and adapter bridge).
+- **[`backend/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend)**: Serverless cloud backends and edge streaming integrations ([`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare) and [`backend/google-apps-script/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script)).
+- **[`docs/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs)**: Comprehensive documentation repository. See [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) for governance rules and [`docs/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/README.md#L1) for the index.
+- **[`scripts/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/scripts)**: Build, release automation (`npm run release`), service worker compiler, and release notes extractors.
+- **[`.github/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/.github)**: GitHub Actions CI/CD workflows (`ci.yml`, `release.yml`, `deploy.yml`) and issue templates.
+- **[`public/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/public)**: Static assets, icons, manifest, and service worker shell.
+- **[`test/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test)**: Automated unit and regression test suites.
 
 ## Local Development & Release Commands
 

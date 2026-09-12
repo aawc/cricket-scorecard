@@ -31,10 +31,10 @@ The Cricket Scorecard PWA supports dual zero-cost cloud storage providers for li
 
 ## Directory Structure
 
-- [`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare#L1): Cloudflare Workers KV edge service.
+- [`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare): Cloudflare Workers KV edge service.
   - [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1): Edge worker script handling CORS, GET, and POST endpoints with 1-year data retention (`expirationTtl = 31536000`).
   - [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1): Wrangler CLI deployment configuration.
-- [`backend/google-apps-script/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script#L1): Google Apps Script serverless backend.
+- [`backend/google-apps-script/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script): Google Apps Script serverless backend.
   - [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1): Apps Script Web App implementation supporting JSON payload ingest and retrieval.
 
 ---

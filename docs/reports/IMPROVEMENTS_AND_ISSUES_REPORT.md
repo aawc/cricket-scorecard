@@ -63,11 +63,11 @@ A total of **12 key issues and enhancements** were identified, categorized, impl
 
 ### Bug 1 [CRITICAL]: Dual Active Batsman & Wrong Dismissal on Replacement
 
-- **Location**: [`src/reducer.ts#L441-L463`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L441-L463) (`assignBatsmanToSlot`), [`src/reducer.ts#L400-L420`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L400-L420) (`getStriker`)
+- **Location**: [`src/reducer.ts#L523-L542`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L523-L542) (`assignBatsmanToSlot`), [`src/reducer.ts#L482-L502`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482-L502) (`getStriker`)
 - **Symptoms**: When a non-striker was run out and a replacement batsman was chosen for Slot 1, both batsmen became marked as `active: true`. When a wicket subsequently fell, the non-facing incoming batsman was dismissed instead of the active striker facing the delivery.
 - **Root Cause**: The slot assignment logic previously defaulted any newly instantiated batsman object in Slot 1 to `active: true` unconditionally, without inspecting the active state of the surviving batsman in Slot 2.
 - **Resolution**:
-  - Implemented strictly synchronized strike determination in [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L441-L463):
+  - Implemented strictly synchronized strike determination in [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L523-L542):
     ```typescript
     const otherSlotName = slot === 1 ? live.currentBatsman2 : live.currentBatsman1;
     let isActive = true;
@@ -75,7 +75,7 @@ A total of **12 key issues and enhancements** were identified, categorized, impl
         isActive = !live.batsmen[otherSlotName].active;
     }
     ```
-  - Added self-healing invariant validation in [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L400-L420) to guarantee exactly one active striker at all times.
+  - Added self-healing invariant validation in [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482-L502) to guarantee exactly one active striker at all times.
 - **Verification**: Covered by Tests 35, 36, and 37.
 
 ---
@@ -126,12 +126,12 @@ A total of **12 key issues and enhancements** were identified, categorized, impl
 
 ### Improvement 1 [HIGH]: Individual Batsman Boundary Counters (4s & 6s) & Strike Rate
 
-- **Location**: [`src/types.ts#L1-L8`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L1-L8), [`src/reducer.ts#L125-L130`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L125-L130), [`src/ui.ts#L440-L460`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L440-L460)
+- **Location**: [`src/types.ts#L5-L11`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L5-L11), [`src/reducer.ts#L125-L130`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L125-L130), [`src/ui.ts#L440-L460`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L440-L460)
 - **Description**: Standard scorecards must record boundaries (`4s` and `6s`) per batsman and compute batting Strike Rate (`(runs / balls) * 100`).
 - **Implementation**:
-  - Added `fours: number; sixes: number;` to [`BatsmanStats`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L1-L8).
-  - Tracked in [`ADD_RUNS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L106-L140) and [`FINALIZE_DELIVERY`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L216-L308).
-  - Serialized compactly (`f`, `s`) in [`minifyState`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/storage.ts#L172-L220).
+  - Added `fours: number; sixes: number;` to [`BatsmanStats`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L5-L11).
+  - Tracked in [`ADD_RUNS`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L106-L137) and [`FINALIZE_DELIVERY`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L213-L308).
+  - Serialized compactly (`f`, `s`) in [`minifyState`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/storage.ts#L596-L645).
   - Rendered in HTML summary tables and text scorecard export.
 - **Verification**: Covered by Tests 42, 49, and 50.
 
@@ -139,11 +139,11 @@ A total of **12 key issues and enhancements** were identified, categorized, impl
 
 ### Improvement 2 [HIGH]: Bowler Maiden Over Tracking & Economy Calculation
 
-- **Location**: [`src/types.ts#L9-L17`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L9-L17), [`src/reducer.ts#L500-L530`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L500-L530), [`src/ui.ts#L500-L525`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L500-L525)
+- **Location**: [`src/types.ts#L13-L20`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L13-L20), [`src/reducer.ts#L500-L530`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L500-L530), [`src/ui.ts#L500-L525`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L500-L525)
 - **Description**: Bowler figures must include completed maiden overs (`O - M - R - W`) and Economy rate (`runs / (balls / 6)`).
 - **Implementation**:
-  - Added `maidens: number;` to [`BowlerStats`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L9-L17).
-  - Calculated in [`checkOverComplete`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L495-L558): an over is a maiden if 0 runs were conceded off the bat, wides, or no-balls across 6 legal balls. Byes and leg byes do not break a maiden.
+  - Added `maidens: number;` to [`BowlerStats`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L13-L20).
+  - Calculated in [`checkOverComplete`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L574-L637): an over is a maiden if 0 runs were conceded off the bat, wides, or no-balls across 6 legal balls. Byes and leg byes do not break a maiden.
 - **Verification**: Covered by Tests 43, 44, and 50.
 
 ---
@@ -212,7 +212,7 @@ A total of **12 key issues and enhancements** were identified, categorized, impl
 - **Location**: [`src/ui.ts#L1001-L1065`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1001-L1065), [`index.html#L330-L345`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L330-L345)
 - **Description**: Users needed a quick way to copy a formatted scorecard to clipboard for WhatsApp, SMS, or Discord.
 - **Implementation**:
-  - Implemented [`generateTextSummary()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1001) formatting status, batsmen figures (with 4s, 6s, SR), extras, Fall of Wickets, and bowler figures (O-M-R-W, Econ).
+  - Implemented [`generateTextSummary()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1562) formatting status, batsmen figures (with 4s, 6s, SR), extras, Fall of Wickets, and bowler figures (O-M-R-W, Econ).
   - Added "Copy Text Scorecard" button with clipboard integration and fallback alert display.
 - **Verification**: Covered by Test 50.
 
@@ -325,7 +325,7 @@ Successfully injected 8 assets into dist/sw.js
 | :--- | :--- | :--- | :--- |
 | **Innings Break Banner & 2nd Innings CTA** | [`index.html`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/index.html#L182), [`src/style.css`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/style.css#L645) | Interactive `#innings-break-banner` with target equation and prominent `▶ Start 2nd Innings` button (`#start-next-innings-btn`). | `[PASS] Implemented` |
 | **Innings Break Control Locking & Dropdown Prompts** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L870), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1135) | Locks scoring keys and player selectors during `INNINGS_BREAK`, preventing empty dropdown rendering for all-out teams. | `[PASS] Implemented` |
-| **2nd Innings State Transition Handler** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1575) | Implemented `startNextInnings()` dispatching `START_NEXT_INNINGS` to flip batting/bowling teams, reset live figures, and populate 2nd innings rosters. | `[PASS] Implemented` |
+| **2nd Innings State Transition Handler** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1802) | Implemented `startNextInnings()` dispatching `START_NEXT_INNINGS` to flip batting/bowling teams, reset live figures, and populate 2nd innings rosters. | `[PASS] Implemented` |
 | **Innings Summary Duplicate Prevention** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L770) | Prevents duplicate rendering of live innings alongside archived Innings 1 in Full Scorecard mode during innings breaks. | `[PASS] Implemented` |
 | **Automated Bug Reproduction & Verification (Test 81)** | [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L2595) | Recreated exact user diagnostic payload verifying banner display, control locking, clean 2nd innings transition, and player dropdown population. | `[PASS] Implemented` |
 
