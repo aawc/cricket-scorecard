@@ -1972,3 +1972,16 @@ body.screenshot-mode .cric-app-container {
     margin-top: 2px;
 }
 
+
+/* Clause 12/13 disclosure on the innings summary. Orange (#D55E00) rather
+   than red, and carrying an explicit [WARN] text label, so the notice does
+   not rely on red/green discrimination. */
+.clause-breach-notice {
+    margin-top: 0.6rem;
+    padding: 0.5rem 0.65rem;
+    border-left: 4px solid #D55E00;
+    background: rgba(213, 86, 0, 0.08);
+    color: var(--text);
+    font-size: 0.85rem;
+    line-height: 1.35;
+}

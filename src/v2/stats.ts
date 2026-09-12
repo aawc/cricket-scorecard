@@ -547,7 +547,12 @@ export function projectInnings(
     activeStriker,
     activeNonStriker,
     activeBowler,
-    projectedScores
+    projectedScores,
+    // Derived by the bridge from the legacy over log, which records who bowled
+    // each over and is the only place the innings bowling figures are held.
+    // Null rather than empty: an empty list is an all-clear this function is
+    // not in a position to give.
+    consecutiveOverBreaches: null
   };
 }
 
