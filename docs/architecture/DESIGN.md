@@ -338,3 +338,29 @@ The application state and action tree are governed by strict contracts:
 - `LiveInnings`: Holds score, wickets, balls, extras, batsmen/bowler records, Fall of Wickets, over log, and completed overs.
 - `GameState`: Houses settings, current innings, team profiles, and historical states.
 - `Action`: Discriminated union of dispatchable store actions (e.g. `ADD_RUNS`, `ADD_WICKET`, `FINALIZE_DELIVERY`, `FORCE_END_INNINGS`, `UNDO`).
+
+---
+
+## 11. ICC Men's One Day International Playing Conditions Compliance Standard
+
+The state machine, scoring reducer ([`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L1)), domain models ([`src/types.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L1)), and v2 event projection engine ([`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L1)) are formally governed by the **ICC Men's One Day International Playing Conditions** (Effective 1 August 2019, from *ICC Playing Handbook Section 04*).
+
+### Governing Rulebook Reference
+- **Local PDF Reference**: [`docs/rules/icc_mens_odi_playing_conditions.pdf`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/icc_mens_odi_playing_conditions.pdf)
+- **Detailed Compliance Overview**: [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L1)
+
+### Key Statutory Standards Enforced
+1. **Match Duration & Overs (Clause 12 & 13)**: Standard 50 overs per innings. Max quota per bowler is 1/5th (20%) of the innings overs (e.g., 10 overs in a 50-over innings, 2 overs in an 8-over match). No consecutive overs by the same bowler.
+2. **The Over & Maidens (Clause 17)**: 6 legal deliveries constitute an over. A maiden over is credited when 0 runs are conceded off the bowler (byes and leg byes do not spoil a maiden). Strike rotates automatically upon completion of the over.
+3. **Scoring & Strike Rotation (Clause 18 & 19)**: Odd completed physical runs (1, 3, 5) swap striker and non-striker. Boundary 4s and 6s accrue directly to the striker and team score.
+4. **No Balls (Clause 21)**: 1 penalty run charged against the bowler; delivery is not counted towards over legal balls; counts as a ball faced for the batsman. Free Hits (Clause 21.19) are **not implemented** — the app does not track free-hit state, so the scorer must apply the dismissal restriction manually.
+5. **Wides & Extras (Clause 22 & 23)**: Wides incur a 1-run penalty charged to bowler and must be re-bowled. Byes and Leg Byes count as legal deliveries for both bowler and batsman but do not penalize bowler conceded runs (MCC Law 21.18 separation).
+6. **Dismissals (Clauses 31–39)**: The v2 projection engine models the full set of dismissal kinds ([`DismissalKind`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/types.ts#L12)) and withholds bowler credit for those not credited to the bowler. The v1 scoring UI distinguishes only a generic wicket from a Run Out (with explicit striker vs non-striker attribution and completed runs); it does not ask which specific mode of dismissal occurred.
+7. **Match Conclusion & Tie Resolution (Clause 16)**: Win by runs/wickets and second innings target tracking. A tie is reported as a tie; **Super Over provisions, Duckworth-Lewis-Stern and reserve days are not implemented.**
+
+### Clauses Deliberately Not Implemented
+
+Free Hits (21.19), Powerplays and fielding restrictions (28 / Appendix C), substitutes and
+concussion replacements (1), Super Over, DLS, and Net Run Rate. The per-clause status matrix in
+[`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L17)
+is the authoritative record of coverage.

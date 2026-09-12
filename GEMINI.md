@@ -54,11 +54,12 @@ The codebase is organized into modular TypeScript units under `src/`:
    - Keep `README.md`, `PROMPT.md`, `GEMINI.md`, [`docs/architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1), [`docs/reports/BUG_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/reports/BUG_REPORT.md#L1), [`docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/reports/IMPROVEMENTS_AND_ISSUES_REPORT.md#L1), and [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) in sync whenever code or features change.
 7. **Tag Hygiene**:
    - Omit internal tracking tags (e.g., `TAG=agy`, `CONV=<id>`) from commit messages and documentation in this workspace.
-
----
-
 8. **Strict Directory Structure Compliance**:
    - All code, documentation, and cloud integrations MUST adhere to [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1). Never create ad-hoc root folders or loose files.
+9. **ICC Men's One Day International Playing Conditions Compliance**:
+   - All future code changes, scoring features, state machine transitions, extras accounting, dismissal mechanics, and statistical projections MUST strictly comply with the official **ICC Men's One Day International Playing Conditions** ([`docs/rules/icc_mens_odi_playing_conditions.pdf`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/icc_mens_odi_playing_conditions.pdf), [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L1)).
+   - Baseline match rules, bowling limits (1/5th quota, no two consecutive overs), extras separation, and maiden calculations must strictly follow the statutory ICC standard.
+   - Coverage is partial by design. Consult the per-clause status matrix in [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L17) before asserting that any clause is implemented. Free hits, powerplays, substitutes, Super Over, DLS and Net Run Rate are **not** implemented — never document them as compliant, and never cite a line anchor for them.
 
 ---
 

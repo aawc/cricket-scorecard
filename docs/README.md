@@ -9,6 +9,7 @@ Welcome to the technical documentation library for the **Cricket Scorecard PWA**
 | Section | Document | Description |
 | :--- | :--- | :--- |
 | **Governance** | [`DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) | Authoritative repository directory layout rules & conventions |
+| **Rules & Standards** | [`rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L1) | ICC Men's ODI Playing Conditions reference & coverage matrix |
 | **Architecture** | [`architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1) | System architecture, cricket laws state machine & UI design |
 | **Architecture** | [`architecture/LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/LIVE_SYNC_DESIGN.md#L1) | Real-time edge streaming architecture & sync protocol |
 | **Architecture** | [`architecture/V2_ARCHITECTURE_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/V2_ARCHITECTURE_REPORT.md#L1) | Comprehensive v2 domain & event-sourced architecture blueprint |

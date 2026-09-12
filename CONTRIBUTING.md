@@ -41,6 +41,7 @@ The Cricket Scorecard is built as a zero-cost, offline-first Progressive Web App
 | **Diagnostic Feedback** | [`src/feedback.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L1) | In-app bug report compiler, runtime error logger, and GitHub Issue generator. |
 | **UI Orchestration** | [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1) | DOM event binding, scoring keypad, player selectors, scoreboard tables, and flip card animation. |
 | **v2 Event-Sourced Core & Analytics** | [`src/v2/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2#L1) | Delivery event streaming, pure statistical projection engine (`stats.ts`), SVG visual charts (`charts.ts`), hardware integrations (`hardware.ts`), CSV/JSON exporters (`export.ts`), and adapter bridge (`bridge.ts`). |
+| **Governing Rules Standard** | [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L17) | Per-clause status matrix mapping the official **ICC Men's One Day International Playing Conditions** ([`docs/rules/icc_mens_odi_playing_conditions.pdf`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/icc_mens_odi_playing_conditions.pdf)) to code, recording which clauses are implemented, partial, or out of scope. |
 
 ---
 
@@ -48,7 +49,7 @@ The Cricket Scorecard is built as a zero-cost, offline-first Progressive Web App
 All contributors MUST follow the authoritative directory layout defined in [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1):
 - Client code in `src/`
 - Cloud & serverless backends in `backend/`
-- Detailed documentation in `docs/`
+- Detailed documentation in `docs/` (including `docs/rules/` for cricket playing conditions)
 - Build & automation scripts in `scripts/`
 - Tests in `test/`
 - Root directory contains strictly essential project configurations.
@@ -208,6 +209,7 @@ Before submitting code changes:
 - [ ] All automated tests pass (`npm test`).
 - [ ] Production build succeeds (`npm run build`).
 - [ ] Release dry-run succeeds (`npm run release -- --dry-run`).
+- [ ] All scoring, over rules, extras, and dismissals strictly comply with the **ICC Men's One Day International Playing Conditions** ([`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L1)).
 - [ ] Diffs follow colorblind accessible indicators (`[+]`, `[-]`, `[PASS]`, `[FAIL]`).
 - [ ] `CONTRIBUTING.md`, `README.md`, `PROMPT.md`, and `GEMINI.md` are synchronized.
 - [ ] Commit descriptions are structured with technical rationale and omit internal tracking tags (`TAG=agy`, `CONV=...`).
