@@ -1,4 +1,5 @@
 import { GameState, Action, LiveInnings, Team, MatchPhase, BowlerStats, BatsmanStats } from './types.js';
+import { getEligibleBowlers, getSelectableBowlers } from './rules.js';
 
 const PHASE_ACTIONS: Record<MatchPhase, string[]> = {
     'SETUP': ['START_MATCH'],
@@ -316,6 +317,88 @@ export function reducer(state: GameState, action: Action): GameState {
         case 'CHANGE_BOWLER': {
             const { name } = action.payload;
             const live = nextState.match.liveInnings;
+            if (!live) break;
+            const bowlingTeam = nextState.match.currentBattingTeam === 1
+                ? nextState.match.team2
+                : nextState.match.team1;
+
+            // The dropdown is currently the only dispatcher of this action and
+            // already hides ineligible bowlers, so this guard is defence in
+            // depth: it keeps Clause 12/13 with the state machine rather than
+            // the view, so any future dispatcher cannot install an illegal
+            // bowler. It validates against the same set the dropdown offers,
+            // so the two layers cannot disagree.
+            //
+            // Note that restored permalinks and live-sync packets bypass the
+            // reducer entirely (storage.unminifyState feeding setGameState) and
+            // are NOT covered here.
+            // Membership is asked first, and separately. Every candidate set
+            // below is a filtered subset of the roster, so a name that is not
+            // on the bowling side fails all of them - and would otherwise be
+            // refused with a fabricated claim that it had exhausted a quota it
+            // never began. This arm also covers the empty roster of a freshly
+            // loaded app, where every set is empty for a reason that has
+            // nothing to do with the quota.
+            //
+            // The three refusal reasons are therefore mutually exclusive: not
+            // on the side, nobody left under quota, or this particular bowler
+            // is ineligible.
+            if (name && bowlingTeam) {
+                if (!bowlingTeam.players.includes(name)) {
+                    nextState.uiEvents.push({
+                        type: 'SHOW_ALERT',
+                        payload: {
+                            title: 'Ineligible Bowler',
+                            message: `${name} is not in the bowling side.`
+                        }
+                    });
+                    break;
+                }
+
+                const { bowlers: permitted } = getSelectableBowlers(live, bowlingTeam.players, nextState.settings);
+
+                if (permitted.length === 0) {
+                    // Nobody is under quota. Unlike the consecutive-over rule,
+                    // the quota is a hard statutory cap and is never relaxed:
+                    // permitting the request here would allow one bowler an
+                    // unbounded number of overs.
+                    //
+                    // No triggerAction: showAlert registers it as a modal-hidden
+                    // callback, so it fires on Escape, a backdrop click or the
+                    // close X just as readily as on OK. Ending the innings is
+                    // destructive and must not happen on an accidental
+                    // dismissal, so point at the confirmed End Innings flow
+                    // instead of performing it here.
+                    nextState.uiEvents.push({
+                        type: 'SHOW_ALERT',
+                        payload: {
+                            title: 'No Bowler Available',
+                            message: `Every bowler has bowled their maximum of ${nextState.settings.maxOversPerBowler} over(s). The innings cannot continue - use End Innings to conclude it.`
+                        }
+                    });
+                    break;
+                }
+
+                if (!permitted.includes(name)) {
+                    const reason = name === live.previousBowler
+                        ? `${name} bowled the previous over. A bowler may not bowl two consecutive overs.`
+                        : `${name} has already bowled the maximum of ${nextState.settings.maxOversPerBowler} over(s) permitted per bowler.`;
+                    // autoSelectEligiblePlayers runs after this action and will
+                    // force-assign when exactly one bowler is eligible. Name that
+                    // bowler here so the alert does not contradict the scoreboard.
+                    const eligible = getEligibleBowlers(live, bowlingTeam.players, nextState.settings);
+                    const substitute = eligible.length === 1 ? ` ${eligible[0]} has been selected instead.` : '';
+                    nextState.uiEvents.push({
+                        type: 'SHOW_ALERT',
+                        payload: {
+                            title: 'Ineligible Bowler',
+                            message: reason + substitute
+                        }
+                    });
+                    break;
+                }
+            }
+
             live.currentBowler = name;
             initBowlerStats(live, name);
             break;
@@ -732,11 +815,7 @@ function autoSelectEligiblePlayers(nextState: GameState): void {
     }
 
     if (!live.currentBowler) {
-        const maxBalls = nextState.settings.maxOversPerBowler * 6;
-        const candidates = bowlingTeam.players.filter(p => {
-            const stats = live.bowlers[p] || { balls: 0 };
-            return p !== live.previousBowler && stats.balls < maxBalls;
-        });
+        const candidates = getEligibleBowlers(live, bowlingTeam.players, nextState.settings);
         if (candidates.length === 1) {
             live.currentBowler = candidates[0];
             initBowlerStats(live, candidates[0]);

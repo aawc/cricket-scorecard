@@ -14,6 +14,7 @@ import {
   DismissalKind
 } from './types.js';
 import { projectInnings, generateWormCoordinates, generateManhattanData } from './stats.js';
+import { findConsecutiveOverBreaches } from '../rules.js';
 
 /**
  * Synthesize DeliveryEvents from a v1 LiveInnings structure and its over history
@@ -270,6 +271,10 @@ export function getProjectionsFromGameState(state: GameState): {
     inngs1Live.currentBatsman2,
     inngs1Live.currentBowler
   );
+  inngs1Proj.consecutiveOverBreaches = findConsecutiveOverBreaches(
+    inngs1Live.overs || [],
+    Object.keys(inngs1Live.bowlers || {})
+  );
 
   let inngs2Proj: InningsProjection | null = null;
   let events2: DeliveryEvent[] = [];
@@ -290,6 +295,10 @@ export function getProjectionsFromGameState(state: GameState): {
       inngs2Live.currentBatsman1,
       inngs2Live.currentBatsman2,
       inngs2Live.currentBowler
+    );
+    inngs2Proj.consecutiveOverBreaches = findConsecutiveOverBreaches(
+      inngs2Live.overs || [],
+      Object.keys(inngs2Live.bowlers || {})
     );
   }
 

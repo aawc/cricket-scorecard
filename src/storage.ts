@@ -561,14 +561,32 @@ export function healInningsOvers(innings: LiveInnings): void {
         
         if (legalCount === 6) {
             completedOvers.push({
-                bowler: innings.currentBowler || "Unknown",
+                bowler: "Unknown",
                 balls: [...currentOverBalls]
             });
             currentOverBalls = [];
             legalCount = 0;
         }
     }
-    
+
+    // currentBowler is whoever was bowling when the state was written, so it
+    // describes the balls that came last, not the ones before them. It is
+    // therefore sound attribution in exactly one shape: a single reconstructed
+    // over with nothing already recorded before it and nothing left over after
+    // it. With nothing before it the over has no neighbour, so even a
+    // currentBowler that had already advanced past the failed flush cannot
+    // form a pair. Once a recorded over precedes it that is no longer true: in
+    // an ordinary C D C rotation, naming the recovered over for currentBowler
+    // manufactures a consecutive-over breach out of a legal rotation, and it
+    // would be printed on a permanent record as a departure from the playing
+    // conditions. "Unknown" is already excluded from that reading.
+    if (completedOvers.length === 1
+        && currentOverBalls.length === 0
+        && innings.overs.length === 0
+        && innings.currentBowler) {
+        completedOvers[0].bowler = innings.currentBowler;
+    }
+
     if (completedOvers.length > 0) {
         innings.overs = [...innings.overs, ...completedOvers];
         innings.overLog = currentOverBalls;

@@ -3,6 +3,10 @@
  * Event-sourced cricket scoring, statistical projections, and visual telemetry.
  */
 
+import { ConsecutiveOverBreach } from '../rules.js';
+
+export type { ConsecutiveOverBreach };
+
 export type ExtraType = 'wide' | 'noball' | 'bye' | 'legbye' | 'penalty';
 
 export type DismissalKind =
@@ -150,6 +154,13 @@ export interface InningsProjection {
     at10Overs: number;
     at20Overs: number;
   };
+  /**
+   * Clause 12/13 breaches for this innings, or `null` when they were never
+   * derived. An empty array is an authoritative all-clear, so the two must
+   * not share a representation: only the adapter holds the innings bowling
+   * figures the derivation needs to reject over records that name no player.
+   */
+  consecutiveOverBreaches: ConsecutiveOverBreach[] | null;
 }
 
 export interface WormDataPoint {

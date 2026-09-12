@@ -1,6 +1,7 @@
 import { gameState, dispatch, setGameState } from './state.js';
 import { saveState, loadState, generatePermalink, clearState, archiveCompletedMatch } from './storage.js';
 import { GameState, LiveInnings, Team } from './types.js';
+import { getSelectableBowlers, isBowlingResourceExhausted, findConsecutiveOverBreaches } from './rules.js';
 import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl } from './feedback.js';
 import { openModal, closeModal, initModalSystem, registerModalHiddenCallback } from './modal.js';
 import {
@@ -820,6 +821,20 @@ export function generateSummaryView(): void {
                 });
             }
 
+            // The consecutive-over relaxation is announced when the bowler is
+            // chosen and then not stored, so without this the finished card
+            // reads as though the innings conformed. Derived from the over log
+            // rather than a stored flag, so matches scored before this existed
+            // are reported too.
+            const breaches = findConsecutiveOverBreaches(displayOvers, Object.keys(inningsData.bowlers || {}));
+            if (breaches.length > 0) {
+                const breachDiv = document.createElement('div');
+                breachDiv.classList.add('clause-breach-notice');
+                const detail = breaches.map(b => `${b.bowler} (over ${b.over})`).join(', ');
+                breachDiv.innerHTML = `<strong>[WARN] Clause 12/13 relaxed:</strong> consecutive overs were bowled by ${detail}. This innings departs from the ICC playing conditions.`;
+                inningsDiv.appendChild(breachDiv);
+            }
+
             if (displayOvers.length > 0) {
                 const overLogHeading = document.createElement('h4');
                 overLogHeading.textContent = "Over Log";
@@ -1081,10 +1096,22 @@ export function updateUI(): void {
         }
 
         if (bowlerSelect && bowlingTeam) {
-            populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, "Select Bowler", (player) => {
-                const maxBalls = gameState.settings.maxOversPerBowler * 6;
-                const stats = live.bowlers[player] || { balls: 0 };
-                return player !== live.previousBowler && stats.balls < maxBalls;
+            const { bowlers: selectable, relaxed } = getSelectableBowlers(live, bowlingTeam.players, gameState.settings);
+            // Three distinct states, each of which must explain itself. An empty
+            // list under a plain "Select Bowler" prompt tells the scorer nothing.
+            // Exhaustion is asked about explicitly rather than inferred from an
+            // empty list, because a not-yet-entered roster produces an empty
+            // list too and must keep the neutral prompt.
+            let prompt = "Select Bowler";
+            if (isBowlingResourceExhausted(live, bowlingTeam.players, gameState.settings)) {
+                prompt = `All bowlers have bowled their maximum of ${gameState.settings.maxOversPerBowler} over(s) - end the innings`;
+            } else if (relaxed) {
+                // Offering these departs from Clause 12/13; say so rather than
+                // relaxing the rule silently.
+                prompt = "No legal bowler left - consecutive-over rule relaxed";
+            }
+            populateDropdown(bowlerSelect, bowlingTeam.players, live.currentBowler, prompt, (player) => {
+                return selectable.includes(player);
             });
         }
     }
@@ -1341,6 +1368,20 @@ function checkControlsState(): void {
         btn.disabled = needsSelection;
     });
 
+    // If no bowler can be selected at all - every bowler has reached the over
+    // quota - the innings cannot continue. End Innings lives inside
+    // #controls-section and would otherwise be disabled along with the scoring
+    // keys, leaving the scorer with a dead scoreboard and only Undo. Keep it
+    // usable so the innings can be concluded deliberately. Exhaustion is asked
+    // about explicitly: an empty roster also yields nobody selectable, and
+    // offering End Innings before a match exists would be nonsense.
+    if (needsSelection && !live.currentBowler && triggerEndInningsBtn) {
+        const bowlTeam = gameState.match.currentBattingTeam === 1 ? gameState.match.team2 : gameState.match.team1;
+        if (bowlTeam && isBowlingResourceExhausted(live, bowlTeam.players, gameState.settings)) {
+            triggerEndInningsBtn.disabled = false;
+        }
+    }
+
     if (selectionWarning) {
         if (needsSelection) {
             selectionWarning.classList.remove('d-none');
@@ -1544,6 +1585,12 @@ export function generateTextSummary(): string {
         if (inn.fow && inn.fow.length > 0) {
             const fowStr = inn.fow.map((f: any) => `${f.wicket}-${f.score} (${f.batsman}, ${f.overs} ov)`).join(', ');
             res += `FALL OF WICKETS: ${fowStr}\n`;
+        }
+
+        const innBreaches = findConsecutiveOverBreaches(inn.overs || [], Object.keys(inn.bowlers || {}));
+        if (innBreaches.length > 0) {
+            const breachStr = innBreaches.map((b: any) => `${b.bowler} (over ${b.over})`).join(', ');
+            res += `[WARN] CLAUSE 12/13 RELAXED: consecutive overs bowled by ${breachStr}\n`;
         }
 
         res += `\nBOWLERS:\n`;

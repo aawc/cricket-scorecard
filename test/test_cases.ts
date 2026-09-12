@@ -762,11 +762,15 @@ if (live.overs.length !== 2) {
     console.error(`Test 26 Failed: Expected 2 completed overs after healing, got ${live.overs.length}`);
     process.exit(1);
 }
-if (live.overs[0].bowler !== "B1" || JSON.stringify(live.overs[0].balls) !== JSON.stringify(["4", "4", "4", "4", "4", "1"])) {
+// The reconstruction recovers how many overs were bowled, and their balls, but
+// not who bowled them: currentBowler describes the balls still in the log, not
+// the two overs before them. Attributing both to B1 was an invention, and the
+// Clause 12/13 derivation reads such a run as consecutive overs by one bowler.
+if (live.overs[0].bowler !== "Unknown" || JSON.stringify(live.overs[0].balls) !== JSON.stringify(["4", "4", "4", "4", "4", "1"])) {
     console.error("Test 26 Failed: Over 1 not healed correctly", live.overs[0]);
     process.exit(1);
 }
-if (live.overs[1].bowler !== "B1" || JSON.stringify(live.overs[1].balls) !== JSON.stringify(["1", "1", "1", "1", "1", "3"])) {
+if (live.overs[1].bowler !== "Unknown" || JSON.stringify(live.overs[1].balls) !== JSON.stringify(["1", "1", "1", "1", "1", "3"])) {
     console.error("Test 26 Failed: Over 2 not healed correctly", live.overs[1]);
     process.exit(1);
 }
@@ -3165,10 +3169,430 @@ console.log("Running Test 56...");
     }
 
     // =========================================================================
-    // V2 Architecture & Feature Suite Tests (Tests 85 - 89)
+    // V2 Architecture & Feature Suite Tests (Tests 85 - 93)
     // =========================================================================
     const { runV2Tests } = await import('./v2_test_cases.js');
     await runV2Tests();
+
+    // Test 94: ICC Clause 12/13 - a bowler may not bowl two consecutive overs
+    console.log("Running Test 94 (ICC Clause 12/13: Consecutive Over & Bowler Quota Enforcement)...");
+    {
+        const { getEligibleBowlers, getSelectableBowlers, isBowlingResourceExhausted } = await import('../src/rules.js');
+        const bowlerWith = (balls: number) => ({ runs: 0, balls, wickets: 0, maidens: 0, wides: 0, noballs: 0 });
+        const alertOf = (title: string) => (gameState.uiEvents || []).find(
+            (e: any) => e.type === 'SHOW_ALERT' && e.payload && e.payload.title === title);
+
+        // --- Case 1: the bowler of the previous over is refused ---
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.match.team2 = { name: "Team 2", players: ["C", "D", "E"], innings: [] };
+        gameState.match.liveInnings.bowlers = { "C": bowlerWith(6) };
+        gameState.match.liveInnings.previousBowler = "C";
+        gameState.match.liveInnings.currentBowler = "";
+
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "C" } });
+
+        if (gameState.match.liveInnings.currentBowler !== "") {
+            console.error(`Test 94 Failed: C bowled the previous over and must not be allowed to bowl the next one, but currentBowler became "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+        const consecutiveAlert = alertOf('Ineligible Bowler');
+        if (!consecutiveAlert || !String(consecutiveAlert.payload.message).includes("two consecutive overs")) {
+            console.error(`Test 94 Failed: rejecting a consecutive over must raise an 'Ineligible Bowler' alert explaining the rule, got: ${JSON.stringify(gameState.uiEvents)}`);
+            process.exit(1);
+        }
+
+        // A legal replacement must still be accepted, otherwise the guard is
+        // simply refusing every bowler and the assertion above proves nothing.
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "D" } });
+        if (gameState.match.liveInnings.currentBowler !== "D") {
+            console.error(`Test 94 Failed: D is eligible and must be accepted, got "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+
+        // --- Case 2: a bowler who has exhausted the over quota is refused ---
+        // Four bowlers, two of them eligible. With only one eligible bowler the
+        // reducer's auto-select would immediately force-assign them, which would
+        // mask whether the rejection itself did anything.
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.match.team2 = { name: "Team 2", players: ["C", "D", "E", "F"], innings: [] };
+        gameState.match.liveInnings.bowlers = {
+            "C": bowlerWith(6),
+            "D": bowlerWith(6),
+            "E": bowlerWith(12),  // 2 overs bowled == the quota
+            "F": bowlerWith(0)
+        };
+        gameState.match.liveInnings.previousBowler = "D";
+        gameState.match.liveInnings.currentBowler = "";
+
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "E" } });
+        if (gameState.match.liveInnings.currentBowler !== "") {
+            console.error(`Test 94 Failed: E has bowled the full quota and must be refused, but currentBowler became "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+        const quotaAlert = alertOf('Ineligible Bowler');
+        const quotaMsg = quotaAlert ? String(quotaAlert.payload.message) : '';
+        if (!quotaAlert || !quotaMsg.includes("E") || !quotaMsg.includes(String(gameState.settings.maxOversPerBowler))) {
+            console.error(`Test 94 Failed: the quota rejection must name the bowler and the ${gameState.settings.maxOversPerBowler}-over limit, got: "${quotaMsg}"`);
+            process.exit(1);
+        }
+
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "C" } });
+        if (gameState.match.liveInnings.currentBowler !== "C") {
+            console.error(`Test 94 Failed: C is under quota and did not bowl the previous over, so must be accepted, got "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+
+        // --- Case 3: a strictly-legal rotation can become unreachable ---
+        // Defaults are 8 overs at 2 overs per bowler, and startMatch admits the
+        // minimum 4-man attack (ceil(8/2)). Greedy selection C D E C D E F arrives
+        // at the last over with F the only bowler under quota and also the bowler
+        // of over 7. Under strict Clause 12/13 nobody may bowl, the dropdown is
+        // empty, and scoring controls stay disabled: the innings cannot be
+        // completed. The consecutive-over rule must yield so the match can finish.
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.oversPerInnings = 8;
+        gameState.settings.maxOversPerBowler = 2;
+        const attack = ["C", "D", "E", "F"];
+        gameState.match.team2 = { name: "Team 2", players: attack, innings: [] };
+        const trapped = gameState.match.liveInnings;
+        trapped.bowlers = {
+            "C": bowlerWith(12),
+            "D": bowlerWith(12),
+            "E": bowlerWith(12),
+            "F": bowlerWith(6)
+        };
+        trapped.previousBowler = "F";
+        trapped.currentBowler = "";
+        trapped.balls = 42;  // 7 completed overs, consistent with the tallies above
+
+        const strict = getEligibleBowlers(trapped, attack, gameState.settings);
+        if (strict.length !== 0) {
+            console.error(`Test 94 Failed: this fixture is meant to reproduce the deadlock, so strict eligibility must be empty, got ${JSON.stringify(strict)}`);
+            process.exit(1);
+        }
+        const offered = getSelectableBowlers(trapped, attack, gameState.settings);
+        if (offered.bowlers.length !== 1 || offered.bowlers[0] !== "F" || !offered.relaxed) {
+            console.error(`Test 94 Failed: F is under quota and must still be offered with the rule flagged as relaxed, got ${JSON.stringify(offered)}`);
+            process.exit(1);
+        }
+
+        // Relaxing the consecutive-over rule must not relax the quota with it.
+        // C is at the 2-over cap and must still be refused in relaxed mode.
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "C" } });
+        if (gameState.match.liveInnings.currentBowler !== "") {
+            console.error(`Test 94 Failed: the quota is never relaxed, so C must be refused even while the consecutive-over rule is relaxed, got "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+        const cappedAlert = alertOf('Ineligible Bowler');
+        if (!cappedAlert || !String(cappedAlert.payload.message).includes(String(gameState.settings.maxOversPerBowler))) {
+            console.error(`Test 94 Failed: refusing an at-quota bowler in relaxed mode must cite the quota, got: ${JSON.stringify(gameState.uiEvents)}`);
+            process.exit(1);
+        }
+
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "F" } });
+        if (gameState.match.liveInnings.currentBowler !== "F") {
+            console.error(`Test 94 Failed: the innings must remain completable; F should have been accepted, got "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+
+        // --- Case 4: the over quota itself is never relaxed ---
+        // Relaxing it would let one bowler bowl an unbounded number of overs.
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.match.team2 = { name: "Team 2", players: attack, innings: [] };
+        gameState.match.liveInnings.bowlers = {
+            "C": bowlerWith(12),
+            "D": bowlerWith(12),
+            "E": bowlerWith(12),
+            "F": bowlerWith(12)
+        };
+        gameState.match.liveInnings.previousBowler = "F";
+        gameState.match.liveInnings.currentBowler = "";
+
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "C" } });
+        if (gameState.match.liveInnings.currentBowler !== "") {
+            console.error(`Test 94 Failed: with every bowler at quota nobody may bowl, but currentBowler became "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+        const exhaustedAlert = alertOf('No Bowler Available');
+        if (!exhaustedAlert) {
+            console.error(`Test 94 Failed: quota exhaustion must be reported rather than silently permitting an extra over, got: ${JSON.stringify(gameState.uiEvents)}`);
+            process.exit(1);
+        }
+        // The alert must not carry a destructive triggerAction: showAlert fires
+        // triggerAction on any modal dismissal, including Escape, so ending the
+        // innings that way would be an accident waiting to happen.
+        if (exhaustedAlert.payload.triggerAction) {
+            console.error(`Test 94 Failed: the alert must not auto-fire a destructive action on dismissal, got triggerAction "${exhaustedAlert.payload.triggerAction}"`);
+            process.exit(1);
+        }
+        // And the scorer must retain a way out: nobody is selectable, so the
+        // innings can only be concluded through the End Innings flow.
+        // Resolve the bowling side exactly as the reducer does, so this
+        // assertion cannot silently drift onto the batting side - whose
+        // default players have bowled nothing and would trivially pass.
+        const strandedTeam = gameState.match.currentBattingTeam === 1
+            ? gameState.match.team2
+            : gameState.match.team1;
+        const stranded = getSelectableBowlers(gameState.match.liveInnings, strandedTeam.players, gameState.settings);
+        if (stranded.bowlers.length !== 0 || stranded.relaxed) {
+            console.error(`Test 94 Failed: with every bowler at quota nobody may be offered and the rule must not be reported as relaxed, got ${JSON.stringify(stranded)}`);
+            process.exit(1);
+        }
+        if (!isBowlingResourceExhausted(gameState.match.liveInnings, strandedTeam.players, gameState.settings)) {
+            console.error(`Test 94 Failed: a rostered side with every bowler at quota is the definition of exhaustion and must be reported as such`);
+            process.exit(1);
+        }
+
+        // --- Case 5: an empty roster is not quota exhaustion ---
+        // A freshly loaded app has no players entered, so every candidate set
+        // is empty. Treating that as exhaustion tells the scorer that all
+        // bowlers have bowled their maximum before a match exists, and lights
+        // up End Innings on the setup screen.
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.match.team2 = { name: "Team 2", players: [], innings: [] };
+
+        const empty = getSelectableBowlers(gameState.match.liveInnings, [], gameState.settings);
+        if (empty.bowlers.length !== 0 || empty.relaxed) {
+            console.error(`Test 94 Failed: an empty roster yields nobody selectable and nothing relaxed, got ${JSON.stringify(empty)}`);
+            process.exit(1);
+        }
+        if (isBowlingResourceExhausted(gameState.match.liveInnings, [], gameState.settings)) {
+            console.error(`Test 94 Failed: an empty roster is not quota exhaustion - no bowler has bowled anything`);
+            process.exit(1);
+        }
+
+        // The reducer must not invent a quota rejection for a roster that does
+        // not exist. Nobody is on the side, so the refusal must say exactly
+        // that rather than claim an exhausted quota nobody ever began.
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "C" } });
+        if (alertOf('No Bowler Available')) {
+            console.error(`Test 94 Failed: an empty roster must not be reported as quota exhaustion, got: ${JSON.stringify(gameState.uiEvents)}`);
+            process.exit(1);
+        }
+        const emptyRosterAlert = alertOf('Ineligible Bowler');
+        if (!emptyRosterAlert || !String(emptyRosterAlert.payload.message).includes('not in the bowling side')) {
+            console.error(`Test 94 Failed: with no roster the refusal must cite membership, not the quota, got: ${JSON.stringify(gameState.uiEvents)}`);
+            process.exit(1);
+        }
+
+        // --- Case 6: a name that is not on the bowling side ---
+        // Every candidate set is a filtered subset of the roster, so an
+        // off-roster name fails them all. Refusing it is right; refusing it
+        // with "has already bowled the maximum" is a fabrication about a
+        // player who has bowled nothing and is not in the team.
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.match.team2 = { name: "Team 2", players: ["C", "D", "E"], innings: [] };
+        gameState.match.liveInnings.bowlers = { "C": bowlerWith(6) };
+        gameState.match.liveInnings.previousBowler = "C";
+        gameState.match.liveInnings.currentBowler = "";
+
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "Z" } });
+        if (gameState.match.liveInnings.currentBowler === "Z") {
+            console.error(`Test 94 Failed: Z is not in the bowling side and must not be installed as bowler`);
+            process.exit(1);
+        }
+        const offRosterAlert = alertOf('Ineligible Bowler');
+        if (!offRosterAlert) {
+            console.error(`Test 94 Failed: an off-roster bowler must be refused with an explanation, got: ${JSON.stringify(gameState.uiEvents)}`);
+            process.exit(1);
+        }
+        const offRosterMsg = String(offRosterAlert.payload.message);
+        if (!offRosterMsg.includes('not in the bowling side')) {
+            console.error(`Test 94 Failed: the refusal must cite membership, got: "${offRosterMsg}"`);
+            process.exit(1);
+        }
+        if (offRosterMsg.includes('maximum')) {
+            console.error(`Test 94 Failed: Z has bowled nothing, so the refusal must not claim an exhausted quota, got: "${offRosterMsg}"`);
+            process.exit(1);
+        }
+
+        // A legal name on the same fixture must still be accepted, so this
+        // case cannot pass by refusing everything.
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "D" } });
+        if (gameState.match.liveInnings.currentBowler !== "D") {
+            console.error(`Test 94 Failed: D is on the side, under quota and did not bowl the previous over, got "${gameState.match.liveInnings.currentBowler}"`);
+            process.exit(1);
+        }
+    }
+
+    // Test 95: a relaxed Clause 12/13 must be visible on the finished scorecard
+    console.log("Running Test 95 (Clause 12/13 Breaches Recorded on the Finished Scorecard)...");
+    {
+        const { findConsecutiveOverBreaches } = await import('../src/rules.js');
+        const { getProjectionsFromGameState } = await import('../src/v2/bridge.js');
+        const { formatMonospaceScorecard } = await import('../src/v2/export.js');
+        const over = (bowler: string) => ({ bowler, balls: ['1', '1', '1', '1', '1', '1'] });
+
+        // --- Case 1: a legal rotation records nothing ---
+        const clean = findConsecutiveOverBreaches([over("C"), over("D"), over("C")], ["C", "D"]);
+        if (clean.length !== 0) {
+            console.error(`Test 95 Failed: C D C alternates and breaches no rule, got ${JSON.stringify(clean)}`);
+            process.exit(1);
+        }
+
+        // --- Case 2: the repeated over is reported, and only that one ---
+        const breached = findConsecutiveOverBreaches(
+            [over("D"), over("C"), over("C"), over("D")], ["C", "D"]);
+        if (breached.length !== 1) {
+            console.error(`Test 95 Failed: exactly one pair of consecutive overs was bowled, got ${JSON.stringify(breached)}`);
+            process.exit(1);
+        }
+        if (breached[0].bowler !== "C" || breached[0].over !== 3) {
+            console.error(`Test 95 Failed: the breach is C's third over, the second of the pair, got ${JSON.stringify(breached[0])}`);
+            process.exit(1);
+        }
+
+        // --- Case 3: repeated non-bowler strings are not a breach ---
+        // An over archived with no bowler set records a string that names no
+        // player. Two of those in succession say nothing about who bowled, and
+        // reporting them would accuse a bowler who does not exist.
+        const sentinels = findConsecutiveOverBreaches(
+            [over("Unknown"), over("Unknown"), over("C"), over("C")], ["C", "D"]);
+        if (sentinels.length !== 1 || sentinels[0].bowler !== "C" || sentinels[0].over !== 4) {
+            console.error(`Test 95 Failed: only the pair bowled by a recorded bowler is a breach, got ${JSON.stringify(sentinels)}`);
+            process.exit(1);
+        }
+
+        // --- Case 4: end to end, from stored state to exported scorecard ---
+        resetTestState();
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.settings.oversPerInnings = 4;
+        gameState.match.currentInnings = 1;
+        gameState.match.currentBattingTeam = 1;
+        gameState.match.team1 = { name: "Team 1", players: ["A", "B"], innings: [] };
+        gameState.match.team2 = { name: "Team 2", players: ["C", "D"], innings: [] };
+        gameState.match.liveInnings.overs = [over("D"), over("C"), over("C"), over("D")];
+        gameState.match.liveInnings.bowlers = {
+            "C": { runs: 12, balls: 12, wickets: 0, maidens: 0, wides: 0, noballs: 0 },
+            "D": { runs: 12, balls: 12, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+        };
+        gameState.match.liveInnings.balls = 24;
+        gameState.match.liveInnings.score = 24;
+
+        const projections = getProjectionsFromGameState(gameState);
+        const recorded = projections.innings1.consecutiveOverBreaches;
+        if (!recorded || recorded.length !== 1 || recorded[0].bowler !== "C" || recorded[0].over !== 3) {
+            console.error(`Test 95 Failed: the projection must carry the breach derived from the over log, got ${JSON.stringify(recorded)}`);
+            process.exit(1);
+        }
+
+        const card = formatMonospaceScorecard(projections.innings1, null);
+        if (!card.includes('Clause 12/13 relaxed')) {
+            console.error(`Test 95 Failed: the exported scorecard must disclose that the rule was relaxed`);
+            process.exit(1);
+        }
+        if (!card.includes('C (over 3)')) {
+            console.error(`Test 95 Failed: the disclosure must name the bowler and the over`);
+            process.exit(1);
+        }
+
+        // A clean innings must not carry the notice, otherwise the assertions
+        // above would pass on a scorecard that always prints it.
+        gameState.match.liveInnings.overs = [over("D"), over("C"), over("D"), over("C")];
+        const cleanCard = formatMonospaceScorecard(getProjectionsFromGameState(gameState).innings1, null);
+        if (cleanCard.includes('Clause 12/13')) {
+            console.error(`Test 95 Failed: an innings bowled within the playing conditions must carry no notice`);
+            process.exit(1);
+        }
+
+        // --- Case 5: a healed over log is a repair artifact, not a breach ---
+        // An innings whose over log was never flushed is reconstructed on load.
+        // The reconstruction knows how many overs were bowled but not by whom,
+        // so naming one bowler across the run would be read here as consecutive
+        // overs and printed on a permanent record as an ICC breach.
+        const { healInningsOvers } = await import('../src/storage.js');
+        const stale: any = {
+            overs: [],
+            overLog: Array(12).fill('1'),
+            currentBowler: 'C',
+            bowlers: { "C": { runs: 12, balls: 12, wickets: 0, maidens: 0, wides: 0, noballs: 0 } }
+        };
+        healInningsOvers(stale);
+        const fabricated = findConsecutiveOverBreaches(stale.overs, Object.keys(stale.bowlers));
+        if (fabricated.length !== 0) {
+            console.error(`Test 95 Failed: a healed over log records overs of unknown authorship and must not be reported as a Clause 12/13 breach, got ${JSON.stringify(fabricated)}`);
+            process.exit(1);
+        }
+
+        // Healing a single over is still attributed, because the bowler of the
+        // over that had just completed is the one recorded as bowling.
+        const oneOver: any = { overs: [], overLog: Array(6).fill('1'), currentBowler: 'C' };
+        healInningsOvers(oneOver);
+        if (oneOver.overs.length !== 1 || oneOver.overs[0].bowler !== 'C') {
+            console.error(`Test 95 Failed: a single healed over must still be attributed to the recorded bowler, got ${JSON.stringify(oneOver.overs)}`);
+            process.exit(1);
+        }
+
+        // A reconstructed over landing next to one already recorded keeps its
+        // attribution withheld. currentBowler may have advanced past the over
+        // that failed to flush, and in the ordinary C D C rotation naming them
+        // here would manufacture a consecutive-over pair out of a legal
+        // rotation. This is the only shape the third clause of the guard
+        // governs, so without this case the clause can be deleted unnoticed.
+        const neighboured: any = {
+            overs: [{ bowler: 'C', balls: Array(6).fill('1') }],
+            overLog: Array(6).fill('1'),
+            currentBowler: 'C'
+        };
+        healInningsOvers(neighboured);
+        if (neighboured.overs.length !== 2 || neighboured.overs[1].bowler !== 'Unknown') {
+            console.error(`Test 95 Failed: a reconstructed over adjacent to a recorded over must not be attributed, got ${JSON.stringify(neighboured.overs.map((o: any) => o.bowler))}`);
+            process.exit(1);
+        }
+
+        // --- Case 6: an underived breach list is not an all-clear ---
+        // Only the adapter holds the innings bowling figures, so a projection
+        // built straight from an event stream cannot run the derivation. It
+        // must say so rather than return an empty list, which a consumer would
+        // read as a verified conformance it never checked.
+        const { projectInnings } = await import('../src/v2/stats.js');
+        const bare = projectInnings([], 'Team 1', 'Team 2', 1, 4, null, null, null, null);
+        if (bare.consecutiveOverBreaches !== null) {
+            console.error(`Test 95 Failed: an underived breach list must be null, not an empty all-clear, got ${JSON.stringify(bare.consecutiveOverBreaches)}`);
+            process.exit(1);
+        }
+        // Silence on the card would read as conformance, so the export has to
+        // say that nothing was checked rather than print nothing at all.
+        const bareCard = formatMonospaceScorecard(bare, null);
+        if (!bareCard.includes('Clause 12/13 conformance not checked')) {
+            console.error(`Test 95 Failed: an underived conformance check must be stated on the card, not passed over in silence`);
+            process.exit(1);
+        }
+
+        // --- Case 7: a healed innings must not contradict its own figures ---
+        // Withholding attribution in the over log costs the v2 bowling card its
+        // per-over mapping, and the projection still seeds a row for whoever is
+        // recorded as bowling. Printing that row asserts the player bowled
+        // nothing, while the stored figures say he bowled two overs.
+        const { synthesizeEventsFromLiveInnings } = await import('../src/v2/bridge.js');
+        const healedEvents = synthesizeEventsFromLiveInnings(stale, 1, ['A', 'B']);
+        const healedProj = projectInnings(
+            healedEvents, 'Team 1', 'Team 2', 1, 4, null, 'A', 'B', stale.currentBowler);
+        const healedCard = formatMonospaceScorecard(healedProj, null);
+        const phantomRows = healedCard.split('\n').filter(l => /^C\s+0\.0\s/.test(l));
+        if (phantomRows.length !== 0) {
+            console.error(`Test 95 Failed: the card must not state that C bowled nothing when the stored figures record two overs, got ${JSON.stringify(phantomRows)}`);
+            process.exit(1);
+        }
+        // The runs themselves must still be reported, against the unattributed
+        // over, so the fix cannot pass by dropping the bowling table entirely.
+        if (!/^Unknown\s+2\.0\s/m.test(healedCard)) {
+            console.error(`Test 95 Failed: the unattributed overs must still be reported, got:\n${healedCard}`);
+            process.exit(1);
+        }
+    }
+
 
     console.log("All tests passed!");
     process.exit(0);

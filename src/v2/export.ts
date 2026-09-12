@@ -45,12 +45,30 @@ export function formatMonospaceScorecard(
     lines.push(subDivider);
     lines.push(`Extras: ${inngs.extras.total} (wd: ${inngs.extras.wides}, nb: ${inngs.extras.noballs}, b: ${inngs.extras.byes}, lb: ${inngs.extras.legbyes})`);
     lines.push(`Total:  ${inngs.totalScore}/${inngs.totalWickets} (${inngs.oversFormatted} / ${inngs.oversPerInnings} Overs, CRR: ${inngs.runRate.toFixed(2)})`);
+    if (inngs.consecutiveOverBreaches === null) {
+      // Silence would read as conformance, and nothing here checked it. Name
+      // the cause: this card came from a path that structurally cannot check,
+      // which is not the same as the check having failed.
+      lines.push(`[NOTE] Clause 12/13 conformance not checked: this card was built without the innings bowling figures.`);
+    } else if (inngs.consecutiveOverBreaches.length > 0) {
+      const detail = inngs.consecutiveOverBreaches
+        .map(b => `${b.bowler} (over ${b.over})`)
+        .join(', ');
+      lines.push(`[WARN] Clause 12/13 relaxed: consecutive overs by ${detail}`);
+    }
     lines.push(subDivider);
 
-    if (inngs.bowlersList.length > 0) {
+    // A bowler with no balls, no runs and no wickets did nothing this innings.
+    // The projection seeds a row for whoever is recorded as bowling, which on
+    // an innings whose over log was reconstructed is someone the deliveries no
+    // longer name - printing it states on a permanent record that a player
+    // bowled nothing, contradicting the figures that were actually stored.
+    const bowledAnything = inngs.bowlersList.filter(
+      bw => bw.balls > 0 || bw.runsConceded > 0 || bw.wickets > 0);
+    if (bowledAnything.length > 0) {
       lines.push(`BOWLER                 O    M    R    W    ECON`);
       lines.push(subDivider);
-      inngs.bowlersList.forEach(bw => {
+      bowledAnything.forEach(bw => {
         const name = bw.name.padEnd(20, ' ').substring(0, 20);
         const o = bw.oversFormatted.padStart(4, ' ');
         const m = bw.maidens.toString().padStart(4, ' ');
