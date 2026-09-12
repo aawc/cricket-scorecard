@@ -20,8 +20,9 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
     - Innings per team is always 1. (Remove option to configure this).
     - Number of overs per innings (default: 8).
     - Maximum allowed overs per bowler (default: 2).
-- **Configurable Rules**:
-    - Standard rules apply (1 run penalty + extra ball for wides/no balls, penalty runs fixed at 1).
+- **Configurable Rules & Statutory Governance**:
+    - **ICC Men's One Day International Playing Conditions Alignment**: Baseline match rules, overs and bowler quotas, delivery accounting, extras separation, no-ball and wide penalties, and dismissals follow the official **ICC Men's One Day International Playing Conditions** ([`docs/rules/icc_mens_odi_playing_conditions.pdf`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/icc_mens_odi_playing_conditions.pdf)). Coverage is partial by design; the per-clause status matrix in [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L17) records which clauses are not implemented.
+    - Standard rules apply (1 run penalty + extra ball for wides/no balls, penalty runs fixed at 1, and no bowler may bowl two consecutive overs). Free hits are **not** tracked by the app; the scorer applies the dismissal restriction manually.
     - **Single Batsman Rule**: Provide a setting to allow a single batsman to play (default: true) even though this is not allowed under standard cricket rules.
     - **Leg Byes Option**: Provide an option to disable leg byes in settings.
 - **Full Scorecard Mode**: Include a toggle to display the scoreboard in a clean, compact monospace table layout optimized for taking screenshots to share. Display complete match status and individual player stats for each innings, including individual batsman 4s, 6s, SR, bowler Maidens, Economy, Wides, and No Balls columns, and Fall of Wickets summary. Ensure no invalid extra innings appear when the match ends.
@@ -83,4 +84,5 @@ Create a standalone website on GitHub Pages that can be used as an offline PWA (
 - Always write automated unit test assertions in `test/test_cases.ts` for all new features and bug fixes to prevent regressions.
 - Always run automated unit tests (`npm test`) on each edit without requesting confirmation from the user.
 - **Directory Structure Rule**: Adhere strictly to the repository directory layout specified in [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1). All serverless backends belong in `backend/`, documentation belongs in `docs/`, and client logic belongs in `src/`.
+- **ICC Men's One Day International Playing Conditions Compliance**: Ensure that all future code changes, scoring features, state transitions, extras accounting, dismissal mechanics, and statistical projections strictly comply with the official **ICC Men's One Day International Playing Conditions** ([`docs/rules/icc_mens_odi_playing_conditions.pdf`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/icc_mens_odi_playing_conditions.pdf), [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L1)).
 - Follow colorblind accessibility standards: use high contrast (Blue `#0072B2` vs Orange `#D55E00`) and explicit text status indicators (`[PASS]`, `[FAIL]`, `[FEAT]`, `[FIX]`, `[DOCS]`, `[TEST]`).

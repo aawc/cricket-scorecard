@@ -30,6 +30,9 @@ cricket-scorecard/
 │   │   ├── DESIGN.md                # Cricket scoring rules & UI/UX architecture
 │   │   ├── LIVE_SYNC_DESIGN.md      # Zero-cost live streaming architecture & sync protocol
 │   │   └── V2_ARCHITECTURE_REPORT.md # Comprehensive v2 domain & event-sourced architecture blueprint
+│   ├── rules/                       # Official Cricket Rulebooks & Playing Conditions
+│   │   ├── README.md                # ICC Men's ODI Playing Conditions coverage matrix
+│   │   └── icc_mens_odi_playing_conditions.pdf # Official ICC ODI Playing Conditions handbook
 │   ├── deployment/                  # Hosting & cloud infrastructure guides
 │   │   └── DEPLOYMENT_AND_BACKEND_SETUP.md # Deployment manual for Pages, Workers, and GAS
 │   ├── reports/                     # Bug ledgers & improvement roadmaps
@@ -109,6 +112,7 @@ Only fundamental repository-level configuration files are permitted at the root:
 ### Rule 4: Structured Technical Documentation (`docs/`)
 All detailed documentation must be placed in appropriate subdirectories under `docs/`:
 - **`docs/architecture/`**: System design documents, state machine specifications, data protocols.
+- **`docs/rules/`**: Authoritative cricket rulebooks, official ICC Playing Conditions, and compliance matrices.
 - **`docs/deployment/`**: Cloud setup guides, hosting instructions, edge deployment manuals.
 - **`docs/reports/`**: Bug tracking ledgers, audit reports, improvement backlog trackers.
 - **`docs/guides/`**: Contributor workflows, diagnostic reproduction guides, bug reporting manuals.
