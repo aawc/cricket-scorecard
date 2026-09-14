@@ -3,3 +3,4 @@ node-env/
 dist/
 .DS_Store
 scratch/
+scripts/*.py

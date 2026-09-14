@@ -654,28 +654,58 @@ export function unminifyState(min: any): GameState {
             currentBowler: "", previousBowler: null,
             outBatsmen: [], overs: [], overLog: [], fow: []
         };
-        return {
-            score: inn.sc || 0,
-            wickets: inn.w || 0,
-            balls: inn.b || 0,
-            extras: {
-                wides: inn.ex ? (inn.ex.wd || 0) : 0,
-                noballs: inn.ex ? (inn.ex.nb || 0) : 0,
-                byes: inn.ex ? (inn.ex.by || 0) : 0,
-                legbyes: inn.ex ? (inn.ex.lb || 0) : 0
-            },
-            batsmen: Object.fromEntries(Object.entries(inn.bat || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, fours: v.f || 0, sixes: v.s || 0, active: v.a === 1 }])),
-            bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, maidens: v.m || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
-            currentBatsman1: inn.cb1 || "",
-            currentBatsman2: inn.cb2 || "",
-            currentBowler: inn.cbo || "",
-            previousBowler: inn.pbo || null,
-            outBatsmen: inn.ob || [],
-            overs: (inn.ov || []).map((o: any) => ({ bowler: o.bo, balls: o.bl })),
-            overLog: inn.ol || [],
-            fow: (inn.fw || []).map((f: any) => ({ wicket: f.w, score: f.s, batsman: f.b, overs: f.ov }))
+            const cb1 = inn.cb1 || "";
+            const cb2 = inn.cb2 || "";
+            let cb1Active = inn.bat?.[cb1]?.a === 1;
+            let cb2Active = inn.bat?.[cb2]?.a === 1;
+            if (cb1 && cb2) {
+                if (cb1Active === cb2Active) {
+                    cb1Active = true;
+                    cb2Active = false;
+                }
+            } else if (cb1) {
+                cb1Active = true;
+            } else if (cb2) {
+                cb2Active = true;
+            }
+
+            const unminifiedBatsmen = Object.fromEntries(
+                Object.entries(inn.bat || {}).map(([k, v]: [string, any]) => {
+                    let active = false;
+                    if (k === cb1) active = cb1Active;
+                    else if (k === cb2) active = cb2Active;
+                    return [k, {
+                        runs: v.r || 0,
+                        balls: v.b || 0,
+                        fours: v.f || 0,
+                        sixes: v.s || 0,
+                        active
+                    }];
+                })
+            );
+
+            return {
+                score: inn.sc || 0,
+                wickets: inn.w || 0,
+                balls: inn.b || 0,
+                extras: {
+                    wides: inn.ex ? (inn.ex.wd || 0) : 0,
+                    noballs: inn.ex ? (inn.ex.nb || 0) : 0,
+                    byes: inn.ex ? (inn.ex.by || 0) : 0,
+                    legbyes: inn.ex ? (inn.ex.lb || 0) : 0
+                },
+                batsmen: unminifiedBatsmen,
+                bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, maidens: v.m || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
+                currentBatsman1: cb1,
+                currentBatsman2: cb2,
+                currentBowler: inn.cbo || "",
+                previousBowler: inn.pbo || null,
+                outBatsmen: inn.ob || [],
+                overs: (inn.ov || []).map((o: any) => ({ bowler: o.bo, balls: o.bl })),
+                overLog: inn.ol || [],
+                fow: (inn.fw || []).map((f: any) => ({ wicket: f.w, score: f.s, batsman: f.b, overs: f.ov }))
+            };
         };
-    };
 
     const unminifyTeam = (t: any, defName: string): Team => {
         if (!t) return { name: defName, players: [], innings: [] };

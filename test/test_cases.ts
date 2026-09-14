@@ -3593,6 +3593,265 @@ console.log("Running Test 56...");
         }
     }
 
+    // Test 96: Batsman dropdowns enabled during active innings for injury/retirement substitution
+    {
+        console.log("Running Test 96 (Batsman Substitution During Active Innings & Invariant Preservation)...");
+        resetTestState();
+        gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+        gameState.match.team2.players = ["B1", "B2", "B3"];
+        updateUI();
+
+        // 1. At 0.0, both batsman dropdowns should be enabled for opener selection
+        if (elements['batsman1-select']?.disabled) {
+            console.error("Test 96 Failed: batsman1-select should be enabled at 0.0");
+            process.exit(1);
+        }
+        if (elements['batsman2-select']?.disabled) {
+            console.error("Test 96 Failed: batsman2-select should be enabled at 0.0");
+            process.exit(1);
+        }
+
+        // 2. Select openers and bowler
+        handleBatsmanChange(1, "P1");
+        handleBatsmanChange(2, "P2");
+        handleBowlerChange("B1");
+        updateUI();
+
+        // 3. Score first delivery (2 runs to striker P1)
+        addRuns(2);
+        updateUI();
+
+        // Batsman dropdowns remain enabled during active play to allow substitution (injury / retired hurt)
+        if (elements['batsman1-select']?.disabled) {
+            console.error("Test 96 Failed: batsman1-select should remain enabled during active innings");
+            process.exit(1);
+        }
+        if (elements['batsman2-select']?.disabled) {
+            console.error("Test 96 Failed: batsman2-select should remain enabled during active innings");
+            process.exit(1);
+        }
+
+        // 4. Substitute active striker P1 with P3 (e.g. P1 retired hurt)
+        handleBatsmanChange(1, "P3");
+        updateUI();
+
+        const live = gameState.match.liveInnings;
+        if (live.currentBatsman1 !== "P3") {
+            console.error(`Test 96 Failed: currentBatsman1 should be P3, got ${live.currentBatsman1}`);
+            process.exit(1);
+        }
+        // P1's stats must be preserved but active must be false
+        if (!live.batsmen["P1"] || live.batsmen["P1"].runs !== 2 || live.batsmen["P1"].balls !== 1) {
+            console.error("Test 96 Failed: P1 stats (2 runs, 1 ball) must be preserved upon substitution");
+            process.exit(1);
+        }
+        if (live.batsmen["P1"].active !== false) {
+            console.error("Test 96 Failed: Outgoing batsman P1 must have active: false");
+            process.exit(1);
+        }
+        // P3 inherits striker status
+        if (!live.batsmen["P3"] || live.batsmen["P3"].active !== true) {
+            console.error("Test 96 Failed: Incoming batsman P3 must be active striker");
+            process.exit(1);
+        }
+        // Non-striker P2 must remain non-striker
+        if (live.batsmen["P2"].active !== false) {
+            console.error("Test 96 Failed: Non-striker P2 must have active: false");
+            process.exit(1);
+        }
+
+        // 5. Score 1 run to P3 (strike rotates)
+        addRuns(1);
+        updateUI();
+
+        const liveAfterSingle = gameState.match.liveInnings;
+        if (liveAfterSingle.batsmen["P3"].runs !== 1 || liveAfterSingle.batsmen["P3"].balls !== 1 || liveAfterSingle.batsmen["P3"].active !== false) {
+            console.error("Test 96 Failed: P3 should have 1 run, 1 ball, and active: false after single, got:", liveAfterSingle.batsmen["P3"]);
+            process.exit(1);
+        }
+        if (liveAfterSingle.batsmen["P2"].active !== true) {
+            console.error("Test 96 Failed: P2 should now be active striker after single");
+            process.exit(1);
+        }
+
+        // 6. Substitute non-striker P3 with P4
+        handleBatsmanChange(1, "P4");
+        updateUI();
+
+        const liveAfterSub2 = gameState.match.liveInnings;
+        if (liveAfterSub2.currentBatsman1 !== "P4") {
+            console.error(`Test 96 Failed: currentBatsman1 should be P4, got ${liveAfterSub2.currentBatsman1}`);
+            process.exit(1);
+        }
+        // P4 should be non-striker (active: false) because P2 is striker
+        if (!liveAfterSub2.batsmen["P4"] || liveAfterSub2.batsmen["P4"].active !== false) {
+            console.error("Test 96 Failed: Incoming batsman P4 in non-striker slot must have active: false");
+            process.exit(1);
+        }
+        if (liveAfterSub2.batsmen["P2"].active !== true) {
+            console.error("Test 96 Failed: P2 must remain active striker");
+            process.exit(1);
+        }
+        if (liveAfterSub2.batsmen["P3"].active !== false) {
+            console.error("Test 96 Failed: Retired batsman P3 must have active: false");
+            process.exit(1);
+        }
+    }
+
+    // Test 97: Batsman Resumption & Rejection of Ineligible Substitutions
+    {
+        console.log("Running Test 97 (Batsman Resumption & Rejection of Ineligible Substitutions)...");
+        resetTestState();
+        gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+        gameState.match.team2.players = ["B1", "B2", "B3"];
+        handleBatsmanChange(1, "P1");
+        handleBatsmanChange(2, "P2");
+        handleBowlerChange("B1");
+        addRuns(4); // P1 has 4 runs off 1 ball (striker: P1)
+
+        // P1 retires hurt, replaced by P3
+        handleBatsmanChange(1, "P3");
+        if (gameState.match.liveInnings.batsmen["P1"].runs !== 4 || gameState.match.liveInnings.batsmen["P1"].active !== false) {
+            console.error("Test 97 Failed: P1 should have 4 runs and active: false");
+            process.exit(1);
+        }
+
+        // P2 (striker in slot 2 after a single or dismissed) is dismissed
+        addRuns(1); // P3 scores 1, strike rotates to P2
+        addWicket(); // P2 dismissed at Slot 2
+
+        if (!gameState.match.liveInnings.outBatsmen.includes("P2")) {
+            console.error("Test 97 Failed: P2 must be in outBatsmen");
+            process.exit(1);
+        }
+
+        // Attempt invalid substitution: selecting dismissed player P2
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 2, name: 'P2' } });
+        if (gameState.match.liveInnings.currentBatsman2 === 'P2') {
+            console.error("Test 97 Failed: Dismissed player P2 cannot be re-selected");
+            process.exit(1);
+        }
+
+        // Attempt invalid substitution: selecting player currently in slot 1 (P3) into slot 2
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 2, name: 'P3' } });
+        if (gameState.match.liveInnings.currentBatsman2 === 'P3') {
+            console.error("Test 97 Failed: Player P3 cannot be selected in both slots simultaneously");
+            process.exit(1);
+        }
+
+        // Valid resumption: P1 (who retired hurt earlier) returns to the crease at Slot 2
+        handleBatsmanChange(2, "P1");
+        const live = gameState.match.liveInnings;
+        if (live.currentBatsman2 !== "P1") {
+            console.error(`Test 97 Failed: currentBatsman2 should be P1, got ${live.currentBatsman2}`);
+            process.exit(1);
+        }
+        // P3 is non-striker (was non-striker before wicket), P1 is active striker
+        if (live.batsmen["P1"].runs !== 4 || live.batsmen["P1"].balls !== 1) {
+            console.error("Test 97 Failed: Returning batsman P1 must preserve prior stats of 4 runs off 1 ball");
+            process.exit(1);
+        }
+        if (live.batsmen["P1"].active !== true) {
+            console.error("Test 97 Failed: Returning batsman P1 in vacant striker slot must have active: true");
+            process.exit(1);
+        }
+
+        // P1 scores a boundary 4
+        addRuns(4);
+        const liveAfterBoundary = gameState.match.liveInnings;
+        if (liveAfterBoundary.batsmen["P1"].runs !== 8 || liveAfterBoundary.batsmen["P1"].balls !== 2 || liveAfterBoundary.batsmen["P1"].fours !== 2) {
+            console.error(`Test 97 Failed: P1 should now have 8 runs off 2 balls with 2 fours, got ${liveAfterBoundary.batsmen["P1"].runs}`);
+            process.exit(1);
+        }
+    }
+
+    // Test 98: Opener change before ball 1 cleans up unused 0-ball/0-run batsman stats
+    {
+        console.log("Running Test 98 (Opener Change Before Ball 1 Cleans Up Unused Stats)...");
+        resetTestState();
+        gameState.match.team1.players = ["P1", "P2", "P3", "P4"];
+        handleBatsmanChange(1, "P1");
+        if (!gameState.match.liveInnings.batsmen["P1"]) {
+            console.error("Test 98 Failed: P1 should exist in batsmen after initial selection");
+            process.exit(1);
+        }
+
+        // Change opener to P3 before any ball is bowled
+        handleBatsmanChange(1, "P3");
+        if (gameState.match.liveInnings.currentBatsman1 !== "P3") {
+            console.error(`Test 98 Failed: currentBatsman1 should be P3, got ${gameState.match.liveInnings.currentBatsman1}`);
+            process.exit(1);
+        }
+        if (gameState.match.liveInnings.batsmen["P1"]) {
+            console.error("Test 98 Failed: unbatted 0/0 entry for P1 should have been cleaned up");
+            process.exit(1);
+        }
+        if (!gameState.match.liveInnings.batsmen["P3"] || !gameState.match.liveInnings.batsmen["P3"].active) {
+            console.error("Test 98 Failed: P3 should be initialized and active");
+            process.exit(1);
+        }
+
+        // Unassign opener slot 1 back to empty string
+        handleBatsmanChange(1, "");
+        if (gameState.match.liveInnings.currentBatsman1 !== "") {
+            console.error(`Test 98 Failed: currentBatsman1 should be empty string after unassigning, got ${gameState.match.liveInnings.currentBatsman1}`);
+            process.exit(1);
+        }
+        if (gameState.match.liveInnings.batsmen["P3"]) {
+            console.error("Test 98 Failed: unbatted 0/0 entry for P3 should have been cleaned up on unassign");
+            process.exit(1);
+        }
+
+        // Test mid-innings unassignment after deliveries have been bowled
+        handleBatsmanChange(1, "P1");
+        handleBatsmanChange(2, "P2");
+        handleBowlerChange("B1");
+        addRuns(2); // P2 was active, scores 2 runs in 1 ball; P1 is non-striker (0 runs, 0 balls)
+
+        // Unassign active striker slot 2 mid-innings (e.g. batsman leaves field)
+        handleBatsmanChange(2, "");
+        const liveMidUnassign = gameState.match.liveInnings;
+        if (liveMidUnassign.currentBatsman2 !== "") {
+            console.error(`Test 98 Failed: currentBatsman2 should be empty, got ${liveMidUnassign.currentBatsman2}`);
+            process.exit(1);
+        }
+        if (liveMidUnassign.batsmen["P2"].active !== false) {
+            console.error("Test 98 Failed: Unassigned batsman P2 must have active: false");
+            process.exit(1);
+        }
+        if (liveMidUnassign.batsmen["P2"].runs !== 2 || liveMidUnassign.batsmen["P2"].balls !== 1) {
+            console.error("Test 98 Failed: P2 stats must be preserved upon mid-innings unassignment");
+            process.exit(1);
+        }
+        if (liveMidUnassign.batsmen["P1"].active !== true) {
+            console.error("Test 98 Failed: Remaining batsman P1 must become active striker when other slot is unassigned");
+            process.exit(1);
+        }
+    }
+
+    // Test 99: Bug Report Payload Deserialization & Active Invariant Healing
+    {
+        console.log("Running Test 99 (Bug Report Payload Deserialization & Active Invariant Healing)...");
+        const bugPermalink = "N4IgDgFiBcILIEEAqBhAEgfQPIDUCiASiADQgDOMoA9mAJYwBspAtlQEYwBMpAhmR9ACMpAKYAbAQAZSAFyiwxtAOYQZIAL4tKIAMb1o3XWzUHZg7QDsYIJCJ7MABOdJgYAbRAISIAELeUIAC6pLRW0G6gZDowAKwAnKQA7jDCIAIAzEwgIgAe2okAJjDSIBZSpGwAnsWkEsWaaTwmoF7QoABOKekVjKQAZlykFNAlPPWkAW0gnUIxPUIlAyNDKbwpDX5TM+mpApyLq+SHYyPqDWxUiWLaeNoznHNpKYaJANY1IMwfhR9l4yAAMTuKSyAkEL3eQi0yxAPxhf1OpAAIsChAAOebgpKQkpfGFwkoIyRnUg6NjmWB+UlsTjWALUqjWFEuC5M7zsdyeIKkKgAN3coFZsFuFWu4RAtNIABZvDLSJKQM4QAwgppBYzYEDRZyAOreFXS7ySI0mwJqtIakAitJijxK+3eB2kcxm4jq6xam2cp2Kx1+52qt0Wtna8U+8N+13u2DMr3ihUJ7yJ+Wq4IgKi2tN9ZLhUA51LDQQJJ6wLw8-mwQQAOnM6jNrpAMlpUzCNjsjgVrnFsetQLToQF5Gi0AYLw+YKlojyUwJpCJFWqMLqiMazRAKK2MEnJcMSxKw1G61It030HSxYEAHZ+h9hlkTsTSEDT0X5o89ytTCAToISRartomwdFwoIwBisI4tCJSzqUUgNJMwFnqBI7Yh8eLQUU8JwQ0ZIUoC3hks2VoEUKvjeGApH0umAhuGmfKDqRVJxh4yYSkm3jpBxgbRiAVFsLayr6kJpAGoJInccGlLePxnKiSq9Y8pm-Q5rRdYNIo2hRIwY4whOU75JhhLlGki4lMuj6rtoG6Iduew3jCB5rEIDQnoh57zNeIAfkcKHfv8z6Ia+Jbvregx+c55yXGKoBAdMIHzOBbxod8hlznBEyopk8xZElMLoUkqWwfUOHkh6JFEdaZKWkxFGWlRHLhHRFYRJJZGhix7Epl1ICcaQnFRq1fECXJwliWN8nmox0nDUJCnpkpXkqQ2MhKIwuIar+6hAA";
+        const decompressed = lzDecompressFromEncodedURIComponent(bugPermalink);
+        const loadedState = unminifyState(JSON.parse(decompressed));
+
+        const t2Inn = loadedState.match.team2.innings[0];
+        // D is not at crease (cb1: F, cb2: E), so D.active must be healed to false
+        if (t2Inn.batsmen["D"].active !== false) {
+            console.error("Test 99 Failed: D.active must be false since D is not at the crease");
+            process.exit(1);
+        }
+        // F is cb1 (active striker in state), E is cb2 (non-striker)
+        if (t2Inn.batsmen["F"].active !== true) {
+            console.error("Test 99 Failed: F.active must be true");
+            process.exit(1);
+        }
+        if (t2Inn.batsmen["E"].active !== false) {
+            console.error("Test 99 Failed: E.active must be false");
+            process.exit(1);
+        }
+    }
 
     console.log("All tests passed!");
     process.exit(0);

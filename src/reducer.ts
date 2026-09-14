@@ -310,6 +310,49 @@ export function reducer(state: GameState, action: Action): GameState {
         case 'CHANGE_BATSMAN': {
             const { slot, name } = action.payload;
             const live = nextState.match.liveInnings;
+            if (!live) break;
+
+            const battingTeam = nextState.match.currentBattingTeam === 1
+                ? nextState.match.team1
+                : nextState.match.team2;
+
+            if (name && battingTeam && battingTeam.players.length > 0 && !battingTeam.players.includes(name)) {
+                nextState.uiEvents.push({
+                    type: 'SHOW_ALERT',
+                    payload: {
+                        title: 'Ineligible Batsman',
+                        message: `${name} is not in the batting side.`
+                    }
+                });
+                break;
+            }
+
+            if (name && live.outBatsmen.includes(name)) {
+                nextState.uiEvents.push({
+                    type: 'SHOW_ALERT',
+                    payload: {
+                        title: 'Ineligible Batsman',
+                        message: `${name} has already been dismissed.`
+                    }
+                });
+                break;
+            }
+
+            const currentSlotName = slot === 1 ? live.currentBatsman1 : live.currentBatsman2;
+            const otherSlotName = slot === 1 ? live.currentBatsman2 : live.currentBatsman1;
+
+            if (name && otherSlotName && name === otherSlotName) {
+                break;
+            }
+
+            const inningsInProgress = live.balls > 0 || (live.overLog && live.overLog.length > 0);
+            // If changing opener before the first delivery of the innings, clean up previous unbatted 0/0 entry
+            if (!inningsInProgress && currentSlotName && currentSlotName !== name) {
+                if (live.batsmen[currentSlotName] && live.batsmen[currentSlotName].balls === 0 && live.batsmen[currentSlotName].runs === 0) {
+                    delete live.batsmen[currentSlotName];
+                }
+            }
+
             assignBatsmanToSlot(live, slot, name);
             break;
         }
@@ -521,7 +564,23 @@ function rotateStrike(live: LiveInnings): void {
 }
 
 function assignBatsmanToSlot(live: LiveInnings, slot: 1 | 2, name: string): void {
-    if (!name) return;
+    if (!name) {
+        if (slot === 1) {
+            live.currentBatsman1 = "";
+        } else {
+            live.currentBatsman2 = "";
+        }
+        const remainingSlot = slot === 1 ? live.currentBatsman2 : live.currentBatsman1;
+        if (remainingSlot && live.batsmen[remainingSlot]) {
+            live.batsmen[remainingSlot].active = true;
+        }
+        for (const bName in live.batsmen) {
+            if (bName !== live.currentBatsman1 && bName !== live.currentBatsman2) {
+                live.batsmen[bName].active = false;
+            }
+        }
+        return;
+    }
     if (slot === 1) {
         live.currentBatsman1 = name;
     } else {
@@ -538,6 +597,13 @@ function assignBatsmanToSlot(live: LiveInnings, slot: 1 | 2, name: string): void
         live.batsmen[name] = { runs: 0, balls: 0, fours: 0, sixes: 0, active: isActive };
     } else {
         live.batsmen[name].active = isActive;
+    }
+
+    // Invariant: any batsman not currently at the crease must have active: false
+    for (const bName in live.batsmen) {
+        if (bName !== live.currentBatsman1 && bName !== live.currentBatsman2) {
+            live.batsmen[bName].active = false;
+        }
     }
 }
 

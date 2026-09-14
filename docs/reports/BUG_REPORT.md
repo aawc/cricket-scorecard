@@ -387,6 +387,30 @@ All tests passed!
   - The fixture deliberately runs out the **non-striker** on the first ball, so the fall-of-wickets name (`B`) cannot be produced by the `activeStriker` fallback, which would report `A`. Removing the `fow` lookup from the bridge makes the test fail with `B should be out having faced 0 balls`; an earlier draft of this test passed under that same mutation and was rewritten.
   - Red-state evidence (fix reverted via `git stash`): Test 93 reported `Expected 2 run-out wickets, got: 0` against the original two-wicket draft of the fixture.
 
+---
+
+### 16. Mid-Innings Batsman Replacement Corrupting Active Flags & Scorecard Attribution
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Tests 96, 97, 98, 99)
+- **Affected Components**: [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L310), [`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L566), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1358), [`src/storage.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/storage.ts#L657)
+- **Diagnostic Context**:
+  - Reported State: 2nd innings, `62 / 0` in `2.2 / 6` overs (Target: 60), completed overs: `2, 2, 2, 2, 3, 3` (Over 1), `6, 6, 6, 6, 6, 6` (Over 2), `6, 6` (Over 3). Slot 1 Batsman: `F` (19 runs, 5 balls), Slot 2 Batsman: `E` (39 runs, 7 balls), Fall of Wickets: None.
+  - Problem Reported: Batsman `D` was listed on the scorecard with 4 runs off 2 balls (`active: true`), resulting in 3 batsmen batting and 2 simultaneous active strikers in an innings with 0 wickets fallen.
+- **Root Cause Analysis**:
+  1. **Unrestricted Batsman Dropdowns During Live Play**: In [`src/ui.ts#L1358`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1358), `batsman1Select` and `batsman2Select` were left enabled (`disabled = false`) throughout the entire innings. Scorer selected `D` as opener, scored 2 deliveries (2, 2 = 4 runs), and then changed the dropdown from `D` to `F` mid-innings without a dismissal occurring.
+  2. **Reducer Orphaned Active Batsman on Substitution**: [`src/reducer.ts#L310`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L310) accepted `CHANGE_BATSMAN` without checking if deliveries had already been bowled. [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L566) assigned `F` to Slot 1 as active striker without setting `D.active = false`. `D` remained in `live.batsmen` with `active: true` alongside `F`, violating the single active striker invariant and creating a phantom 3rd batsman in a 0-wicket scorecard.
+  3. **Unsanitized Deserialization**: [`src/storage.ts#L657`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/storage.ts#L657) blindly trusted stored `v.a === 1` active flags across all batsmen, preserving corrupted dual-active flags on restore.
+- **Resolution**:
+  1. **Active Striker Invariant Enforcement & Slot Management**: In [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L566), all batsmen not currently at the crease (Slot 1 or Slot 2) are explicitly set to `active: false`. When a batsman is substituted mid-innings (e.g. for injury, illness, or tactical rotation), the incoming batsman correctly inherits the strike status while the outgoing player's historical stats are preserved with `active: false`.
+  2. **Mid-Innings Substitution Support & Opener Cleanup**: In [`src/reducer.ts#L310`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L310), `CHANGE_BATSMAN` supports substitutions throughout the innings, cleans up unbatted 0/0 opener entries prior to ball 1, and validates against ineligible selections (dismissed batsmen in `outBatsmen`, duplicate slot selections, and non-roster players).
+  3. **Deserialization Self-Healing**: In [`src/storage.ts#L657`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/storage.ts#L657), `unminifyInnings` heals active flags so only players at the crease can have `active: true`, resolving ties to guarantee at most one active striker.
+- **Verification**: `[PASS]` Verified by automated Tests 96, 97, 98, and 99 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L3597):
+  - Test 96 verifies mid-innings batsman substitution (injury/retirement), strike inheritance, and non-crease active flag clearing.
+  - Test 97 verifies mid-innings batsman resumption (returning to crease after prior retirement), stat accumulation, and rejection of dismissed/duplicate selections.
+  - Test 98 verifies unbatted 0/0 opener cleanup before ball 1 and clean slot unassignment.
+  - Test 99 deserializes the reported payload and verifies `D.active` is healed to `false` and `F.active` to `true`.
+
+
 
 
 

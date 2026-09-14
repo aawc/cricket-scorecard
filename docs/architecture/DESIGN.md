@@ -145,8 +145,7 @@ flowchart TD
 -   **Byes**: Base 1 run + extra runs. Counts as ball faced and bowler ball, but runs do not accrue to batsman. Strike rotates on odd physical runs (1 + extraRuns) prior to evaluating over completion.
 -   **Leg Byes**: Base 1 run + extra runs (supports multi-run leg byes). Counts as ball faced for active striker and bowler ball. Strike rotates on odd leg byes. Disabled if `enableLegByes` is false.
 -   **Wickets**: Standard dismissal. Increments batsman balls faced, marks out batsman inactive, records Fall of Wickets entry, and appends to `outBatsmen` prior to checking all-out transitions.
--   **Run Outs**: Wicket + optional extra runs. Striker's balls faced is incremented regardless of who is run out. If odd runs were completed before the run out, strike switches for the surviving batsman to reflect crossed ends.
--   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L523) and [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482). Contextually assigns `active = !otherSlotBatsman.active` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field.
+-   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L566) and [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L525). Contextually assigns `active = !otherSlotBatsman.active` and sets all non-crease batsmen to `active: false` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field. Dropdowns and the state machine allow mid-innings batsman substitution (e.g. for injury, illness, or tactical rotation), preserving historical stats and permitting resumption.
 -   **Over Completion**: When 6 legal balls are bowled, maiden calculation evaluates whether bowler conceded 0 runs, the over is pushed to the `overs` array, `overLog` is cleared, and strike is rotated for the new over. If the innings ends mid-over (all out or target reached), the incomplete over is saved to `overs` upon transition.
 
 ### 4.3. Innings & Match Transitions
@@ -264,7 +263,7 @@ To track history and progress, the following major refactorings have been succes
     *   Implemented a post-build asset crawler to dynamically inject hashed production bundles into the PWA Service Worker offline cache.
 
 4.  **Batsman Strike Synchronization & Scorecard Accuracy Fixes**:
-    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L523)) and robust striker resolution ([`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L482)), eliminating dual-active and dual-inactive states.
+    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L566)) and robust striker resolution ([`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L525)), eliminating dual-active and dual-inactive states.
     *   Fixed leg bye delivery handling to increment active striker balls faced and rotate strike on odd runs.
     *   Fixed 6th-ball bye delivery pipeline to rotate physical runs before checking over completion.
     *   Fixed run out delivery pipeline to rotate strike for surviving batsman when odd extra runs are completed before dismissal.
