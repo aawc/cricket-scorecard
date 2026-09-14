@@ -1322,8 +1322,6 @@ function checkControlsState(): void {
     } else {
         if (appContainer) appContainer.classList.remove('spectator-locked');
         if (newMatchBtn) newMatchBtn.disabled = false;
-        if (batsman1Select) batsman1Select.disabled = false;
-        if (batsman2Select) batsman2Select.disabled = false;
         if (bowlerSelect) bowlerSelect.disabled = false;
     }
     
@@ -1357,6 +1355,13 @@ function checkControlsState(): void {
     const singleBatsmanAllowed = gameState.settings.allowSingleBatsman;
     const lastManStanding = singleBatsmanAllowed && live.wickets === totalPlayers - 1;
     
+    if (batsman1Select) {
+        batsman1Select.disabled = false;
+    }
+    if (batsman2Select) {
+        batsman2Select.disabled = lastManStanding;
+    }
+
     let needsSelection = false;
     if (lastManStanding) {
         needsSelection = !live.currentBatsman1 || !live.currentBowler;
