@@ -32,6 +32,7 @@ declare function openBulkImportModal(teamNum: number, triggerEl?: any): void;
 declare function handleBulkImport(): void;
 declare function openModal(modal: any, trigger?: any): void;
 declare function closeModal(modal: any): void;
+declare function cleanupModalScrollLock(): void;
 declare function dispatch(action: any): void;
 declare function generateBugReportMarkdown(options?: any): string;
 declare function recordRuntimeError(error: any): void;
@@ -3849,6 +3850,131 @@ console.log("Running Test 56...");
         }
         if (t2Inn.batsmen["E"].active !== false) {
             console.error("Test 99 Failed: E.active must be false");
+            process.exit(1);
+        }
+    }
+
+    // Test 100: Innings Break Modal Dismissal & Complete Body Scroll Unlock
+    {
+        console.log("Running Test 100 (Innings Break Modal Dismissal & Complete Body Scroll Unlock)...");
+        
+        // 1. Direct unit test of cleanupModalScrollLock
+        (global as any).document.body.style.overflow = 'hidden';
+        (global as any).document.body.style.overflowY = 'hidden';
+        (global as any).document.body.style.paddingRight = '15px';
+        (global as any).document.body.classList.add('modal-open');
+        (global as any).document.documentElement.style.overflow = 'hidden';
+        (global as any).document.documentElement.classList.add('modal-open');
+
+        cleanupModalScrollLock();
+
+        if ((global as any).document.body.style.overflow !== '') {
+            console.error("Test 100 Failed: document.body.style.overflow must be reset to empty string");
+            process.exit(1);
+        }
+        if ((global as any).document.body.style.paddingRight !== '') {
+            console.error("Test 100 Failed: document.body.style.paddingRight must be reset to empty string");
+            process.exit(1);
+        }
+        if ((global as any).document.body.classList.contains('modal-open')) {
+            console.error("Test 100 Failed: document.body must not have modal-open class");
+            process.exit(1);
+        }
+        if ((global as any).document.documentElement.style.overflow !== '') {
+            console.error("Test 100 Failed: document.documentElement.style.overflow must be reset to empty string");
+            process.exit(1);
+        }
+        if ((global as any).document.documentElement.classList.contains('modal-open')) {
+            console.error("Test 100 Failed: document.documentElement must not have modal-open class");
+            process.exit(1);
+        }
+
+        // 2. Full match scoring scenario: 1-over innings ends naturally, modal shown and dismissed
+        resetTestState();
+        gameState.settings.oversPerInnings = 1;
+        gameState.settings.maxOversPerBowler = 1;
+        gameState.match.team1.players = ["A", "B", "C"];
+        gameState.match.team2.players = ["X", "Y", "Z"];
+        gameState.match.liveInnings.currentBatsman1 = "A";
+        gameState.match.liveInnings.currentBatsman2 = "B";
+        gameState.match.liveInnings.currentBowler = "X";
+        gameState.match.liveInnings.batsmen = {
+            "A": { runs: 0, balls: 0, fours: 0, sixes: 0, active: true },
+            "B": { runs: 0, balls: 0, fours: 0, sixes: 0, active: false }
+        };
+        gameState.match.liveInnings.bowlers = {
+            "X": { runs: 0, balls: 0, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+        };
+
+        // Score 6 balls to complete the 1st innings
+        for (let b = 0; b < 6; b++) {
+            addRuns(2);
+        }
+
+        // Innings 1 is now over; check state
+        if (gameState.phase !== 'INNINGS_BREAK' && gameState.phase !== 'PLAYING_INNINGS') {
+            console.error(`Test 100 Failed: Expected INNINGS_BREAK or transition to PLAYING_INNINGS, got ${gameState.phase}`);
+            process.exit(1);
+        }
+
+        // Simulate Bootstrap having locked scroll when alert modal opened
+        (global as any).document.body.style.overflow = 'hidden';
+        (global as any).document.body.classList.add('modal-open');
+
+        // Close alertDialogModal
+        closeModal('alertDialogModal');
+
+        // Transition to 2nd innings
+        if (gameState.phase === 'INNINGS_BREAK') {
+            startNextInnings();
+        }
+
+        if (gameState.phase !== 'PLAYING_INNINGS') {
+            console.error(`Test 100 Failed: Expected PLAYING_INNINGS for 2nd innings, got ${gameState.phase}`);
+            process.exit(1);
+        }
+        if (gameState.match.currentInnings !== 2) {
+            console.error(`Test 100 Failed: Expected currentInnings === 2, got ${gameState.match.currentInnings}`);
+            process.exit(1);
+        }
+        if ((global as any).document.body.style.overflow !== '') {
+            console.error("Test 100 Failed: Body scroll lock must be completely cleared after innings change into 2nd innings");
+            process.exit(1);
+        }
+        if ((global as any).document.body.classList.contains('modal-open')) {
+            console.error("Test 100 Failed: modal-open class must not remain on body after entering 2nd innings");
+            process.exit(1);
+        }
+
+        // 3. Chained modals scenario (endInningsModal -> alertDialogModal)
+        resetTestState();
+        openModal('endInningsModal');
+        (global as any).document.body.style.overflow = 'hidden';
+        (global as any).document.body.classList.add('modal-open');
+        executeEndInnings(); // closes endInningsModal, triggers FORCE_END_INNINGS -> SHOW_ALERT
+        closeModal('alertDialogModal'); // dismisses alert
+        if ((global as any).document.body.style.overflow !== '') {
+            console.error("Test 100 Failed: Chained modal dismissal must clear body style.overflow");
+            process.exit(1);
+        }
+
+        // 4. Exact bug report payload verification
+        const bugReportPayload = "N4IgDgFiBcIAoBkCCBNAkgOQOIH1McywGUQAaEAZxlAHswBLGANnIFsaAjGAJnIEMKXaAEZyAUwA2QgAzkALlFgT6AcwhyQAXzbUQAY0bRe+jhqPzhugHYwQAFTF9WAAkvkwMANogkZEACE-AGEQAF1yehtoT1AKPRgAdmMAdxhZECEAZhYQMQAPXWSAEzTyKxlyDgBPUpApNO0MvjNQX2hQACcYABZKnnIAM1qqaHS+GGFGwPaQLuhsvpEADkHh2vHRxpCZuczjIWEcodHyEbGJzUaOGmSJXQAtXTnuXoyJlIBrWtZa4tryhrkFBPHivA6fb6-EonEAAzbkAAaIKMYPe5GSXxhPxhfxhcOkl3Ieg4llgISJHG4tkCFJotiR7mutmB5E4XnCIBoADcvKAmbBHpU7tEQFTyGLRX4JdKwto+XTYCyMsLvDLxVKNerQnKMgqQILlV5JeqTcazVTtaR5fS-BwVebNQ6tTr+SAlXajWqnQ7LdbYAzDSKvcGNdqOTQVRyBqlomHGnIqTMovZHC4JR4RQGlY8OZF2Y1lLo4r9ahVcgUZrj0vjKjUYfV4U0Wm7keky8d0md+BdEa3FukO6d1g0rjdha0+28cZj0tj0lWyjJCSZSS2KYmQAHiXrfIyFVYAK4SCSsoSecM82OsyODGPn+MqRKZNgKgmaIA";
+        const decompressed = lzDecompressFromEncodedURIComponent(bugReportPayload);
+        const hydratedState = unminifyState(JSON.parse(decompressed));
+        setGameState(hydratedState);
+        updateUI();
+
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.currentInnings !== 2) {
+            console.error("Test 100 Failed: Hydrated state should be in 2nd innings PLAYING_INNINGS");
+            process.exit(1);
+        }
+        if ((global as any).document.body.style.overflow !== '') {
+            console.error("Test 100 Failed: Hydrated 2nd innings state must have clean body scroll (overflow === '')");
+            process.exit(1);
+        }
+        if ((global as any).document.body.classList.contains('modal-open')) {
+            console.error("Test 100 Failed: Hydrated 2nd innings state must not have modal-open class");
             process.exit(1);
         }
     }

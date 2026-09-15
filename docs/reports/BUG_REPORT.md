@@ -410,6 +410,37 @@ All tests passed!
   - Test 98 verifies unbatted 0/0 opener cleanup before ball 1 and clean slot unassignment.
   - Test 99 deserializes the reported payload and verifies `D.active` is healed to `false` and `F.active` to `true`.
 
+---
+
+### 17. Body Scroll Lock on Innings Break Modal Dismissal
+- **Severity**: `[HIGH]`
+- **Status**: `[PASS]` Resolved & Verified (Test 100)
+- **Affected Components**: [`src/modal.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89), [`src/modal.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L131), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L167), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1300), [`src/ui.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1814)
+- **Diagnostic Context**:
+  - Reported Environment: Android 10, Chrome 153.0.0.0 Mobile Safari/537.36 (Screen size: 443x824).
+  - Reported State: 2nd innings, `0 / 0` in `0.0 / 6` overs (Target: 73).
+  - User Feedback: *"Unable to scroll since innings change"*.
+- **Root Cause Analysis**:
+  1. **Bootstrap Modal ScrollBarHelper Inline Style Leak**: When 1st innings concludes (overs completed or all out), the state machine dispatches a `SHOW_ALERT` UI event (`"Innings Over! Max overs reached. Target set to: 73"`), which invokes [`showAlert`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1419) and [`openModal`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L30). When Bootstrap 5 JS is active, `bootstrap.Modal.show()` sets `document.body.style.overflow = 'hidden'` and `document.body.style.paddingRight = '...'` to prevent page scrolling while the dialog is visible.
+  2. **Synchronous Transition Interruption in `closeModal`**: When the user dismissed the alert modal by clicking OK (`[data-bs-dismiss="modal"]`), [`closeModal`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L131) initiated Bootstrap's asynchronous `instance.hide()` and immediately invoked [`nativeHideModal`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L188) in the exact same millisecond. `nativeHideModal` set `modalEl.style.display = 'none'` and removed `.modal-backdrop` elements from the DOM synchronously. Because Bootstrap's backdrop and modal DOM elements were mutated and detached before Bootstrap's CSS fade transition finished, Bootstrap's internal transition callback was disrupted and `this._scrollBar.reset()` never executed.
+  3. **Omitted Inline Overflow Purge**: [`nativeHideModal`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L188) only called `document.body.classList.remove('modal-open')`, but completely omitted resetting inline `document.body.style.overflow`, `document.body.style.paddingRight`, and `document.documentElement.style.overflow`. Consequently, `<body style="overflow: hidden; padding-right: ...;">` remained permanently applied to the DOM after entering the 2nd innings, locking all touch and mouse scroll gestures on mobile browsers.
+- **Resolution**:
+  1. **Comprehensive Scroll Lock Purge Engine** ([`src/modal.ts#L89`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89)): Created [`cleanupModalScrollLock`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89) which checks if any modal dialogs remain open (`.modal.show, .modal[style*="display: block"], .modal[style*="display: flex"]`). If none are open, it unconditionally resets:
+     - `document.body.classList.remove('modal-open')`
+     - `document.body.style.overflow = ''`, `document.body.style.overflowY = ''`, `document.body.style.overflowX = ''`
+     - `document.body.style.paddingRight = ''`, `document.body.style.marginRight = ''`
+     - `document.documentElement.classList.remove('modal-open')`
+     - `document.documentElement.style.overflow = ''`, `document.documentElement.style.overflowY = ''`, `document.documentElement.style.overflowX = ''`
+     - `document.documentElement.style.paddingRight = ''`
+     - Purges all orphaned `.modal-backdrop` elements from the DOM.
+  2. **Lifecycle & Event Interceptor Integration** ([`src/modal.ts#L131`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L131)): Integrated [`cleanupModalScrollLock`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L89) into [`closeModal`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L131), [`nativeHideModal`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L188), and global event listeners for Escape key and Bootstrap's `hidden.bs.modal` events in [`initModalSystem`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/modal.ts#L203).
+  3. **UI State Invariant Healing** ([`src/ui.ts#L1300`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1300)): Added defensive scroll lock cleanup on every [`updateUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1012) render pass when no modals are open, as well as in [`startNextInnings`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1814), [`resetMatch`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1821), and [`initUI`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L161).
+- **Verification**: `[PASS]` Verified by automated Test 100 in [`test/test_cases.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L3858):
+  - Directly asserts `cleanupModalScrollLock()` clears inline styles and classes on `document.body` and `document.documentElement`.
+  - Simulates a full 1st innings completion, alert dialog display with Bootstrap scroll lock simulation, modal dismissal, and confirms `document.body.style.overflow === ''` and `classList.contains('modal-open') === false` in Innings 2.
+  - Tests chained modal flows (`endInningsModal` -> `alertDialogModal`) verifying scroll lock is completely cleared upon dismissing the second modal.
+  - Replays and validates the exact reported payload, confirming clean scrollable state in Innings 2 (`0/0` in `0.0/6` ov, Target: 73).
+
 
 
 

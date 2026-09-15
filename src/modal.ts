@@ -86,11 +86,56 @@ function nativeShowModal(modalEl: HTMLElement): void {
     }
 }
 
+export function cleanupModalScrollLock(): void {
+    if (typeof document === 'undefined') return;
+
+    const openModals = document.querySelectorAll(
+        '.modal.show, .modal[style*="display: block"], .modal[style*="display: flex"]'
+    );
+    if (openModals.length === 0) {
+        if (document.body) {
+            if (document.body.classList) {
+                document.body.classList.remove('modal-open');
+            }
+            if (document.body.style) {
+                document.body.style.overflow = '';
+                document.body.style.overflowY = '';
+                document.body.style.overflowX = '';
+                document.body.style.paddingRight = '';
+                document.body.style.marginRight = '';
+            }
+        }
+        if (document.documentElement) {
+            if (document.documentElement.classList) {
+                document.documentElement.classList.remove('modal-open');
+            }
+            if (document.documentElement.style) {
+                document.documentElement.style.overflow = '';
+                document.documentElement.style.overflowY = '';
+                document.documentElement.style.overflowX = '';
+                document.documentElement.style.paddingRight = '';
+            }
+        }
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if (backdrops && typeof backdrops.forEach === 'function') {
+            backdrops.forEach(b => {
+                if (typeof b.remove === 'function') {
+                    b.remove();
+                }
+            });
+        }
+        activeBackdrops = [];
+    }
+}
+
 export function closeModal(modalTarget: HTMLElement | string): void {
     if (typeof document === 'undefined') return;
 
     const modalEl = getModalElement(modalTarget);
-    if (!modalEl) return;
+    if (!modalEl) {
+        cleanupModalScrollLock();
+        return;
+    }
 
     // WAI-ARIA Guardrail: Blur any focused descendant before hiding or applying aria-hidden
     if (document.activeElement && typeof modalEl.contains === 'function' && modalEl.contains(document.activeElement)) {
@@ -124,6 +169,9 @@ export function closeModal(modalTarget: HTMLElement | string): void {
         });
     }
 
+    // Re-verify scroll lock release after callbacks (in case callbacks triggered state changes)
+    cleanupModalScrollLock();
+
     // Restore focus to the trigger element per W3C modal guidelines
     const trigger = (modalEl as any)._triggerElement as HTMLElement | null;
     if (trigger && typeof trigger.focus === 'function' && (typeof document.body.contains !== 'function' || document.body.contains(trigger))) {
@@ -146,20 +194,7 @@ function nativeHideModal(modalEl: HTMLElement): void {
     if (typeof modalEl.removeAttribute === 'function') {
         modalEl.removeAttribute('aria-modal');
     }
-    if (document.body && document.body.classList) {
-        document.body.classList.remove('modal-open');
-    }
-
-    // Remove any created backdrops
-    const backdrops = document.querySelectorAll('.modal-backdrop');
-    if (backdrops && typeof backdrops.forEach === 'function') {
-        backdrops.forEach(b => {
-            if (typeof b.remove === 'function') {
-                b.remove();
-            }
-        });
-    }
-    activeBackdrops = [];
+    cleanupModalScrollLock();
 }
 
 /**
@@ -178,12 +213,14 @@ export function initModalSystem(): void {
             const modal = dismissBtn.closest('.modal') as HTMLElement | null;
             if (modal) {
                 closeModal(modal);
+            } else {
+                cleanupModalScrollLock();
             }
             return;
         }
 
         // Handle clicking on the backdrop area of an open modal
-        if (target.classList.contains('modal') && target.classList.contains('show')) {
+        if (target.classList && target.classList.contains('modal') && target.classList.contains('show')) {
             closeModal(target);
             return;
         }
@@ -194,6 +231,17 @@ export function initModalSystem(): void {
         if (e.key === 'Escape') {
             const openModals = document.querySelectorAll('.modal.show');
             openModals.forEach(m => closeModal(m as HTMLElement));
+            cleanupModalScrollLock();
+        }
+    });
+
+    // Listen to Bootstrap's hidden.bs.modal event if Bootstrap is active
+    document.addEventListener('hidden.bs.modal', (e: Event) => {
+        const modal = e.target as HTMLElement | null;
+        if (modal) {
+            closeModal(modal);
+        } else {
+            cleanupModalScrollLock();
         }
     });
 }

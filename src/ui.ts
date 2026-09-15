@@ -3,7 +3,7 @@ import { saveState, loadState, generatePermalink, clearState, archiveCompletedMa
 import { GameState, LiveInnings, Team } from './types.js';
 import { getSelectableBowlers, isBowlingResourceExhausted, findConsecutiveOverBreaches } from './rules.js';
 import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl } from './feedback.js';
-import { openModal, closeModal, initModalSystem, registerModalHiddenCallback } from './modal.js';
+import { openModal, closeModal, initModalSystem, registerModalHiddenCallback, cleanupModalScrollLock } from './modal.js';
 import {
     startLiveSession,
     resumeUmpireSession,
@@ -164,6 +164,7 @@ export function initUI(): void {
     setupEventListeners();
     initSortable();
     renderRosters();
+    cleanupModalScrollLock();
     
     // Initial load from storage
     try {
@@ -1296,6 +1297,7 @@ export function updateUI(): void {
     renderAnalyticsCharts();
     updateLiveIndicators();
     handleUIEvents();
+    cleanupModalScrollLock();
 }
 
 function checkControlsState(): void {
@@ -1806,12 +1808,14 @@ export function executeStartMatch(battingTeamNum: 1 | 2): void {
 
 export function startNextInnings(): void {
     if (isSpectator() || gameState.phase !== 'INNINGS_BREAK') return;
+    cleanupModalScrollLock();
     dispatch({ type: 'START_NEXT_INNINGS' });
     updateUI();
 }
 
 export function resetMatch(): void {
     if (isSpectator()) return;
+    cleanupModalScrollLock();
 
     // 1. Terminate any active live streaming session so it cannot overwrite the completed match in cloud storage
     stopLiveSync();
