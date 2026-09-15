@@ -95,20 +95,52 @@ function createMockElement(id?: string): any {
         return createMockElement();
     },
     querySelectorAll: function(selector: string) {
+        if (selector === '.modal.show' || selector.includes('.modal.show')) {
+            const result: any[] = [];
+            for (const id in elements) {
+                if (elements[id].classes && elements[id].classes.has('modal') && elements[id].classes.has('show')) {
+                    result.push(elements[id]);
+                }
+            }
+            return result;
+        }
+        if (selector === '.modal-backdrop' || selector.includes('.modal-backdrop')) {
+            const result: any[] = [];
+            for (const id in elements) {
+                if (elements[id].classes && elements[id].classes.has('modal-backdrop')) {
+                    result.push(elements[id]);
+                }
+            }
+            return result;
+        }
         return [];
     },
     documentElement: {
         setAttribute: () => {},
-        getAttribute: () => 'light'
+        getAttribute: () => 'light',
+        style: {} as Record<string, string>,
+        classes: new Set<string>(),
+        classList: {
+            add: function(c: string) { (global as any).document.documentElement.classes.add(c); },
+            remove: function(c: string) { (global as any).document.documentElement.classes.delete(c); },
+            contains: function(c: string) { return (global as any).document.documentElement.classes.has(c); }
+        }
     },
     body: {
+        style: {} as Record<string, string>,
         classList: {
             add: function(c: string) { (global as any).document.body.classes.add(c); },
             remove: function(c: string) { (global as any).document.body.classes.delete(c); },
             contains: function(c: string) { return (global as any).document.body.classes.has(c); }
         },
         classes: new Set<string>(),
-        appendChild: function(c: any) {},
+        appendChild: function(c: any) {
+            if (c && c.classes && c.classes.has('modal-backdrop')) {
+                const id = 'backdrop_' + Math.random();
+                c.id = id;
+                elements[id] = c;
+            }
+        },
         contains: function(t: any) { return true; }
     }
 };
@@ -212,6 +244,7 @@ async function loadModulesAndRun() {
     const modalMod = await import('../src/modal.js');
     (global as any).openModal = modalMod.openModal;
     (global as any).closeModal = modalMod.closeModal;
+    (global as any).cleanupModalScrollLock = modalMod.cleanupModalScrollLock;
 
     // Feedback & Bug Reporting globals
     (global as any).generateBugReportMarkdown = feedbackMod.generateBugReportMarkdown;
