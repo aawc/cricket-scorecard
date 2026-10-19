@@ -239,19 +239,22 @@ export function getProjectionsFromGameState(state: GameState): {
   const match = state.match;
 
   // Determine which team batted first:
-  // If team1 has an archived innings, team1 batted first.
-  // If team2 has an archived innings, team2 batted first.
-  // Otherwise if currentInnings is 1, currentBattingTeam batted first.
-  // If currentInnings is 2, the team not currently batting batted first.
+  // If team1 has an archived innings and team2 does not, team1 batted first.
+  // If team2 has an archived innings and team1 does not, team2 batted first.
+  // When both teams have archived innings (match completed) or neither does:
+  // In innings 1, currentBattingTeam batted first.
+  // In innings 2, if currentBattingTeam === 2, team 1 batted first (team 2 is chasing).
   let t1BattedFirst = true;
-  if ((match.team1?.innings?.length || 0) > 0) {
+  const t1Inngs = match.team1?.innings?.length || 0;
+  const t2Inngs = match.team2?.innings?.length || 0;
+  if (t1Inngs > 0 && t2Inngs === 0) {
     t1BattedFirst = true;
-  } else if ((match.team2?.innings?.length || 0) > 0) {
+  } else if (t2Inngs > 0 && t1Inngs === 0) {
     t1BattedFirst = false;
   } else if (match.currentInnings === 1) {
     t1BattedFirst = match.currentBattingTeam === 1;
   } else if (match.currentInnings === 2) {
-    t1BattedFirst = match.currentBattingTeam !== 1;
+    t1BattedFirst = match.currentBattingTeam === 2;
   }
 
   const batting1Team = t1BattedFirst ? match.team1 : match.team2;
