@@ -1,7 +1,7 @@
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [ main, v2 ]
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -20,47 +20,30 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      # 1. Checkout main (Production Root) and v2 (Preview Subdirectory /v2/)
-      - name: Checkout main branch
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: main
-          path: main-src
-
-      - name: Checkout v2 branch
-        uses: actions/checkout@v4
-        with:
-          ref: v2
-          path: v2-src
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: '**/package-lock.json'
 
-      # 2. Build main branch (Root /)
-      - name: Build main branch (Root /)
-        run: |
-          cd main-src
-          npm ci || npm install
-          npm run build
-          cd ..
-          mkdir -p dist
-          cp -a main-src/dist/. dist/
+      - name: Install dependencies
+        run: npm ci || npm install
 
-      # 3. Build v2 branch (Subdirectory /v2/)
-      - name: Build v2 branch (Subdirectory /v2/)
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Mirror to /v2/ subpath
         run: |
-          cd v2-src
-          npm ci || npm install
-          npm run build
-          cd ..
           mkdir -p dist/v2
-          cp -a v2-src/dist/. dist/v2/
+          for item in dist/*; do
+            if [ "$item" != "dist/v2" ]; then
+              cp -a "$item" dist/v2/
+            fi
+          done
 
-      # 4. Deploy Combined Distribution Artifact to GitHub Pages
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
