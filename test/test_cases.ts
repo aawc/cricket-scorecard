@@ -589,8 +589,14 @@ try {
         console.error("Test 20 Failed: summariesDiv not found");
         process.exit(1);
     }
-    if (summariesDiv.appendedChildren.length !== 2) {
-        console.error(`Test 20 Failed: Expected 2 innings summaries rendered, got ${summariesDiv.appendedChildren.length}`);
+    const inningsSummaries = summariesDiv.appendedChildren.filter((c: any) => c.classList && c.classList.contains('innings-summary'));
+    if (inningsSummaries.length !== 2) {
+        console.error(`Test 20 Failed: Expected 2 innings summaries rendered, got ${inningsSummaries.length}`);
+        process.exit(1);
+    }
+    // Expected 3 appended children: worm chart section + 2 innings summaries
+    if (summariesDiv.appendedChildren.length !== 3) {
+        console.error(`Test 20 Failed: Expected 3 elements (worm chart + 2 innings summaries), got ${summariesDiv.appendedChildren.length}`);
         process.exit(1);
     }
 } catch (e) {
@@ -3977,6 +3983,160 @@ console.log("Running Test 56...");
             console.error("Test 100 Failed: Hydrated 2nd innings state must not have modal-open class");
             process.exit(1);
         }
+    }
+
+    // Test 101: Final Scorecard Analytics & Charts Integration
+    {
+        console.log("Running Test 101 (Final Scorecard Analytics & Charts Integration)...");
+        stopLiveSync();
+        resetTestState();
+        gameState.settings.oversPerInnings = 1;
+        gameState.settings.maxOversPerBowler = 1;
+        gameState.settings.allowSingleBatsman = false;
+        gameState.match.team1 = {
+            name: "Team 1",
+            players: ["Batter 1A", "Batter 1B", "Batter 1C"],
+            innings: []
+        };
+        gameState.match.team2 = {
+            name: "Team 2",
+            players: ["Bowler 2A", "Bowler 2B", "Bowler 2C"],
+            innings: []
+        };
+        gameState.match.currentInnings = 1;
+        gameState.match.currentBattingTeam = 1;
+        gameState.match.liveInnings.currentBatsman1 = "Batter 1A";
+        gameState.match.liveInnings.currentBatsman2 = "Batter 1B";
+        gameState.match.liveInnings.currentBowler = "Bowler 2A";
+        gameState.match.liveInnings.batsmen = {
+            "Batter 1A": { runs: 0, balls: 0, fours: 0, sixes: 0, active: true },
+            "Batter 1B": { runs: 0, balls: 0, fours: 0, sixes: 0, active: false }
+        };
+        gameState.match.liveInnings.bowlers = {
+            "Bowler 2A": { runs: 0, balls: 0, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+        };
+
+        // Score Innings 1 (6 balls: 4, 1, wicket, 6, 2, 1) -> 14 runs
+        addRuns(4); // Ball 1
+        addRuns(1); // Ball 2 (strike rotates to Batter 1B)
+        addWicket(); // Ball 3 (Batter 1B is out)
+        handleBatsmanChange(2, "Batter 1C"); // replace Batter 1B
+        addRuns(6); // Ball 4
+        addRuns(2); // Ball 5
+        addRuns(1); // Ball 6 (over 1 complete, innings 1 ends)
+
+        // Transition to 2nd innings if not automatically transitioned by alert callback
+        if (gameState.phase === 'INNINGS_BREAK') {
+            startNextInnings();
+        }
+        if (gameState.match.currentInnings !== 2) {
+            console.error(`Test 101 Failed: Expected currentInnings 2, got ${gameState.match.currentInnings}`);
+            process.exit(1);
+        }
+
+        // Start Innings 2 (Team 2 chasing target 15)
+        startNextInnings();
+        handleBatsmanChange(1, "Bowler 2A");
+        handleBatsmanChange(2, "Bowler 2B");
+        handleBowlerChange("Batter 1A");
+
+        // Score Innings 2: 6, 4, 6 -> 16 runs (target met, match won by Team 2)
+        addRuns(6);
+        addRuns(4);
+        addRuns(6);
+
+        if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver) {
+            console.error(`Test 101 Failed: Expected match to be in MATCH_OVER phase with matchOver=true, got ${gameState.phase}`);
+            process.exit(1);
+        }
+
+        // Generate full scorecard summary view
+        generateSummaryView();
+        const summariesDiv = elements['innings-summaries'];
+        if (!summariesDiv) {
+            console.error("Test 101 Failed: #innings-summaries not found");
+            process.exit(1);
+        }
+
+        // 1. Verify Match Result Banner
+        const resultBanner = summariesDiv.appendedChildren.find((c: any) => c.classList.contains('scorecard-match-result-banner'));
+        if (!resultBanner) {
+            console.error("Test 101 Failed: .scorecard-match-result-banner was not rendered into summariesDiv");
+            process.exit(1);
+        }
+        if (!resultBanner.innerHTML.includes('scorecard-match-result-text')) {
+            console.error("Test 101 Failed: .scorecard-match-result-text missing from result banner");
+            process.exit(1);
+        }
+
+        // 2. Verify Match Trajectory Worm Chart
+        const wormSection = summariesDiv.appendedChildren.find((c: any) => c.classList.contains('scorecard-worm-section'));
+        if (!wormSection) {
+            console.error("Test 101 Failed: .scorecard-worm-section was not rendered into summariesDiv");
+            process.exit(1);
+        }
+        const wormCard = wormSection.appendedChildren.find((c: any) => c.classList.contains('scorecard-chart-card'));
+        if (!wormCard || (!wormCard.innerHTML.includes('worm-chart') && !wormCard.innerHTML.includes('<svg'))) {
+            console.error("Test 101 Failed: Worm chart SVG (.worm-chart) missing from worm card");
+            process.exit(1);
+        }
+
+        // 3. Verify Innings Summaries and Analytics
+        const inningsDivs = summariesDiv.appendedChildren.filter((c: any) => c.classList.contains('innings-summary'));
+        if (inningsDivs.length !== 2) {
+            console.error(`Test 101 Failed: Expected 2 innings summaries, got ${inningsDivs.length}`);
+            process.exit(1);
+        }
+
+        inningsDivs.forEach((innDiv: any, idx: number) => {
+            // A. Telemetry Grid
+            const telemetryGrid = innDiv.appendedChildren.find((c: any) => c.classList.contains('scorecard-telemetry-grid'));
+            if (!telemetryGrid) {
+                console.error(`Test 101 Failed: .scorecard-telemetry-grid missing for innings ${idx + 1}`);
+                process.exit(1);
+            }
+            if (!telemetryGrid.innerHTML.includes('Run Rate') || !telemetryGrid.innerHTML.includes('Boundaries') || !telemetryGrid.innerHTML.includes('Extras')) {
+                console.error(`Test 101 Failed: Telemetry metrics missing for innings ${idx + 1}`);
+                process.exit(1);
+            }
+
+            // B. Innings Charts Container
+            const chartsContainer = innDiv.appendedChildren.find((c: any) => c.classList.contains('scorecard-innings-charts'));
+            if (!chartsContainer) {
+                console.error(`Test 101 Failed: .scorecard-innings-charts container missing for innings ${idx + 1}`);
+                process.exit(1);
+            }
+
+            // C. Manhattan Chart
+            const manhattanBlock = chartsContainer.appendedChildren.find((c: any) => {
+                const title = c.appendedChildren?.find((ch: any) => ch.textContent?.includes('Manhattan'));
+                return !!title;
+            });
+            if (!manhattanBlock) {
+                console.error(`Test 101 Failed: Manhattan block missing for innings ${idx + 1}`);
+                process.exit(1);
+            }
+            const manhattanCard = manhattanBlock.appendedChildren.find((c: any) => c.classList.contains('scorecard-chart-card'));
+            if (!manhattanCard || (!manhattanCard.innerHTML.includes('manhattan-chart') && !manhattanCard.innerHTML.includes('<svg'))) {
+                console.error(`Test 101 Failed: Manhattan chart SVG (.manhattan-chart) missing for innings ${idx + 1}`);
+                process.exit(1);
+            }
+
+            // D. Partnerships Chart
+            const pshipBlock = chartsContainer.appendedChildren.find((c: any) => {
+                const title = c.appendedChildren?.find((ch: any) => ch.textContent?.includes('Partnership'));
+                return !!title;
+            });
+            if (!pshipBlock) {
+                console.error(`Test 101 Failed: Partnerships block missing for innings ${idx + 1}`);
+                process.exit(1);
+            }
+            const pshipCard = pshipBlock.appendedChildren.find((c: any) => c.classList.contains('scorecard-chart-card'));
+            if (!pshipCard || (!pshipCard.innerHTML.includes('partnership-chart') && !pshipCard.innerHTML.includes('<svg') && !pshipCard.innerHTML.includes('No partnerships recorded'))) {
+                console.error(`Test 101 Failed: Partnerships chart card missing content for innings ${idx + 1}`);
+                process.exit(1);
+            }
+        });
     }
 
     console.log("All tests passed!");

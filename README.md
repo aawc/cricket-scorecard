@@ -45,7 +45,7 @@ Fully functional, overhauled, and verified. Standardized Release Management & dy
 - **Universal Data Portability Suite**: Monospace ASCII scorecard exporter, ball-by-ball CSV exporter for spreadsheet analysis, and lossless JSON match archive import/export.
 - **Configurable match parameters**: Overs per innings, bowler limits, single batsman mode, leg byes toggle.
 - **State persistence**: `localStorage` automatic synchronization.
-- **Full Scorecard mode**: Clean monospace match summary featuring individual batsman 4s/6s/SR, bowler maidens/econ, wide and no-ball tallies, and Fall of Wickets summary.
+- **Full Scorecard Mode & Post-Match Visual Analytics**: Rich post-match summary featuring a prominent result banner, comparative Match Trajectory Worm Chart (Tol colorblind palette), per-innings Run Rate / Boundaries / Extras telemetry grids, Over-by-Over Progression (Manhattan chart), Batting Partnerships stacked bars, individual batsman 4s/6s/SR, bowler maidens/econ, and Fall of Wickets summary.
 - **Undo functionality**: Instant rollback for scoring corrections.
 - **Web App Manifest & Service Worker**: Offline PWA installation support.
 - **Automated Tests**: Comprehensive test suite covering all scoring rules, live sync, spectator restrictions, release management, match immutability, v2 event projections, SVG charts, and hardware abstractions.

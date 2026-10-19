@@ -752,6 +752,35 @@ export function generateSummaryView(): void {
         if (!summariesDiv) return;
         summariesDiv.innerHTML = '';
 
+        const projections = getProjectionsFromGameState(gameState);
+
+        // Victory / Match Result Banner at match completion
+        if (gameState.match.matchOver || gameState.phase === 'MATCH_OVER') {
+            const matchResultDiv = document.createElement('div');
+            matchResultDiv.classList.add('scorecard-match-result-banner');
+            const winMsg = (matchStatusDisplay && matchStatusDisplay.textContent) ? matchStatusDisplay.textContent : 'Match Over';
+            matchResultDiv.innerHTML = `<span class="scorecard-match-result-text">${winMsg}</span>`;
+            summariesDiv.appendChild(matchResultDiv);
+        }
+
+        // Match Trajectory Worm Chart
+        if (projections.wormData && (projections.wormData.innings1.length > 0 || projections.wormData.innings2.length > 0)) {
+            const wormSection = document.createElement('div');
+            wormSection.classList.add('scorecard-analytics-section', 'scorecard-worm-section');
+            const wormTitle = document.createElement('h3');
+            wormTitle.classList.add('scorecard-section-title');
+            wormTitle.textContent = 'Match Trajectory (Worm Chart)';
+            wormSection.appendChild(wormTitle);
+            const wormBox = document.createElement('div');
+            wormBox.classList.add('scorecard-chart-card');
+            wormBox.innerHTML = renderWormChartSVG(projections.wormData, {
+                team1Name: gameState.match.team1.name || 'Team 1',
+                team2Name: gameState.match.team2.name || 'Team 2'
+            });
+            wormSection.appendChild(wormBox);
+            summariesDiv.appendChild(wormSection);
+        }
+
         const renderInningsSummary = (teamName: string, inningsData: any, inningsNumber: number): void => {
             const inningsDiv = document.createElement('div');
             inningsDiv.classList.add('innings-summary');
@@ -766,6 +795,30 @@ export function generateSummaryView(): void {
             const totalOvers = gameState.settings.oversPerInnings;
             scoreP.innerHTML = `<strong>Score:</strong> ${inningsData.score}/${inningsData.wickets} (${overs}.${balls} / ${totalOvers} ov)`;
             inningsDiv.appendChild(scoreP);
+
+            const proj = inningsNumber === 1 ? projections.innings1 : projections.innings2;
+            const telemetryGrid = document.createElement('div');
+            telemetryGrid.classList.add('scorecard-telemetry-grid');
+            const runRate = inningsData.balls > 0 ? (inningsData.score / (inningsData.balls / 6)).toFixed(2) : '0.00';
+            const totalFours = Object.values(inningsData.batsmen || {}).reduce((s: number, b: any) => s + (b.fours || 0), 0);
+            const totalSixes = Object.values(inningsData.batsmen || {}).reduce((s: number, b: any) => s + (b.sixes || 0), 0);
+            const boundaryRuns = totalFours * 4 + totalSixes * 6;
+
+            telemetryGrid.innerHTML = `
+                <div class="scorecard-telemetry-card">
+                    <div class="scorecard-telemetry-label">Run Rate</div>
+                    <div class="scorecard-telemetry-value">${runRate}</div>
+                </div>
+                <div class="scorecard-telemetry-card">
+                    <div class="scorecard-telemetry-label">Boundaries</div>
+                    <div class="scorecard-telemetry-value">${totalFours}×4, ${totalSixes}×6 (${boundaryRuns}r)</div>
+                </div>
+                <div class="scorecard-telemetry-card">
+                    <div class="scorecard-telemetry-label">Extras</div>
+                    <div class="scorecard-telemetry-value">${inningsData.extras ? (inningsData.extras.wides + inningsData.extras.noballs + inningsData.extras.byes + inningsData.extras.legbyes) : 0}</div>
+                </div>
+            `;
+            inningsDiv.appendChild(telemetryGrid);
 
             const batsmenTable = document.createElement('table');
             batsmenTable.classList.add('summary-table');
@@ -801,8 +854,8 @@ export function generateSummaryView(): void {
 
             const extrasP = document.createElement('p');
             const ext = inningsData.extras;
-            const totalExtras = ext.wides + ext.noballs + ext.byes + ext.legbyes;
-            extrasP.innerHTML = `<strong>Extras:</strong> ${totalExtras} (W: ${ext.wides}, NB: ${ext.noballs}, B: ${ext.byes}, LB: ${ext.legbyes})`;
+            const totalExtras = ext ? (ext.wides + ext.noballs + ext.byes + ext.legbyes) : 0;
+            extrasP.innerHTML = `<strong>Extras:</strong> ${totalExtras} (W: ${ext ? ext.wides : 0}, NB: ${ext ? ext.noballs : 0}, B: ${ext ? ext.byes : 0}, LB: ${ext ? ext.legbyes : 0})`;
             inningsDiv.appendChild(extrasP);
 
             if (inningsData.fow && inningsData.fow.length > 0) {
@@ -812,6 +865,44 @@ export function generateSummaryView(): void {
                 fowDiv.innerHTML = `<strong>Fall of Wickets:</strong> ${fowList}`;
                 inningsDiv.appendChild(fowDiv);
             }
+
+            // Visual Analytics: Manhattan & Partnerships Charts
+            const chartsContainer = document.createElement('div');
+            chartsContainer.classList.add('scorecard-innings-charts');
+
+            // Manhattan Chart
+            const manhattanWrap = document.createElement('div');
+            manhattanWrap.classList.add('scorecard-chart-block');
+            const manhattanTitle = document.createElement('h4');
+            manhattanTitle.classList.add('scorecard-chart-subtitle');
+            manhattanTitle.textContent = 'Over-by-Over Progression (Manhattan)';
+            manhattanWrap.appendChild(manhattanTitle);
+            const manhattanBox = document.createElement('div');
+            manhattanBox.classList.add('scorecard-chart-card');
+            const bars = inningsNumber === 1 ? projections.manhattan1 : projections.manhattan2;
+            manhattanBox.innerHTML = renderManhattanChartSVG(bars);
+            manhattanWrap.appendChild(manhattanBox);
+            chartsContainer.appendChild(manhattanWrap);
+
+            // Partnerships Chart
+            const pshipWrap = document.createElement('div');
+            pshipWrap.classList.add('scorecard-chart-block');
+            const pshipTitle = document.createElement('h4');
+            pshipTitle.classList.add('scorecard-chart-subtitle');
+            pshipTitle.textContent = 'Batting Partnerships';
+            pshipWrap.appendChild(pshipTitle);
+            const pshipBox = document.createElement('div');
+            pshipBox.classList.add('scorecard-chart-card');
+            const pships = proj ? proj.partnerships : [];
+            if (pships && pships.length > 0) {
+                pshipBox.innerHTML = renderPartnershipChartSVG(pships);
+            } else {
+                pshipBox.innerHTML = '<div class="text-muted small py-2 text-center">No partnerships recorded.</div>';
+            }
+            pshipWrap.appendChild(pshipBox);
+            chartsContainer.appendChild(pshipWrap);
+
+            inningsDiv.appendChild(chartsContainer);
 
             // Over Log Table
             let displayOvers = [...(inningsData.overs || [])];
