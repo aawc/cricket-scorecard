@@ -1890,6 +1890,15 @@ export function executeStartMatch(battingTeamNum: 1 | 2): void {
 
     dispatch({ type: 'CHOOSE_TOSS_BATTING', payload: { battingTeamNum } });
 
+    // Always make starting a new match an active live match automatically
+    const liveSession = getLiveSession();
+    if (!liveSession.isLive || liveSession.role !== 'UMPIRE') {
+        startLiveSession(gameState, undefined, undefined, (updatedState) => {
+            setGameState(updatedState);
+            updateUI();
+        });
+    }
+
     if (settingsSection) settingsSection.classList.add('hidden');
     const flipContainer = document.querySelector('.flip-container');
     if (flipContainer) flipContainer.classList.remove('hidden');

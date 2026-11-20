@@ -602,6 +602,15 @@ export function startLiveSession(
     const spectatorUrl = getSpectatorUrl(matchId);
     const umpireUrl = getUmpireUrl(matchId, writeKey);
 
+    if (typeof window !== "undefined" && window.history && window.history.replaceState && window.location) {
+        try {
+            const cleanUrl = `${window.location.origin}${window.location.pathname}?live=${encodeURIComponent(matchId)}&key=${encodeURIComponent(writeKey)}`;
+            window.history.replaceState({}, "", cleanUrl);
+        } catch (e: any) {
+            console.warn("[LiveSync] Failed to update URL with live match parameters:", e);
+        }
+    }
+
     return { matchId, writeKey, spectatorUrl, umpireUrl };
 }
 

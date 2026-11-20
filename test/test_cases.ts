@@ -4139,6 +4139,63 @@ console.log("Running Test 56...");
         });
     }
 
+    // =========================================================================
+    // Test 102: Automatic Live Match Initialization on New Match Start
+    // =========================================================================
+    {
+        console.log("Running Test 102 (Automatic Live Match Initialization on New Match Start)...");
+        const mockLiveStore = new MemoryStorageProvider();
+        setLiveStorageProvider(mockLiveStore);
+
+        // Reset match and verify live session is cleared
+        resetMatch();
+        let session = getLiveSession();
+        if (session.isLive || session.matchId !== null) {
+            console.error("Test 102 Failed: Live session should be disconnected after resetMatch()");
+            process.exit(1);
+        }
+
+        // Configure match settings and rosters
+        gameState.match.team1 = { name: "Live Team A", players: ["A1", "A2", "A3"], innings: [] };
+        gameState.match.team2 = { name: "Live Team B", players: ["B1", "B2", "B3"], innings: [] };
+        gameState.settings.oversPerInnings = 5;
+        gameState.settings.maxOversPerBowler = 2;
+
+        // Start match (dispatch START_MATCH to enter TOSS phase, then executeStartMatch)
+        dispatch({
+            type: "START_MATCH",
+            payload: {
+                settings: { oversPerInnings: 5, maxOversPerBowler: 2 },
+                team1Players: ["A1", "A2", "A3"],
+                team2Players: ["B1", "B2", "B3"]
+            }
+        });
+        executeStartMatch(1);
+
+        // Assert that the match is now automatically live without manual intervention
+        session = getLiveSession();
+        if (!session.isLive || session.role !== 'UMPIRE' || !session.matchId || !session.writeKey) {
+            console.error("Test 102 Failed: Starting match did not automatically initialize live session:", session);
+            process.exit(1);
+        }
+
+        // Verify initial state packet was pushed to storage provider
+        const packetRes = await mockLiveStore.fetchPacket(session.matchId);
+        if (!packetRes.success || !packetRes.packet) {
+            console.error("Test 102 Failed: Initial live packet was not saved to storage provider:", packetRes);
+            process.exit(1);
+        }
+
+        const unminified = unminifyState(packetRes.packet.state);
+        if (!unminified.matchStarted || unminified.match.currentBattingTeam !== 1) {
+            console.error("Test 102 Failed: Synced match state is invalid:", unminified);
+            process.exit(1);
+        }
+
+        // Clean up session
+        stopLiveSync();
+    }
+
     console.log("All tests passed!");
     process.exit(0);
 }).catch(err => {
