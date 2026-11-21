@@ -34,8 +34,16 @@ function parseArgs() {
     return { tag, output, getTag };
 }
 
+function resolveTargetRootDir() {
+    const cwdCandidate = process.cwd();
+    if (fs.existsSync(path.join(cwdCandidate, "src/version.ts"))) {
+        return cwdCandidate;
+    }
+    return rootDir;
+}
+
 function extractAppVersionFromVersionTs() {
-    const versionTsPath = path.join(rootDir, "src/version.ts");
+    const versionTsPath = path.join(resolveTargetRootDir(), "src/version.ts");
     if (!fs.existsSync(versionTsPath)) return "v2026.09.001";
     const content = fs.readFileSync(versionTsPath, "utf8");
     const match = content.match(/export const APP_VERSION\s*=\s*['"]([^'"]+)['"]/);
@@ -43,12 +51,12 @@ function extractAppVersionFromVersionTs() {
 }
 
 function extractReleasesFromVersionTs() {
-    const versionTsPath = path.join(rootDir, "src/version.ts");
+    const versionTsPath = path.join(resolveTargetRootDir(), "src/version.ts");
     if (!fs.existsSync(versionTsPath)) {
         return [];
     }
     const content = fs.readFileSync(versionTsPath, "utf8");
-    const match = content.match(/export const RELEASE_HISTORY:\s*ReleaseInfo\[\]\s*=\s*(\[[\s\S]*?\]);/);
+    const match = content.match(/export const RELEASE_HISTORY:\s*ReleaseInfo\[\]\s*=\s*(\[\s*\]|\[[\s\S]*?\n\]);/);
     if (!match) return [];
     try {
         const fn = new Function("return (" + match[1] + ");");
@@ -103,7 +111,7 @@ function main() {
     }
 
     if (output) {
-        const outPath = path.isAbsolute(output) ? output : path.join(rootDir, output);
+        const outPath = path.isAbsolute(output) ? output : path.join(resolveTargetRootDir(), output);
         fs.writeFileSync(outPath, markdown);
         console.log(`[SUCCESS] Release notes written to ${outPath}`);
     } else {

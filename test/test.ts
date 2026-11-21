@@ -253,6 +253,9 @@ async function loadModulesAndRun() {
     (global as any).clearRuntimeErrors = feedbackMod.clearRuntimeErrors;
     (global as any).getGitHubIssueUrl = feedbackMod.getGitHubIssueUrl;
     (global as any).copyBugReportToClipboard = feedbackMod.copyBugReportToClipboard;
+    (global as any).updateFeedbackPreview = uiMod.updateFeedbackPreview;
+    (global as any).handleCopyFeedbackReport = uiMod.handleCopyFeedbackReport;
+    (global as any).handleOpenGithubIssue = uiMod.handleOpenGithubIssue;
 
     // Live Streaming & 1-Year Sync globals
     const syncMod = await import('../src/sync.js');

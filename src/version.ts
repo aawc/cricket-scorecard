@@ -31,13 +31,13 @@ export const APP_RELEASE_TIMESTAMP = "2026-09-08T01:55:00.000Z";
  */
 export function categorizeCommitMessage(message: string): "feat" | "fix" | "docs" | "refactor" | "test" | "perf" | "chore" {
     const lower = (message || "").toLowerCase().trim();
-    if (/^feat(\(.*\))?:|^add |^implement |^support /.test(lower)) return "feat";
-    if (/^fix(\(.*\))?:|^resolve |^correct |^restore |^heal /.test(lower)) return "fix";
-    if (/^docs(\(.*\))?:|^document |update readme|update prompt|update design/.test(lower)) return "docs";
-    if (/^refactor(\(.*\))?:|^reorganize |^clean |^rework |^deconstruct /.test(lower)) return "refactor";
-    if (/^test(\(.*\))?:|^add unit test|^add test/.test(lower)) return "test";
-    if (/^perf(\(.*\))?:|^optimize |^speed /.test(lower)) return "perf";
-    return "chore";
+    if (/^(chore|ci|build)(\([^)]*\))?:|^bump /.test(lower)) return "chore";
+    if (/^docs(\([^)]*\))?:|^document |^update (readme|agents|claude|gemini|contributing|security|design|docs)/.test(lower)) return "docs";
+    if (/^test(\([^)]*\))?:|^add (unit )?test/.test(lower)) return "test";
+    if (/^feat(\([^)]*\))?:|^add |^implement |^support /.test(lower)) return "feat";
+    if (/^fix(\([^)]*\))?:|^resolve |^correct |^restore |^heal /.test(lower)) return "fix";
+    if (/^refactor(\([^)]*\))?:|^reorganize |^clean |^rework |^deconstruct /.test(lower)) return "refactor";
+    return /^perf(\([^)]*\))?:|^optimize |^speed /.test(lower) ? "perf" : "chore";
 }
 
 /**

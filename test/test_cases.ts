@@ -40,6 +40,9 @@ declare function getRuntimeErrors(): any[];
 declare function clearRuntimeErrors(): void;
 declare function getGitHubIssueUrl(reportText: string, customTitle?: string): string;
 declare function copyBugReportToClipboard(reportText: string): Promise<boolean>;
+declare function updateFeedbackPreview(): void;
+declare function handleCopyFeedbackReport(): Promise<void>;
+declare function handleOpenGithubIssue(): void;
 
 declare var MemoryStorageProvider: any;
 declare var CloudflareKVStorageProvider: any;
@@ -2219,20 +2222,58 @@ console.log("Running Test 56...");
 
     // Test 74: Commit Categorization & Release History Metadata
     console.log("Running Test 74...");
-    if ((global as any).categorizeCommitMessage("feat(sync): add live broadcast") !== "feat" ||
-        (global as any).categorizeCommitMessage("Implement run out modal") !== "feat" ||
-        (global as any).categorizeCommitMessage("fix: solve strike rotation") !== "fix" ||
-        (global as any).categorizeCommitMessage("docs: author contributing guide") !== "docs" ||
-        (global as any).categorizeCommitMessage("test: add unit tests 70-73") !== "test" ||
-        (global as any).categorizeCommitMessage("perf: optimize score rendering") !== "perf" ||
-        (global as any).categorizeCommitMessage("refactor: split ui modules") !== "refactor") {
-        console.error("Test 74 Failed: Commit categorization failed on standard messages");
-        process.exit(1);
+    {
+        const expectedCommitCategories: Array<[string, string]> = [
+            ["feat(sync): add live broadcast", "feat"],
+            ["Implement run out modal", "feat"],
+            ["fix: solve strike rotation", "fix"],
+            ["docs: author contributing guide", "docs"],
+            ["docs: synchronize AGENTS.md", "docs"],
+            ["Update AGENTS.md governance", "docs"],
+            ["test: add unit tests 70-73", "test"],
+            ["perf: optimize score rendering", "perf"],
+            ["refactor: split ui modules", "refactor"],
+            ["ci: chain release and deploy workflows", "chore"],
+            ["build: update bundler", "chore"],
+            ["chore(release): v2026.11.001 [skip ci]", "chore"],
+            ["Bump vite from 8.0.16 to 8.1.6", "chore"]
+        ];
+
+        for (const [msg, expectedCategory] of expectedCommitCategories) {
+            const actualVersionTs = (global as any).categorizeCommitMessage(msg);
+            if (actualVersionTs !== expectedCategory) {
+                console.error(`[FAIL] Test 74 Failed: src/version.ts categorizeCommitMessage(${JSON.stringify(msg)}) returned "${actualVersionTs}", expected "${expectedCategory}"`);
+                process.exit(1);
+            }
+        }
+
+        const fs74 = await import("fs");
+        const path74 = await import("path");
+        const url74 = await import("url");
+        const releaseScriptPath74 = path74.resolve(process.cwd(), "scripts/release.js");
+        const releaseScriptSrc74 = fs74.readFileSync(releaseScriptPath74, "utf8");
+        if (!releaseScriptSrc74.includes("isMainModule")) {
+            console.error("[FAIL] Test 74 Failed: scripts/release.js must guard CLI execution with isMainModule so pure helpers can be imported safely");
+            process.exit(1);
+        }
+        const releaseHref74: string = url74.pathToFileURL(releaseScriptPath74).href;
+        const releaseMod74: any = await import(releaseHref74);
+        if (typeof releaseMod74.categorizeCommitMessage !== "function") {
+            console.error("[FAIL] Test 74 Failed: scripts/release.js must export categorizeCommitMessage");
+            process.exit(1);
+        }
+        for (const [msg, expectedCategory] of expectedCommitCategories) {
+            const actualReleaseJs = releaseMod74.categorizeCommitMessage(msg);
+            if (actualReleaseJs !== expectedCategory) {
+                console.error(`[FAIL] Test 74 Failed: scripts/release.js categorizeCommitMessage(${JSON.stringify(msg)}) returned "${actualReleaseJs}", expected "${expectedCategory}"`);
+                process.exit(1);
+            }
+        }
     }
 
     const latestRelease = (global as any).getLatestRelease();
     if (!latestRelease || !latestRelease.version || !latestRelease.highlights || latestRelease.highlights.length === 0) {
-        console.error("Test 74 Failed: Latest release metadata is missing version or highlights");
+        console.error("[FAIL] Test 74 Failed: Latest release metadata is missing version or highlights");
         process.exit(1);
     }
 
@@ -2267,14 +2308,55 @@ console.log("Running Test 56...");
     console.log("Running Test 76...");
     const appVersion = (global as any).APP_VERSION;
     if (!appVersion || !/^v\d{4}\.\d{2}\.\d{3}$/.test(appVersion)) {
-        console.error(`Test 76 Failed: APP_VERSION must match format v$yyyy.$mm.$nnn, got ${appVersion}`);
+        console.error(`[FAIL] Test 76 Failed: APP_VERSION must match format v$yyyy.$mm.$nnn, got ${appVersion}`);
         process.exit(1);
     }
 
     const bugReport = (global as any).generateBugReportMarkdown({ userFeedback: "Test issue" });
     if (!bugReport.includes(`**App Version**: \`${appVersion}\``)) {
-        console.error(`Test 76 Failed: Bug report did not use centralized APP_VERSION: ${bugReport}`);
+        console.error(`[FAIL] Test 76 Failed: Bug report did not use centralized APP_VERSION: ${bugReport}`);
         process.exit(1);
+    }
+
+    {
+        if (elements['feedback-text']) elements['feedback-text'].value = "Preview version check";
+        updateFeedbackPreview();
+        const previewMarkdown = String(elements['feedback-preview']?.textContent || "");
+        if (!previewMarkdown.includes(appVersion) || previewMarkdown.includes("v20260908-004")) {
+            console.error(`[FAIL] Test 76 Failed: updateFeedbackPreview() must embed APP_VERSION (${appVersion}) and never stale v20260908-004, got:\n${previewMarkdown}`);
+            process.exit(1);
+        }
+
+        let copiedMarkdown = "";
+        const origWriteText = navigator.clipboard.writeText;
+        let openedUrl = "";
+        const origWindowOpen = (global as any).window.open;
+        try {
+            navigator.clipboard.writeText = async (txt: string) => { copiedMarkdown = txt; };
+            (global as any).window.open = (url: string) => { openedUrl = url; };
+            await handleCopyFeedbackReport();
+            handleOpenGithubIssue();
+        } finally {
+            navigator.clipboard.writeText = origWriteText;
+            (global as any).window.open = origWindowOpen;
+        }
+        if (!copiedMarkdown.includes(appVersion) || copiedMarkdown.includes("v20260908-004")) {
+            console.error(`[FAIL] Test 76 Failed: handleCopyFeedbackReport() must embed APP_VERSION (${appVersion}) and never v20260908-004`);
+            process.exit(1);
+        }
+        const decodedIssueUrl = decodeURIComponent(openedUrl);
+        if (!decodedIssueUrl.includes(appVersion) || decodedIssueUrl.includes("v20260908-004")) {
+            console.error(`[FAIL] Test 76 Failed: handleOpenGithubIssue() must embed APP_VERSION (${appVersion}) and never v20260908-004`);
+            process.exit(1);
+        }
+
+        const fs76 = await import("fs");
+        const path76 = await import("path");
+        const uiSource = fs76.readFileSync(path76.resolve(process.cwd(), "src/ui.ts"), "utf8");
+        if (uiSource.includes("v20260908-004")) {
+            console.error("[FAIL] Test 76 Failed: src/ui.ts still contains hardcoded stale version 'v20260908-004'");
+            process.exit(1);
+        }
     }
 
     // Test 77: Release Notes Modal Trigger & Footer Badge Integration
@@ -4334,6 +4416,404 @@ console.log("Running Test 56...");
 
         // Clean up session
         stopLiveSync();
+    }
+
+    // =========================================================================
+    // Test 103: Semantic Release CLI, Doc-Only Gate, Commit-Before-Tag & Chained Pages Workflow
+    // =========================================================================
+    {
+        console.log("Running Test 103 (Semantic Release CLI, Doc-Only Gate, Commit-Before-Tag & Chained Pages Workflow)...");
+        const fs103 = await import("fs");
+        const path103 = await import("path");
+        const os103 = await import("os");
+        const url103 = await import("url");
+        const { execFileSync } = await import("child_process");
+
+        const repoRoot = process.cwd();
+        const releaseScriptPath = path103.resolve(repoRoot, "scripts/release.js");
+        const releaseScriptContent = fs103.readFileSync(releaseScriptPath, "utf8");
+        if (!releaseScriptContent.includes("isMainModule")) {
+            console.error("[FAIL] Test 103 Failed: scripts/release.js must guard CLI execution with isMainModule");
+            process.exit(1);
+        }
+
+        const releaseHref: string = url103.pathToFileURL(releaseScriptPath).href;
+        const releaseMod: any = await import(releaseHref);
+        const { parseArgs, resolvePreferredRemote, isDocOrCommunityOnlyPath, shouldCutRelease } = releaseMod;
+
+        if (typeof parseArgs !== "function" ||
+            typeof resolvePreferredRemote !== "function" ||
+            typeof isDocOrCommunityOnlyPath !== "function" ||
+            typeof shouldCutRelease !== "function") {
+            console.error("[FAIL] Test 103 Failed: scripts/release.js must export parseArgs, resolvePreferredRemote, isDocOrCommunityOnlyPath, and shouldCutRelease");
+            process.exit(1);
+        }
+
+        // 1. Verify parseArgs CLI flags
+        const parsedCiArgs = parseArgs(["--ci", "--skip-tests", "--no-push", "--tag", "v2026.11.005"]);
+        if (!parsedCiArgs.ci || !parsedCiArgs.skipTests || !parsedCiArgs.noPush || parsedCiArgs.push !== false || parsedCiArgs.tag !== "v2026.11.005") {
+            console.error("[FAIL] Test 103 Failed: parseArgs did not parse --ci/--skip-tests/--no-push/--tag accurately:", parsedCiArgs);
+            process.exit(1);
+        }
+        const parsedCheckArgs = parseArgs(["--should-release", "--dry-run"]);
+        if (!parsedCheckArgs.shouldRelease || !parsedCheckArgs.dryRun || parsedCheckArgs.push !== false) {
+            console.error("[FAIL] Test 103 Failed: parseArgs did not parse --should-release/--dry-run accurately:", parsedCheckArgs);
+            process.exit(1);
+        }
+
+        // 2. Verify resolvePreferredRemote priority order
+        if (resolvePreferredRemote(["origin", "github-aawc"]) !== "github-aawc") {
+            console.error("[FAIL] Test 103 Failed: resolvePreferredRemote(['origin', 'github-aawc']) must return 'github-aawc'");
+            process.exit(1);
+        }
+        if (resolvePreferredRemote(["origin", "gh-aawc"]) !== "gh-aawc") {
+            console.error("[FAIL] Test 103 Failed: resolvePreferredRemote(['origin', 'gh-aawc']) must return 'gh-aawc'");
+            process.exit(1);
+        }
+        if (resolvePreferredRemote(["origin"]) !== "origin") {
+            console.error("[FAIL] Test 103 Failed: resolvePreferredRemote(['origin']) must return 'origin'");
+            process.exit(1);
+        }
+
+        // 3. Verify shouldCutRelease & isDocOrCommunityOnlyPath
+        const docOnlyPaths = [
+            "AGENTS.md",
+            "CLAUDE.md",
+            "README.md",
+            "docs/architecture/DESIGN.md",
+            ".github/copilot-instructions.md",
+            ".github/ISSUE_TEMPLATE/bug_report.yml",
+            "LICENSE"
+        ];
+        for (const p of docOnlyPaths) {
+            if (!isDocOrCommunityOnlyPath(p)) {
+                console.error(`[FAIL] Test 103 Failed: isDocOrCommunityOnlyPath(${JSON.stringify(p)}) must return true`);
+                process.exit(1);
+            }
+        }
+
+        if (shouldCutRelease({ changedFiles: ["src/ui.ts"], headMessage: "chore(release): v2026.11.001", tagsAtHead: [] }) !== false) {
+            console.error("[FAIL] Test 103 Failed: shouldCutRelease must return false when headMessage starts with 'chore(release): '");
+            process.exit(1);
+        }
+        if (shouldCutRelease({ changedFiles: ["src/ui.ts"], headMessage: "feat: wip [skip release]", tagsAtHead: [] }) !== false) {
+            console.error("[FAIL] Test 103 Failed: shouldCutRelease must return false when headMessage contains '[skip release]'");
+            process.exit(1);
+        }
+        if (shouldCutRelease({ changedFiles: ["src/ui.ts"], headMessage: "chore(release): v2026.11.001 [skip ci]", tagsAtHead: [] }) !== false) {
+            console.error("[FAIL] Test 103 Failed: shouldCutRelease must return false when headMessage contains '[skip ci]'");
+            process.exit(1);
+        }
+        if (shouldCutRelease({ changedFiles: ["src/ui.ts"], headMessage: "feat: live sync", tagsAtHead: ["v2026.09.001"] }) !== false) {
+            console.error("[FAIL] Test 103 Failed: shouldCutRelease must return false when tagsAtHead already includes a semantic tag");
+            process.exit(1);
+        }
+        if (shouldCutRelease({ changedFiles: docOnlyPaths, headMessage: "docs: update governance", tagsAtHead: [] }) !== false) {
+            console.error("[FAIL] Test 103 Failed: shouldCutRelease must return false when changedFiles are strictly doc/community-only");
+            process.exit(1);
+        }
+        if (shouldCutRelease({
+            changedFiles: ["src/ui.ts"],
+            headMessage: "feat: refine release pipeline\n\nBody prose mentioning [skip ci] and chore(release): must not skip.",
+            tagsAtHead: []
+        }) !== true) {
+            console.error("[FAIL] Test 103 Failed: shouldCutRelease must inspect only the commit subject line, not commit body prose");
+            process.exit(1);
+        }
+
+        const releasableChangeSets = [
+            ["AGENTS.md", "src/ui.ts"],
+            ["index.html"],
+            ["package.json"],
+            ["scripts/release.js"],
+            [".github/workflows/release.yml"]
+        ];
+        for (const files of releasableChangeSets) {
+            if (shouldCutRelease({ changedFiles: files, headMessage: "feat: update asset", tagsAtHead: [] }) !== true) {
+                console.error(`[FAIL] Test 103 Failed: shouldCutRelease must return true when changedFiles=${JSON.stringify(files)}`);
+                process.exit(1);
+            }
+        }
+
+        // 4. End-to-end execution of scripts/release.js inside an isolated temporary git repository
+        const tmpDir = fs103.mkdtempSync(path103.join(os103.tmpdir(), "cric-release-test-"));
+        const ghOutDir = fs103.mkdtempSync(path103.join(os103.tmpdir(), "cric-release-ghout-"));
+        try {
+            const gitEnv = {
+                ...process.env,
+                GIT_AUTHOR_NAME: "Test Runner",
+                GIT_AUTHOR_EMAIL: "test@example.com",
+                GIT_COMMITTER_NAME: "Test Runner",
+                GIT_COMMITTER_EMAIL: "test@example.com",
+                GIT_CONFIG_GLOBAL: "/dev/null"
+            };
+            const runGit = (args: string[]) =>
+                execFileSync("git", args, { cwd: tmpDir, env: gitEnv, encoding: "utf8" }).trim();
+
+            runGit(["init"]);
+            runGit(["symbolic-ref", "HEAD", "refs/heads/main"]);
+
+            fs103.mkdirSync(path103.join(tmpDir, "src"), { recursive: true });
+            fs103.mkdirSync(path103.join(tmpDir, "public"), { recursive: true });
+
+            fs103.writeFileSync(
+                path103.join(tmpDir, "package.json"),
+                JSON.stringify({
+                    name: "cricket-scorecard-pwa-test",
+                    version: "2026.09.001",
+                    type: "module",
+                    scripts: {
+                        test: "node -e \"process.exit(0)\"",
+                        build: "node -e \"process.exit(0)\""
+                    }
+                }, null, 2) + "\n"
+            );
+            fs103.copyFileSync(
+                path103.join(repoRoot, "src/version.ts"),
+                path103.join(tmpDir, "src/version.ts")
+            );
+            fs103.writeFileSync(
+                path103.join(tmpDir, "public/sw.js"),
+                "const CACHE_NAME = 'cricket-scorecard-v2026.09.001';\n"
+            );
+            fs103.writeFileSync(
+                path103.join(tmpDir, "index.html"),
+                "<footer><span id=\"footer-version-text\">v2026.09.001</span></footer>\n"
+            );
+            fs103.writeFileSync(path103.join(tmpDir, "AGENTS.md"), "# Agent Guidelines\n");
+
+            runGit(["add", "."]);
+            runGit(["commit", "-m", "chore: initial seed"]);
+            runGit(["tag", "-a", "v2026.09.001", "-m", "Release v2026.09.001"]);
+
+            // Add releasable commit whose subject contains literal `];` to guard RELEASE_HISTORY parser
+            fs103.writeFileSync(path103.join(tmpDir, "src/sync.ts"), "export const liveSync = true;\n");
+            runGit(["add", "src/sync.ts"]);
+            runGit(["commit", "-m", "fix(ui): guard arr[0]; prevent crash"]);
+
+            const ghOutputFile1 = path103.join(ghOutDir, "github_output_1.txt");
+            fs103.writeFileSync(ghOutputFile1, "");
+
+            execFileSync(
+                process.execPath,
+                [releaseScriptPath, "--ci", "--skip-tests", "--no-push"],
+                {
+                    cwd: tmpDir,
+                    env: {
+                        ...process.env,
+                        GITHUB_OUTPUT: ghOutputFile1,
+                        GIT_CONFIG_GLOBAL: "/dev/null"
+                    },
+                    encoding: "utf8"
+                }
+            );
+
+            const dirtyAfterRelease = runGit(["status", "--porcelain"]);
+            if (dirtyAfterRelease !== "") {
+                console.error(`[FAIL] Test 103 Failed: Expected clean working tree after --ci release, got:\n${dirtyAfterRelease}`);
+                process.exit(1);
+            }
+
+            const headSubject = runGit(["log", "-n", "1", "--pretty=%s"]);
+            if (!/^chore\(release\): v\d{4}\.\d{2}\.\d{3} \[skip ci\]$/.test(headSubject)) {
+                console.error(`[FAIL] Test 103 Failed: Expected release commit subject 'chore(release): vYYYY.MM.NNN [skip ci]', got "${headSubject}"`);
+                process.exit(1);
+            }
+
+            const ghOut1 = fs103.readFileSync(ghOutputFile1, "utf8");
+            const outMap1: Record<string, string> = {};
+            for (const line of ghOut1.split(/\r?\n/).filter(Boolean)) {
+                const eqIdx = line.indexOf("=");
+                if (eqIdx > 0) outMap1[line.slice(0, eqIdx)] = line.slice(eqIdx + 1);
+            }
+
+            const newTag = outMap1["tag"];
+            if (!newTag || !/^v\d{4}\.\d{2}\.\d{3}$/.test(newTag) || newTag === "v2026.09.001") {
+                console.error(`[FAIL] Test 103 Failed: Invalid new tag in GITHUB_OUTPUT: ${JSON.stringify(outMap1)}`);
+                process.exit(1);
+            }
+
+            const headSha1 = runGit(["rev-parse", "HEAD"]);
+            const tagTargetSha = runGit(["rev-parse", `${newTag}^{commit}`]);
+            if (tagTargetSha !== headSha1) {
+                console.error(`[FAIL] Test 103 Failed: Tag ${newTag} (${tagTargetSha}) does not point to release commit HEAD (${headSha1}) — git commit must run BEFORE git tag -a`);
+                process.exit(1);
+            }
+
+            const versionTsAtTag = runGit(["show", `${newTag}:src/version.ts`]);
+            if (!versionTsAtTag.includes(`APP_VERSION = "${newTag}"`)) {
+                console.error(`[FAIL] Test 103 Failed: ${newTag}:src/version.ts does not contain APP_VERSION = "${newTag}"`);
+                process.exit(1);
+            }
+
+            if (outMap1["skipped"] !== "false" || outMap1["release_sha"] !== headSha1) {
+                console.error(`[FAIL] Test 103 Failed: GITHUB_OUTPUT mismatch after release: ${JSON.stringify(outMap1)} (expected skipped=false, release_sha=${headSha1})`);
+                process.exit(1);
+            }
+
+            // Second commit: pure-markdown edit on top of newTag must skip release
+            fs103.appendFileSync(path103.join(tmpDir, "AGENTS.md"), "\nUpdated agent documentation.\n");
+            runGit(["add", "AGENTS.md"]);
+            runGit(["commit", "-m", "docs: update AGENTS.md"]);
+            const docHeadSha = runGit(["rev-parse", "HEAD"]);
+
+            const ghOutputFile2 = path103.join(ghOutDir, "github_output_2.txt");
+            fs103.writeFileSync(ghOutputFile2, "");
+
+            execFileSync(
+                process.execPath,
+                [releaseScriptPath, "--ci", "--skip-tests", "--no-push"],
+                {
+                    cwd: tmpDir,
+                    env: {
+                        ...process.env,
+                        GITHUB_OUTPUT: ghOutputFile2,
+                        GIT_CONFIG_GLOBAL: "/dev/null"
+                    },
+                    encoding: "utf8"
+                }
+            );
+
+            const ghOut2 = fs103.readFileSync(ghOutputFile2, "utf8");
+            const outMap2: Record<string, string> = {};
+            for (const line of ghOut2.split(/\r?\n/).filter(Boolean)) {
+                const eqIdx = line.indexOf("=");
+                if (eqIdx > 0) outMap2[line.slice(0, eqIdx)] = line.slice(eqIdx + 1);
+            }
+            if (outMap2["skipped"] !== "true" || outMap2["release_sha"] !== docHeadSha) {
+                console.error(`[FAIL] Test 103 Failed: Pure-markdown commit must emit skipped=true and release_sha=${docHeadSha}, got: ${JSON.stringify(outMap2)}`);
+                process.exit(1);
+            }
+
+            const allTagsAfterDoc = runGit(["tag", "-l", "v*"]).split(/\r?\n/).filter(Boolean);
+            if (allTagsAfterDoc.length !== 2 || !allTagsAfterDoc.includes("v2026.09.001") || !allTagsAfterDoc.includes(newTag)) {
+                console.error(`[FAIL] Test 103 Failed: Pure-markdown commit must not mint a new tag, got tags: ${JSON.stringify(allTagsAfterDoc)}`);
+                process.exit(1);
+            }
+
+            // Third commit: local non-CI release must omit [skip ci] and preserve RELEASE_HISTORY despite `arr[0];` in prior release
+            fs103.writeFileSync(path103.join(tmpDir, "src/ui_patch.ts"), "export const patched = 1;\n");
+            runGit(["add", "src/ui_patch.ts"]);
+            runGit(["commit", "-m", "feat: add ui patch"]);
+
+            execFileSync(
+                process.execPath,
+                [releaseScriptPath, "--skip-tests", "--no-push"],
+                {
+                    cwd: tmpDir,
+                    env: gitEnv,
+                    encoding: "utf8"
+                }
+            );
+
+            const localHeadSubject = runGit(["log", "-n", "1", "--pretty=%s"]);
+            if (!/^chore\(release\): v\d{4}\.\d{2}\.\d{3}$/.test(localHeadSubject) || localHeadSubject.includes("[skip ci]")) {
+                console.error(`[FAIL] Test 103 Failed: Local non-CI release commit must omit [skip ci], got "${localHeadSubject}"`);
+                process.exit(1);
+            }
+
+            const versionAfterSecondRelease = fs103.readFileSync(path103.join(tmpDir, "src/version.ts"), "utf8");
+            const historyMatch = versionAfterSecondRelease.match(/export const RELEASE_HISTORY:\s*ReleaseInfo\[\]\s*=\s*(\[\s*\]|\[[\s\S]*?\n\]);/);
+            if (!historyMatch) {
+                console.error("[FAIL] Test 103 Failed: Could not match RELEASE_HISTORY array in generated src/version.ts");
+                process.exit(1);
+            }
+            const parsedHistory = new Function(`return (${historyMatch[1]});`)();
+            if (!Array.isArray(parsedHistory) || parsedHistory.length < 3) {
+                console.error(`[FAIL] Test 103 Failed: RELEASE_HISTORY was truncated by 'arr[0];' commit subject; expected >= 3 releases, got ${parsedHistory?.length}`);
+                process.exit(1);
+            }
+
+            const extractNotesScriptPath = path103.resolve(repoRoot, "scripts/extract-release-notes.js");
+            const extractedNotes1 = execFileSync(
+                process.execPath,
+                [extractNotesScriptPath, "--tag", newTag],
+                { cwd: tmpDir, encoding: "utf8" }
+            );
+            if (!extractedNotes1.includes("guard arr[0]; prevent crash")) {
+                console.error(`[FAIL] Test 103 Failed: extract-release-notes.js failed to parse RELEASE_HISTORY containing 'arr[0];':\n${extractedNotes1}`);
+                process.exit(1);
+            }
+        } finally {
+            fs103.rmSync(tmpDir, { recursive: true, force: true });
+            fs103.rmSync(ghOutDir, { recursive: true, force: true });
+        }
+
+        // 5. Verify GitHub Actions workflow contracts & zero script-injection interpolations in run: blocks
+        const deployYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/deploy.yml"), "utf8");
+        const releaseYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/release.yml"), "utf8");
+        const ciYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/ci.yml"), "utf8");
+
+        const extractYamlRunBlocks = (yamlText: string): string[] => {
+            const lines = yamlText.split(/\r?\n/);
+            const blocks: string[] = [];
+            for (let i = 0; i < lines.length; i++) {
+                const runMatch = lines[i].match(/^(\s*(?:-\s+)?)run:\s*(.*)$/);
+                if (!runMatch) continue;
+                const indentLen = lines[i].match(/^\s*/)?.[0].length ?? 0;
+                const inlineVal = runMatch[2].trim();
+                if (inlineVal === "|" || inlineVal === ">" || inlineVal === "|-" || inlineVal === ">-") {
+                    const bodyLines: string[] = [];
+                    for (let j = i + 1; j < lines.length; j++) {
+                        const line = lines[j];
+                        if (line.trim() === "") {
+                            bodyLines.push(line);
+                            continue;
+                        }
+                        const childIndent = line.match(/^\s*/)?.[0].length ?? 0;
+                        if (childIndent <= indentLen) {
+                            i = j - 1;
+                            break;
+                        }
+                        bodyLines.push(line);
+                        if (j === lines.length - 1) i = j;
+                    }
+                    blocks.push(bodyLines.join("\n"));
+                } else {
+                    blocks.push(inlineVal);
+                }
+            }
+            return blocks;
+        };
+
+        for (const [wfName, wfText] of [["ci.yml", ciYml], ["deploy.yml", deployYml], ["release.yml", releaseYml]] as const) {
+            for (const runBlock of extractYamlRunBlocks(wfText)) {
+                if (runBlock.includes("${{")) {
+                    console.error(`[FAIL] Test 103 Failed: ${wfName} contains untrusted '\${{' interpolation inside a run: block:\n${runBlock}`);
+                    process.exit(1);
+                }
+            }
+        }
+
+        if (!deployYml.includes("workflow_call") ||
+            !deployYml.includes("checkout_ref") ||
+            !deployYml.includes("ref: ${{ inputs.checkout_ref || github.ref }}") ||
+            /^\s*push\s*:/m.test(deployYml) ||
+            !deployYml.includes("dist/v2") ||
+            !/node-version:\s*['"]?22['"]?/.test(deployYml)) {
+            console.error("[FAIL] Test 103 Failed: deploy.yml missing workflow_call checkout_ref contract, /v2/ mirror, or Node 22");
+            process.exit(1);
+        }
+
+        if (!/group:\s*['"]?main-release-deploy['"]?/.test(releaseYml) ||
+            !/cancel-in-progress:\s*false/.test(releaseYml) ||
+            !releaseYml.includes("scripts/release.js") ||
+            !releaseYml.includes("ref: ${{ inputs.tag }}") ||
+            !releaseYml.includes("^v[0-9]{4}\\.[0-9]{2}\\.[0-9]{3}$") ||
+            !releaseYml.includes("origin/main") ||
+            !/^permissions:\s*\r?\n\s+contents:\s*read/m.test(releaseYml) ||
+            !/fail_on_unmatched_files:\s*true/.test(releaseYml) ||
+            !releaseYml.includes("./.github/workflows/deploy.yml") ||
+            !releaseYml.includes("checkout_ref") ||
+            !/node-version:\s*['"]?22['"]?/.test(releaseYml)) {
+            console.error("[FAIL] Test 103 Failed: release.yml missing concurrency group, least-privilege permissions, inputs.tag checkout, tag regex validation, origin/main deploy check, fail_on_unmatched_files, chained deploy.yml, or Node 22");
+            process.exit(1);
+        }
+
+        if (!/node-version:\s*['"]?22['"]?/.test(ciYml)) {
+            console.error("[FAIL] Test 103 Failed: ci.yml must use Node 22");
+            process.exit(1);
+        }
     }
 
     console.log("All tests passed!");

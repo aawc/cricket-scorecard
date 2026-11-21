@@ -1,8 +1,20 @@
 name: Deploy to GitHub Pages
+
 on:
-  push:
-    branches: [ main ]
+  workflow_call:
+    inputs:
+      checkout_ref:
+        description: 'Git ref or commit SHA to checkout and deploy to GitHub Pages'
+        required: false
+        type: string
+        default: ''
   workflow_dispatch:
+    inputs:
+      checkout_ref:
+        description: 'Optional Git ref or commit SHA to checkout and deploy'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -22,15 +34,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.checkout_ref || github.ref }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm ci
 
       - name: Build production bundle
         run: npm run build

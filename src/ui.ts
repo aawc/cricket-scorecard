@@ -13,10 +13,10 @@ import {
     subscribeLiveSession,
     onUmpireDemoted,
     parseLiveUrlParams,
-    getSpectatorUrl,
-    getUmpireUrl
+    getSpectatorUrl, getUmpireUrl
 } from './sync.js';
 import { initReleaseNotesModal, openReleaseNotesModal } from './release_notes.js';
+import { APP_VERSION } from './version.js';
 import { wakeLockController, haptics, audioSynth } from './v2/hardware.js';
 import { renderWormChartSVG, renderManhattanChartSVG, renderPartnershipChartSVG } from './v2/charts.js';
 import { getProjectionsFromGameState, synthesizeEventsFromLiveInnings } from './v2/bridge.js';
@@ -800,8 +800,8 @@ export function generateSummaryView(): void {
             const telemetryGrid = document.createElement('div');
             telemetryGrid.classList.add('scorecard-telemetry-grid');
             const runRate = inningsData.balls > 0 ? (inningsData.score / (inningsData.balls / 6)).toFixed(2) : '0.00';
-            const totalFours = Object.values(inningsData.batsmen || {}).reduce((s: number, b: any) => s + (b.fours || 0), 0);
-            const totalSixes = Object.values(inningsData.batsmen || {}).reduce((s: number, b: any) => s + (b.sixes || 0), 0);
+            const totalFours = Object.values(inningsData.batsmen || {}).reduce<number>((s, b: any) => s + Number(b.fours || 0), 0);
+            const totalSixes = Object.values(inningsData.batsmen || {}).reduce<number>((s, b: any) => s + Number(b.sixes || 0), 0);
             const boundaryRuns = totalFours * 4 + totalSixes * 6;
 
             telemetryGrid.innerHTML = `
@@ -1746,7 +1746,7 @@ export function updateFeedbackPreview(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-004'
+        appVersion: APP_VERSION
     });
     feedbackPreviewEl.textContent = markdown;
 }
@@ -1757,7 +1757,7 @@ export async function handleCopyFeedbackReport(): Promise<void> {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-004'
+        appVersion: APP_VERSION
     });
 
     const success = await copyBugReportToClipboard(markdown);
@@ -1776,7 +1776,7 @@ export function handleOpenGithubIssue(): void {
     const markdown = generateBugReportMarkdown({
         userFeedback,
         includeState,
-        appVersion: 'v20260908-004'
+        appVersion: APP_VERSION
     });
 
     const title = userFeedback ? `Bug: ${userFeedback.substring(0, 50)}...` : undefined;

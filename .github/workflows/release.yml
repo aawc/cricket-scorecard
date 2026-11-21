@@ -1,4 +1,4 @@
-name: Create GitHub Release
+name: Create GitHub Release & Deploy Pages
 
 on:
   push:
@@ -11,76 +11,158 @@ on:
       tag:
         description: 'Release Tag (e.g. v2026.09.001)'
         required: false
+        type: string
         default: ''
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: main-release-deploy
   cancel-in-progress: false
 
 jobs:
   release:
-    name: Build & Publish Release
+    name: Build, Cut Semantic Release & Publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: !(github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'chore(release):'))
+    outputs:
+      should_deploy: ${{ steps.finalize_outputs.outputs.should_deploy }}
+      deploy_ref: ${{ steps.finalize_outputs.outputs.deploy_ref }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ inputs.tag }}
           fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '22'
           cache: 'npm'
 
       - name: Install Dependencies
-        run: npm ci || npm install
+        run: npm ci
 
       - name: Run Test Suites
         run: npm test
 
-      - name: Build Production Assets
+      # Branch A: Automated Semantic Release on push to refs/heads/main
+      - name: Cut Semantic Release (main branch push)
+        id: auto_release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: node scripts/release.js --ci --skip-tests
+
+      - name: Extract Notes & Package Distribution (main branch push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.auto_release.outputs.skipped != 'true'
+        env:
+          TAG_NAME: ${{ steps.auto_release.outputs.tag }}
+        run: |
+          node scripts/extract-release-notes.js --tag "$TAG_NAME" --output RELEASE_NOTES.md
+          cd dist && zip -r "../cricket-scorecard-dist-${TAG_NAME}.zip" . && cd ..
+
+      - name: Publish GitHub Release (main branch push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.auto_release.outputs.skipped != 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.auto_release.outputs.tag }}
+          target_commitish: ${{ steps.auto_release.outputs.release_sha }}
+          name: Release ${{ steps.auto_release.outputs.tag }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            cricket-scorecard-dist-${{ steps.auto_release.outputs.tag }}.zip
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+      # Branch B: Explicit tag push (refs/tags/v*) or manual workflow_dispatch
+      - name: Build Production Assets (tag push or manual dispatch)
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         run: npm run build
 
-      - name: Resolve Release Tag & Extract Notes
-        id: release_meta
+      - name: Resolve Release Tag & Package Distribution (tag push or manual dispatch)
+        id: manual_release
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          CURRENT_REF: ${{ github.ref }}
+          CURRENT_REF_NAME: ${{ github.ref_name }}
         run: |
-          INPUT_TAG="${{ github.event.inputs.tag }}"
-          REF_TAG=""
-          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            REF_TAG="${{ github.ref_name }}"
-          fi
-
           TARGET_TAG="$INPUT_TAG"
-          if [ -z "$TARGET_TAG" ] && [ -n "$REF_TAG" ]; then
-            TARGET_TAG="$REF_TAG"
+          if [ -z "$TARGET_TAG" ] && [[ "$CURRENT_REF" == refs/tags/* ]]; then
+            TARGET_TAG="$CURRENT_REF_NAME"
           fi
           if [ -z "$TARGET_TAG" ]; then
             TARGET_TAG=$(node scripts/extract-release-notes.js --get-tag)
           fi
 
-          echo "Target release tag: $TARGET_TAG"
+          if [[ ! "$TARGET_TAG" =~ ^v[0-9]{4}\.[0-9]{2}\.[0-9]{3}$ ]]; then
+            echo "[FAIL] Invalid semantic release tag format: $TARGET_TAG" >&2
+            exit 1
+          fi
+
+          echo "[INFO] Target release tag: $TARGET_TAG"
           node scripts/extract-release-notes.js --tag "$TARGET_TAG" --output RELEASE_NOTES.md
+          cd dist && zip -r "../cricket-scorecard-dist-${TARGET_TAG}.zip" . && cd ..
           echo "tag=$TARGET_TAG" >> "$GITHUB_OUTPUT"
-          echo "notes_path=RELEASE_NOTES.md" >> "$GITHUB_OUTPUT"
 
-      - name: Package Release Distribution
-        run: |
-          TAG_NAME="${{ steps.release_meta.outputs.tag }}"
-          cd dist && zip -r "../cricket-scorecard-dist-${TAG_NAME}.zip" . && cd ..
-
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release (tag push or manual dispatch)
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_meta.outputs.tag }}
+          tag_name: ${{ steps.manual_release.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          name: Release ${{ steps.release_meta.outputs.tag }}
+          name: Release ${{ steps.manual_release.outputs.tag }}
           body_path: RELEASE_NOTES.md
           files: |
-            cricket-scorecard-dist-${{ steps.release_meta.outputs.tag }}.zip
+            cricket-scorecard-dist-${{ steps.manual_release.outputs.tag }}.zip
+          fail_on_unmatched_files: true
           draft: false
           prerelease: false
           generate_release_notes: true
+
+      - name: Finalize Chained Deployment Outputs
+        id: finalize_outputs
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          CURRENT_REF: ${{ github.ref }}
+          INPUT_TAG: ${{ inputs.tag }}
+          GITHUB_SHA_ENV: ${{ github.sha }}
+          AUTO_RELEASE_SHA: ${{ steps.auto_release.outputs.release_sha }}
+        run: |
+          if [ "$EVENT_NAME" = "push" ] && [ "$CURRENT_REF" = "refs/heads/main" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=${AUTO_RELEASE_SHA:-$GITHUB_SHA_ENV}" >> "$GITHUB_OUTPUT"
+          elif [[ "$CURRENT_REF" == refs/tags/* ]] || { [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_TAG" ]; }; then
+            git fetch origin main --quiet || true
+            MAIN_SHA=$(git rev-parse origin/main 2>/dev/null || echo "")
+            HEAD_SHA=$(git rev-parse HEAD)
+            if [ -n "$MAIN_SHA" ] && [ "$HEAD_SHA" = "$MAIN_SHA" ]; then
+              echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            fi
+            echo "deploy_ref=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$CURRENT_REF" = "refs/heads/main" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=$GITHUB_SHA_ENV" >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: release
+    if: needs.release.outputs.should_deploy == 'true'
+    uses: ./.github/workflows/deploy.yml
+    with:
+      checkout_ref: ${{ needs.release.outputs.deploy_ref }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
