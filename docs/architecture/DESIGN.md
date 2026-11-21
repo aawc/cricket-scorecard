@@ -9,25 +9,26 @@ The application is structured as a TypeScript Progressive Web App, utilizing Vit
 - **Frontend**: TypeScript (transpiled to standard modern ES2022 JavaScript).
 - **Build Toolchain (Vite)**: Dev server with fast HMR; production builds compile files, minify scripts, and generate outputs inside `dist/`.
 - **Source Directory Structure**:
-  - `src/types.ts`: Central TypeScript interface models and action type definitions.
+  - `src/types.ts`: Central TypeScript interface models, `GodModeState`, and action type definitions.
   - `src/app.ts`: Main PWA entry point, handles service worker lifecycle and root event routing.
-  - `src/rules.ts`: Pure ICC ODI Clause 12/13 bowler eligibility, consecutive-over, and quota predicates.
+  - `src/rules.ts`: Pure ICC ODI Clause 12/13 bowler eligibility, synthetic delivery grammar, consecutive-over, and quota predicates.
   - `src/state.ts`: Central game state store coordinator and undo history wrapper.
   - `src/storage.ts`: LZString state compression/decompression and storage minification logic.
-  - `src/reducer.ts`: Pure reducer state machine managing match state calculations, strike rotations, and validation.
+  - `src/reducer.ts`: Pure reducer state machine managing match state calculations, strike rotations, validation, and lossless `APPLY_GOD_MODE` transitions.
   - `src/sync.ts`: Real-time multi-reader live state sync engine, storage provider abstraction, write-token authorization, and 1-year TTL management.
   - `src/modal.ts`: Universal zero-dependency modal controller and W3C WAI-ARIA focus management.
   - `src/version.ts`: Centralized semantic version constants (`APP_VERSION`), dynamic tagging calculations (`v$yyyy.$mm.$nnn`), and release records.
   - `src/release_notes.ts`: Release notes modal rendering, highlights, commit manifest streams, and version badge event bindings.
   - `src/feedback.ts`: Bug reporting engine and diagnostic Markdown generator.
   - `src/ui.ts`: Cached DOM selectors, event listeners, and UI rendering bindings.
-  - `src/v2/`: Event-sourced domain architecture, pure projection engine, SVG charts, hardware integration, and data exporters (see [`docs/architecture/V2_ARCHITECTURE_REPORT.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/V2_ARCHITECTURE_REPORT.md#L1)).
-  - `scripts/release.js`: Automated release management CLI with semantic tagging, commit compilation, and git tag push.
+  - `src/god_mode.ts`: Modular Umpire God Mode modal controller (`#godModeModal`), pre-clamping validation, live-sync bootstrap/flush, and 4-layer spectator security lockout.
+  - `src/v2/`: Event-sourced domain architecture, pure projection engine, SVG charts, hardware integration, and data exporters (see [`docs/architecture/V2_ARCHITECTURE_REPORT.md`](V2_ARCHITECTURE_REPORT.md#L1)).
+  - `scripts/release.js`: Automated release management CLI with semantic tagging, commit-before-tag ordering, doc-only skip gating, and git tag push.
 - **Styling**: Bootstrap 5 (via CDN) for responsive, mobile-first UI components.
 - **PWA Capabilities**: Service Worker (`sw.js`) compiled into `dist/` root, caching static assets for offline capability; Web App Manifest (`manifest.json`) for installation.
 - **State Persistence**: `localStorage` to save match state across reloads.
 - **State Sharing**: URL-based sharing using `LZString` compression for compact permalinks, plus real-time cloud live streaming with 1-year retention.
-- **Testing**: Node.js test runner using `ts-node` to run TypeScript assertions (`test/test_cases.ts`) in a mock DOM environment.
+- **Testing**: Node.js test runner using `ts-node` to run TypeScript assertions (`test/test_cases.ts` and `test/v2_test_cases.ts`) in a mock DOM environment.
 
 ---
 
@@ -63,7 +64,7 @@ let gameState = {
         liveInnings: {
             score: 0,
             wickets: 0,
-            balls: 0,               // Total legal/illegal balls bowled that count towards overs
+            balls: 0,               // Total legal balls bowled in the innings
             extras: { 
                 wides: 0, 
                 noballs: 0, 
@@ -146,7 +147,7 @@ flowchart TD
 -   **Byes**: Base 1 run + extra runs. Counts as ball faced and bowler ball, but runs do not accrue to batsman. Strike rotates on odd physical runs (1 + extraRuns) prior to evaluating over completion.
 -   **Leg Byes**: Base 1 run + extra runs (supports multi-run leg byes). Counts as ball faced for active striker and bowler ball. Strike rotates on odd leg byes. Disabled if `enableLegByes` is false.
 -   **Wickets**: Standard dismissal. Increments batsman balls faced, marks out batsman inactive, records Fall of Wickets entry, and appends to `outBatsmen` prior to checking all-out transitions.
--   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L527) and [`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L486). Contextually assigns `active = !otherSlotBatsman.active` and sets all non-crease batsmen to `active: false` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field. Dropdowns and the state machine allow mid-innings batsman substitution (e.g. for injury, illness, or tactical rotation), preserving historical stats and permitting resumption.
+-   **Batsman Slot Assignment**: Handled via [`assignBatsmanToSlot`](../../src/reducer.ts#L527) and [`getStriker`](../../src/reducer.ts#L486). Contextually assigns `active = !otherSlotBatsman.active` and sets all non-crease batsmen to `active: false` to maintain the invariant that exactly one batsman is active whenever two batsmen are on the field. Dropdowns and the state machine allow mid-innings batsman substitution (e.g. for injury, illness, or tactical rotation), preserving historical stats and permitting resumption.
 -   **Over Completion**: When 6 legal balls are bowled, maiden calculation evaluates whether bowler conceded 0 runs, the over is pushed to the `overs` array, `overLog` is cleared, and strike is rotated for the new over. If the innings ends mid-over (all out or target reached), the incomplete over is saved to `overs` upon transition.
 
 ### 4.3. Innings & Match Transitions
@@ -189,12 +190,12 @@ stateDiagram-v2
 ```
 
 #### 1. Match Phases (States)
-The game transitions between the following phases:
-*   **`SETUP`**: Roster editing and settings selection. Allowed: `ADD_PLAYER`, `DELETE_PLAYER`, `UPDATE_SETTINGS`, `START_MATCH`.
-*   **`TOSS`**: Toss winner selection. Allowed: `CHOOSE_TOSS_BATTING`.
-*   **`PLAYING_INNINGS`**: Match active, scoring controls enabled. Allowed: `ADD_RUNS`, `ADD_WICKET`, `ADD_LEG_BYE`, `FINALIZE_DELIVERY`, `CHANGE_BATSMAN`, `CHANGE_BOWLER`, `UNDO`.
-*   **`INNINGS_BREAK`**: First innings completed, target set. Displays `#innings-break-banner` with `▶ Start 2nd Innings` (`#start-next-innings-btn`). Scoring controls locked. Allowed: `START_NEXT_INNINGS`, `UNDO`, `RESET_MATCH`.
-*   **`MATCH_OVER`**: Match completed, match state immutable, scoring and player selectors locked. Allowed: `RESET_MATCH`.
+The game transitions between the following phases (`APPLY_GOD_MODE` is permitted across all 5 phases for authorized umpires):
+*   **`SETUP`**: Roster editing and settings selection. Allowed: `START_MATCH`, `APPLY_GOD_MODE`.
+*   **`TOSS`**: Toss winner selection. Allowed: `CHOOSE_TOSS_BATTING`, `RESET_MATCH`, `APPLY_GOD_MODE`.
+*   **`PLAYING_INNINGS`**: Match active, scoring controls enabled. Allowed: `ADD_RUNS`, `ADD_WICKET`, `ADD_LEG_BYE`, `FINALIZE_DELIVERY`, `CHANGE_BATSMAN`, `CHANGE_BOWLER`, `FORCE_END_INNINGS`, `UNDO`, `RESET_MATCH`, `APPLY_GOD_MODE`.
+*   **`INNINGS_BREAK`**: First innings completed, target set. Displays `#innings-break-banner` with `▶ Start 2nd Innings` (`#start-next-innings-btn`). Scoring controls locked. Allowed: `START_NEXT_INNINGS`, `UNDO`, `RESET_MATCH`, `APPLY_GOD_MODE`.
+*   **`MATCH_OVER`**: Match completed, normal scoring and `UNDO` actions rejected per immutability rules; umpire can start a new match via `RESET_MATCH` or explicitly reopen/adjust state via `APPLY_GOD_MODE`.
 
 #### 2. Reducer Dispatch Flow
 Every user interaction dispatches a synchronous Action object: `{ type: 'ACTION_TYPE', payload: { ... } }`.
@@ -233,6 +234,7 @@ The test suite runs in Node.js using `ts-node` to execute TypeScript assertions 
     *   Completed over archiving and incomplete final over storage.
     *   Minification/unminification of historical over and stat data.
     *   Plaintext scorecard text generation and one-click copy.
+    *   Umpire God Mode lossless merging, synthetic over reconciliation, 4-layer spectator lockout, and live-sync bootstrap.
 
 ---
 
@@ -264,13 +266,13 @@ To track history and progress, the following major refactorings have been succes
     *   Implemented a post-build asset crawler to dynamically inject hashed production bundles into the PWA Service Worker offline cache.
 
 4.  **Batsman Strike Synchronization & Scorecard Accuracy Fixes**:
-    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L527)) and robust striker resolution ([`getStriker`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L486)), eliminating dual-active and dual-inactive states.
+    *   Replaced hardcoded slot-based active striker assignment with contextual slot assignment ([`assignBatsmanToSlot`](../../src/reducer.ts#L527)) and robust striker resolution ([`getStriker`](../../src/reducer.ts#L486)), eliminating dual-active and dual-inactive states.
     *   Fixed leg bye delivery handling to increment active striker balls faced and rotate strike on odd runs.
     *   Fixed 6th-ball bye delivery pipeline to rotate physical runs before checking over completion.
     *   Fixed run out delivery pipeline to rotate strike for surviving batsman when odd extra runs are completed before dismissal.
     *   Fixed dismissal ordering in `ADD_WICKET` and `executeRunOutWicket` to record the out batsman in `outBatsmen` prior to all-out innings termination.
-    *   Fixed winning margin calculations in [`updateUI`](../../src/ui.ts#L1106) for Single Batsman play.
-    *   Added automated unit tests 35-41 in [`test/test_cases.ts`](../../test/test_cases.ts#L1049-L1252).
+    *   Fixed winning margin calculations in [`updateUI`](../../src/ui.ts#L1109) for Single Batsman play.
+    *   Added automated unit tests 35-41 in [`test/test_cases.ts`](../../test/test_cases.ts#L1066-L1268).
 
 5.  **Cricket Scoring Domain Enhancements & Accessibility**:
     *   Added boundary tracking (`4s` and `6s`) and batting Strike Rate (`SR`) calculation.
@@ -280,15 +282,15 @@ To track history and progress, the following major refactorings have been succes
     *   Separated bowler conceded runs from fielding byes on No-Balls (Law 21.18).
     *   Added early declaration / forfeit / force end innings support (`FORCE_END_INNINGS`).
     *   Enforced red-green color blindness accessibility with double encoding (solid border + background tint + `[STRIKER]` badge text).
-    *   Added Plaintext Scorecard generator ([`generateTextSummary`](../../src/ui.ts#L1662)) with one-click clipboard copying.
-    *   Added automated unit tests 42-50 in [`test/test_cases.ts`](../../test/test_cases.ts#L1253-L1544).
+    *   Added Plaintext Scorecard generator ([`generateTextSummary`](../../src/ui.ts#L1668)) with one-click clipboard copying.
+    *   Added automated unit tests 42-50 in [`test/test_cases.ts`](../../test/test_cases.ts#L1270-L1560).
 
 6.  **User Feedback & Diagnostic Bug Reporting Mechanism**:
     *   Implemented an in-memory runtime error ring buffer ([`recordRuntimeError`](../../src/feedback.ts#L21-L65)) listening to `window.error` and `window.unhandledrejection`.
     *   Added structured Markdown diagnostic report generator ([`generateBugReportMarkdown`](../../src/feedback.ts#L107-L240)) that compiles user descriptions, match state figures (active striker/non-striker, bowler maidens/econ, FOW, extras), minified state JSON, and LZString permalink.
     *   Added interactive modal dialog (`#feedbackModal`) with real-time diagnostic preview accordion, one-click clipboard copy ([`copyBugReportToClipboard`](../../src/feedback.ts#L245-L276)), and pre-filled GitHub issue URL builder ([`getGitHubIssueUrl`](../../src/feedback.ts#L281-L294)).
-    *   Added header "Feedback / Bug" button and modal bindings in [`index.html:L54`](../../index.html#L54) and [`src/ui.ts:L1738-L1790`](../../src/ui.ts#L1738-L1790).
-    *   Added automated unit tests 51-53 in [`test/test_cases.ts:L1545-L1668`](../../test/test_cases.ts#L1545-L1668).
+    *   Added header "Feedback / Bug" button and modal bindings in [`index.html:L58`](../../index.html#L58) and [`src/ui.ts:L1744-L1795`](../../src/ui.ts#L1744-L1795).
+    *   Added automated unit tests 51-53 in [`test/test_cases.ts:L1562-L1684`](../../test/test_cases.ts#L1562-L1684).
 
 7.  **Real-Time Multi-Reader Live State Sync & 1-Year Retention**:
     *   **Remote Storage Hosting Endpoint**: Live match states are stored in a serverless REST Key-Value store via [`CloudflareKVStorageProvider`](../../src/sync.ts#L98) connecting to Cloudflare Workers KV endpoints (`https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`), with turnkey Google Apps Script support via [`GoogleSheetsStorageProvider`](../../src/sync.ts#L180).
@@ -302,18 +304,24 @@ To track history and progress, the following major refactorings have been succes
 8.  **Universal Zero-Dependency Modal Controller, WAI-ARIA Focus Management & Body Scroll Lock Cleanup**:
     *   Implemented [`src/modal.ts`](../../src/modal.ts#L1) providing [`openModal()`](../../src/modal.ts#L30), [`closeModal()`](../../src/modal.ts#L131), and [`cleanupModalScrollLock()`](../../src/modal.ts#L89) with native backdrop lifecycle management, keyboard/click dismissal, and automatic fallback when Bootstrap CDN fails.
     *   Guarantees W3C WAI-ARIA accessibility by actively blurring focused descendants before applying `aria-hidden="true"` and restoring focus to triggering elements upon dismissal.
-    *   Provides idempotent body scroll unlocking via [`cleanupModalScrollLock()`](../../src/modal.ts#L89) which removes `.modal-open` class, purges inline scroll locks (`overflow`, `overflowX`, `overflowY`, `paddingRight`, `marginRight`) from `document.body` and `document.documentElement`, and purges orphaned backdrops. Defensively integrated across modal dismissal paths, Escape handlers, and UI render cycles ([`updateUI()`](../../src/ui.ts#L1106), [`initUI()`](../../src/ui.ts#L161), [`startNextInnings()`](../../src/ui.ts#L1911), [`resetMatch()`](../../src/ui.ts#L1918)) to prevent mobile touch/scroll freezing on innings transitions.
+    *   Provides idempotent body scroll unlocking via [`cleanupModalScrollLock()`](../../src/modal.ts#L89) which removes `.modal-open` class, purges inline scroll locks (`overflow`, `overflowX`, `overflowY`, `paddingRight`, `marginRight`) from `document.body` and `document.documentElement`, and purges orphaned backdrops. Defensively integrated across modal dismissal paths, Escape handlers, and UI render cycles ([`updateUI()`](../../src/ui.ts#L1109), [`initUI()`](../../src/ui.ts#L162), [`startNextInnings()`](../../src/ui.ts#L1917), [`resetMatch()`](../../src/ui.ts#L1924)) to prevent mobile touch/scroll freezing on innings transitions.
 
-9.  **Standardized Release Management & Semantic Tagging Architecture**:
+9.  **Standardized Release Management & Chained Semantic Deployment Architecture**:
     *   **Dynamic Timestamped Semantic Tagging (`v$yyyy.$mm.$nnn`)**: Authored [`src/version.ts`](../../src/version.ts#L1) defining [`APP_VERSION`](../../src/version.ts#L25), [`parseSemanticVersion()`](../../src/version.ts#L46), and [`getNextSemanticVersion()`](../../src/version.ts#L72) with automated rollover on year and month boundaries.
-    *   **Release CLI Pipeline**: Authored [`scripts/release.js`](../../scripts/release.js#L1) orchestrating pre-release unit test gates, commit history compilation from git logs, release highlights generation, cross-file version synchronization, and automated annotated git tag creation and remote pushing.
-    *   **Persistent Footer Release Badge**: Created an interactive `#footer-release-badge` in [`index.html`](../../index.html#L678) and [`src/style.css`](../../src/style.css#L1579) featuring a live update indicator and version pill.
+    *   **Release CLI Pipeline & Chained Pages Deployment**: Authored [`scripts/release.js`](../../scripts/release.js#L1) orchestrating doc-only skip gating ([`shouldCutRelease()`](../../scripts/release.js#L251)), pre-release unit test gates, commit history compilation, release highlights generation, cross-file version synchronization, and commit-before-tag ordering chained into reusable [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml#L1) from [`.github/workflows/release.yml`](../../.github/workflows/release.yml#L1).
+    *   **Persistent Footer Release Badge**: Created an interactive `#footer-release-badge` in [`index.html`](../../index.html#L957) and [`src/style.css`](../../src/style.css#L1745) featuring a live update indicator and version pill.
     *   **Release Notes Modal View**: Implemented [`src/release_notes.ts`](../../src/release_notes.ts#L1) rendering `#releaseNotesModal` with categorized colorblind-safe badges (`[FEAT]`, `[FIX]`, `[DOCS]`, `[TEST]`, `[PERF]`), commit SHA links to GitHub, author attributions, and keyboard accessibility.
     *   **Developer & Multi-Agent Contributor Guidelines**: Authored [`CONTRIBUTING.md`](../../CONTRIBUTING.md#L1) and canonical [`AGENTS.md`](../../AGENTS.md#L1) (pointed to by [`GEMINI.md`](../../GEMINI.md#L1), [`CLAUDE.md`](../../CLAUDE.md#L1), and [`.github/copilot-instructions.md`](../../.github/copilot-instructions.md#L1)) standardizing bug reproduction from diagnostic payloads, Red-Green regression testing, pure reducer rules, and release execution.
 
+10. **Umpire God Mode (`src/god_mode.ts` & `APPLY_GOD_MODE`), Synthetic Over Reconciliation & 4-Layer Spectator Lockout**:
+    *   **Pure State Override Reducer**: Implemented [`APPLY_GOD_MODE`](../../src/reducer.ts#L468), [`validateGodModePayload()`](../../src/reducer.ts#L971), and [`buildGodModeDraftFromState()`](../../src/reducer.ts#L1158) supporting lossless zero-edit round-trips, partial stat overrides, mid-match sync from `SETUP`, all-phase transitions, duplicate-free innings archive/unarchive, and synthetic delivery reconciliation ([`parseSyntheticDeliveryToken()`](../../src/rules.ts#L151)) that never awards false Clause 17 maidens or false Clause 12/13 breaches.
+    *   **Modular UI & Live-Sync Bootstrap**: Authored [`src/god_mode.ts`](../../src/god_mode.ts#L1) ([`openGodModeModal()`](../../src/god_mode.ts#L272), [`applyGodModeModal()`](../../src/god_mode.ts#L308)) with strict pre-clamping validation, `[ERROR]` colorblind-safe feedback (`#D55E00`), `48px` touch targets, outgoing-player stat carry-over prevention, over-break/post-wicket slot preservation, automatic `UMPIRE` live-session initialization when jumping out of `SETUP`, immediate non-debounced sync flushing, and automatic 3D card unflipping when reopening `MATCH_OVER`.
+    *   **4-Layer Spectator Security Lockout**: Enforced across CSS (`.spectator-locked #god-mode-btn, .spectator-locked #godModeModal`), runtime DOM synchronization ([`syncGodModeVisibility()`](../../src/god_mode.ts#L178)), programmatic guards in `openGodModeModal()` / `applyGodModeModal()`, and automatic modal teardown on mid-edit umpire takeover demotion ([`demoteUmpireToSpectator()`](../../src/sync.ts#L385)).
+    *   **Automated Regression Coverage**: Verified by Tests 105–113 in [`test/test_cases.ts`](../../test/test_cases.ts#L5333) and [`test/test_cases.ts`](../../test/test_cases.ts#L6199).
+
 ---
 
-## 10. Future Architectural Roadmap
+## 9. Future Architectural Roadmap
 
 To transition this project from a prototype implementation to a professional, industry-standard codebase, we have planned the following structural improvements:
 
@@ -322,7 +330,7 @@ To transition this project from a prototype implementation to a professional, in
     *   **Goal**: Implement a lightweight reactive framework (such as Preact, Lit, or Signals) that automatically compiles the view in response to state transitions, eliminating manual DOM lookups.
 
 2.  **Remote Storage Sync (Cloud Persistence)** - *Status: [IMPLEMENTED] (Production Ready)*:
-    *   Zero-cost live streaming and remote 1-year state persistence implemented via [`src/sync.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L1), [`docs/architecture/LIVE_SYNC_DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/LIVE_SYNC_DESIGN.md#L1), and [`docs/deployment/DEPLOYMENT_AND_BACKEND_SETUP.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/deployment/DEPLOYMENT_AND_BACKEND_SETUP.md#L1).
+    *   Zero-cost live streaming and remote 1-year state persistence implemented via [`src/sync.ts`](../../src/sync.ts#L1), [`docs/architecture/LIVE_SYNC_DESIGN.md`](LIVE_SYNC_DESIGN.md#L1), and [`docs/deployment/DEPLOYMENT_AND_BACKEND_SETUP.md`](../deployment/DEPLOYMENT_AND_BACKEND_SETUP.md#L1).
 
 ---
 
@@ -338,17 +346,18 @@ The application state and action tree are governed by strict contracts:
 - `FallOfWicket`: Records chronological dismissal entries (`wicket`, `score`, `batsman`, `overs`).
 - `LiveInnings`: Holds score, wickets, balls, extras, batsmen/bowler records, Fall of Wickets, over log, and completed overs.
 - `GameState`: Houses settings, current innings, team profiles, and historical states.
-- `Action`: Discriminated union of dispatchable store actions (e.g. `ADD_RUNS`, `ADD_WICKET`, `FINALIZE_DELIVERY`, `FORCE_END_INNINGS`, `UNDO`).
+- `GodModeState` ([`src/types.ts`](../../src/types.ts#L170)): Partial override contract for rules, rosters, match phase, innings, target, archived first-innings summary, active batters, striker slot, bowlers, and extras.
+- `Action` ([`src/types.ts`](../../src/types.ts#L122)): Discriminated union of dispatchable store actions (including `ADD_RUNS`, `ADD_WICKET`, `FINALIZE_DELIVERY`, `FORCE_END_INNINGS`, `APPLY_GOD_MODE` at [`src/types.ts`](../../src/types.ts#L135), and `UNDO`).
 
 ---
 
 ## 11. ICC Men's One Day International Playing Conditions Compliance Standard
 
-The state machine, scoring reducer ([`src/reducer.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/reducer.ts#L1)), domain models ([`src/types.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L1)), and v2 event projection engine ([`src/v2/stats.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/stats.ts#L1)) are formally governed by the **ICC Men's One Day International Playing Conditions** (Effective 1 August 2019, from *ICC Playing Handbook Section 04*).
+The state machine, scoring reducer ([`src/reducer.ts`](../../src/reducer.ts#L1)), domain models ([`src/types.ts`](../../src/types.ts#L1)), and v2 event projection engine ([`src/v2/stats.ts`](../../src/v2/stats.ts#L1)) are formally governed by the **ICC Men's One Day International Playing Conditions** (Effective 1 August 2019, from *ICC Playing Handbook Section 04*).
 
 ### Governing Rulebook Reference
-- **Local PDF Reference**: [`docs/rules/icc_mens_odi_playing_conditions.pdf`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/icc_mens_odi_playing_conditions.pdf)
-- **Detailed Compliance Overview**: [`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L1)
+- **Local PDF Reference**: [`docs/rules/icc_mens_odi_playing_conditions.pdf`](../rules/icc_mens_odi_playing_conditions.pdf)
+- **Detailed Compliance Overview**: [`docs/rules/README.md`](../rules/README.md#L1)
 
 ### Key Statutory Standards Enforced
 1. **Match Duration & Overs (Clause 12 & 13)**: Standard 50 overs per innings. Max quota per bowler is 1/5th (20%) of the innings overs (e.g., 10 overs in a 50-over innings, 2 overs in an 8-over match). No consecutive overs by the same bowler.
@@ -356,41 +365,40 @@ The state machine, scoring reducer ([`src/reducer.ts`](file:///usr/local/google/
 3. **Scoring & Strike Rotation (Clause 18 & 19)**: Odd completed physical runs (1, 3, 5) swap striker and non-striker. Boundary 4s and 6s accrue directly to the striker and team score.
 4. **No Balls (Clause 21)**: 1 penalty run charged against the bowler; delivery is not counted towards over legal balls; counts as a ball faced for the batsman. Free Hits (Clause 21.19) are **not implemented** — the app does not track free-hit state, so the scorer must apply the dismissal restriction manually.
 5. **Wides & Extras (Clause 22 & 23)**: Wides incur a 1-run penalty charged to bowler and must be re-bowled. Byes and Leg Byes count as legal deliveries for both bowler and batsman but do not penalize bowler conceded runs (MCC Law 21.18 separation).
-6. **Dismissals (Clauses 31–39)**: The v2 projection engine models the full set of dismissal kinds ([`DismissalKind`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/types.ts#L12)) and withholds bowler credit for those not credited to the bowler. The v1 scoring UI distinguishes only a generic wicket from a Run Out (with explicit striker vs non-striker attribution and completed runs); it does not ask which specific mode of dismissal occurred.
+6. **Dismissals (Clauses 31–39)**: The v2 projection engine models the full set of dismissal kinds ([`DismissalKind`](../../src/v2/types.ts#L12)) and withholds bowler credit for those not credited to the bowler. The v1 scoring UI distinguishes only a generic wicket from a Run Out (with explicit striker vs non-striker attribution and completed runs); it does not ask which specific mode of dismissal occurred.
 7. **Match Conclusion & Tie Resolution (Clause 16)**: Win by runs/wickets and second innings target tracking. A tie is reported as a tie; **Super Over provisions, Duckworth-Lewis-Stern and reserve days are not implemented.**
 
 ### Clauses Deliberately Not Implemented
 
 Free Hits (21.19), Powerplays and fielding restrictions (28 / Appendix C), substitutes and
 concussion replacements (1), Super Over, DLS, and Net Run Rate. The per-clause status matrix in
-[`docs/rules/README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/rules/README.md#L17)
+[`docs/rules/README.md`](../rules/README.md#L17)
 is the authoritative record of coverage.
 
 ---
 
 ## 12. Final Scorecard Visual Analytics & Match Conclusion Integration
 
-To deliver a comprehensive broadcast-style post-match summary, the final scorecard view rendered by [`generateSummaryView()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L751) integrates the v2 statistical projection and SVG visualization engines directly into `#innings-summaries`:
+To deliver a comprehensive broadcast-style post-match summary, the final scorecard view rendered by [`generateSummaryView()`](../../src/ui.ts#L754) integrates the v2 statistical projection and SVG visualization engines directly into `#innings-summaries`:
 
 1. **State Projection & Batting-First Resolution**:
    - [`getProjectionsFromGameState()`](../../src/v2/bridge.ts#L266) deterministically reconstructs [`DeliveryEvent`](../../src/v2/types.ts#L33) event streams for both innings.
    - Accurately resolves `t1BattedFirst` when both teams hold archived innings upon match conclusion ([`src/v2/bridge.ts#L284-L295`](../../src/v2/bridge.ts#L284-L295)) by referencing `match.currentBattingTeam` relative to `match.currentInnings`.
 
 2. **Match Conclusion & Result Banner**:
-   - Renders a prominent victory banner (`.scorecard-match-result-banner` in [`src/style.css#L1994`](../../src/style.css#L1994)) atop the scorecard whenever `match.matchOver` or `phase === 'MATCH_OVER'`.
+   - Renders a prominent victory banner (`.scorecard-match-result-banner` in [`src/ui.ts#L765`](../../src/ui.ts#L765) and [`src/style.css#L2160`](../../src/style.css#L2160)) atop the scorecard whenever `match.matchOver` or `phase === 'MATCH_OVER'`.
    - Adheres to colorblind accessibility standards using primary high-contrast styling and explicit textual win outcomes.
 
 3. **Match Trajectory Worm Chart**:
-   - Embeds a comparative multi-innings Worm Chart SVG (`.scorecard-worm-section` in [`src/ui.ts#L771`](../../src/ui.ts#L771)) generated by [`renderWormChartSVG()`](../../src/v2/charts.ts#L23).
+   - Embeds a comparative multi-innings Worm Chart SVG (`.scorecard-worm-section` in [`src/ui.ts#L774`](../../src/ui.ts#L774)) generated by [`renderWormChartSVG()`](../../src/v2/charts.ts#L23).
    - Plots cumulative scoring curves with Paul Tol colorblind-safe palettes (Innings 1 Blue `#0072B2` solid vs Innings 2 Orange `#D55E00` dashed) and Fall-of-Wicket pinpoints.
 
 4. **Innings Telemetry & Run-Rate Metrics**:
-   - Displays a responsive metric grid (`.scorecard-telemetry-grid` in [`src/ui.ts#L803`](../../src/ui.ts#L803) and [`src/style.css#L2047`](../../src/style.css#L2047)) for each innings:
+   - Displays a responsive metric grid (`.scorecard-telemetry-grid` in [`src/ui.ts#L806`](../../src/ui.ts#L806) and [`src/style.css#L2213`](../../src/style.css#L2213)) for each innings:
      - **Run Rate**: Calculated run rate per 6 legal balls.
      - **Boundaries**: Total 4s and 6s counts alongside cumulative boundary run contribution.
      - **Extras**: Total extras conceded across wides, no-balls, byes, and leg-byes.
 
 5. **Innings Visual Analytics (Manhattan & Partnerships)**:
-   - **Over-by-Over Progression (Manhattan)**: Zero-dependency SVG bar chart rendered via [`renderManhattanChartSVG()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L124), color-coded by run brackets with wicket markers.
-   - **Batting Partnerships**: Horizontal stacked bar chart rendered via [`renderPartnershipChartSVG()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/v2/charts.ts#L252), visualizing run shares per wicket pair with player labels and ball counts.
-
+   - **Over-by-Over Progression (Manhattan)**: Zero-dependency SVG bar chart rendered via [`renderManhattanChartSVG()`](../../src/v2/charts.ts#L124), color-coded by run brackets with wicket markers.
+   - **Batting Partnerships**: Horizontal stacked bar chart rendered via [`renderPartnershipChartSVG()`](../../src/v2/charts.ts#L252), visualizing run shares per wicket pair with player labels and ball counts.

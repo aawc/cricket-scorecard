@@ -16,6 +16,7 @@ import {
     getSpectatorUrl, getUmpireUrl
 } from './sync.js';
 import { initReleaseNotesModal, openReleaseNotesModal } from './release_notes.js';
+import { initGodModeUI, syncGodModeVisibility } from './god_mode.js';
 import { APP_VERSION } from './version.js';
 import { wakeLockController, haptics, audioSynth } from './v2/hardware.js';
 import { renderWormChartSVG, renderManhattanChartSVG, renderPartnershipChartSVG } from './v2/charts.js';
@@ -161,6 +162,7 @@ export function isSpectator(): boolean {
 export function initUI(): void {
     initModalSystem();
     initReleaseNotesModal();
+    initGodModeUI(() => { renderRosters(); updateUI(); });
     setupEventListeners();
     initSortable();
     renderRosters();
@@ -196,6 +198,7 @@ export function initUI(): void {
 
     // Register umpire demotion listener (triggers when another window connects as Umpire)
     onUmpireDemoted((matchId) => {
+        closeModal('godModeModal');
         updateUI();
         updateLiveIndicators();
         showAlert(
@@ -549,7 +552,7 @@ export function renderRosters(): void {
             <div class="d-flex align-items-center flex-grow-1">
                 <span class="drag-handle text-muted">☰</span>
                 <span class="lineup-number me-2 text-muted fw-bold"></span>
-                <span class="player-name">${name}</span>
+                <span class="player-name">${escapeHtml(name)}</span>
             </div>
             <div>
                 ${isShared ? '<span class="badge bg-info me-1">🔁</span>' : ''}
@@ -615,7 +618,7 @@ function handleQuickAdd(teamNum: number): void {
         <div class="d-flex align-items-center flex-grow-1">
             <span class="drag-handle text-muted">☰</span>
             <span class="lineup-number me-2 text-muted fw-bold"></span>
-            <span class="player-name">${name}</span>
+            <span class="player-name">${escapeHtml(name)}</span>
         </div>
         <div>
             ${isShared ? '<span class="badge bg-info me-1">🔁</span>' : ''}
@@ -673,7 +676,7 @@ export function handleBulkImport(): void {
                 <div class="d-flex align-items-center flex-grow-1">
                     <span class="drag-handle text-muted">☰</span>
                     <span class="lineup-number me-2 text-muted fw-bold"></span>
-                    <span class="player-name">${cleanName}</span>
+                    <span class="player-name">${escapeHtml(cleanName)}</span>
                 </div>
                 <div>
                     ${isShared ? '<span class="badge bg-info me-1">🔁</span>' : ''}
@@ -1388,12 +1391,15 @@ export function updateUI(): void {
         tossTeam2Btn.textContent = `${gameState.match.team2.name || 'Team 2'} Batting`;
     }
     renderAnalyticsCharts();
+    const flipContainer = document.querySelector('.flip-container');
+    if (flipContainer && flipContainer.classList.contains('flipped')) generateSummaryView();
     updateLiveIndicators();
     handleUIEvents();
     cleanupModalScrollLock();
 }
 
 function checkControlsState(): void {
+    syncGodModeVisibility();
     if (!controlsSection) return;
     const live = gameState.match.liveInnings;
     const controls = controlsSection.querySelectorAll('button:not(#undo-btn)') as NodeListOf<HTMLButtonElement>;

@@ -239,6 +239,7 @@ async function loadModulesAndRun() {
     (global as any).executeStartMatch = uiMod.executeStartMatch;
     (global as any).openBulkImportModal = uiMod.openBulkImportModal;
     (global as any).handleBulkImport = uiMod.handleBulkImport;
+    (global as any).renderRosters = uiMod.renderRosters;
     (global as any).dispatch = stateMod.dispatch;
 
     const modalMod = await import('../src/modal.js');
@@ -326,6 +327,21 @@ async function loadModulesAndRun() {
     (global as any).buildGodModeDraftFromState = reducerMod.buildGodModeDraftFromState;
     (global as any).validateGodModePayload = reducerMod.validateGodModePayload;
     (global as any).parseSyntheticDeliveryToken = rulesMod.parseSyntheticDeliveryToken;
+
+    const godModeMod = await import('../src/god_mode.js');
+    (global as any).initGodModeUI = godModeMod.initGodModeUI;
+    (global as any).openGodModeModal = godModeMod.openGodModeModal;
+    (global as any).applyGodModeModal = godModeMod.applyGodModeModal;
+    (global as any).swapGodModeStrike = godModeMod.swapGodModeStrike;
+    (global as any).handleGodModeBowlerInput = godModeMod.handleGodModeBowlerInput;
+    (global as any).handleGodModeBatterInput = godModeMod.handleGodModeBatterInput;
+    (global as any).handleGodModeInningsChange = godModeMod.handleGodModeInningsChange;
+    (global as any).handleGodModePhaseOrInningsChange = godModeMod.handleGodModePhaseOrInningsChange;
+    (global as any).syncGodModeVisibility = godModeMod.syncGodModeVisibility;
+    godModeMod.initGodModeUI(() => {
+        uiMod.renderRosters();
+        uiMod.updateUI();
+    });
 
     // Run tests - dynamic import for ESM compatibility
     await import('./test_cases.js');

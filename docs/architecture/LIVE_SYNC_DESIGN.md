@@ -25,7 +25,7 @@ The **Cricket Scorecard PWA** operates as a client-side Progressive Web App runn
 We evaluate six potential architectures across latency, cost, setup friction, 1-year TTL enforcement, security, and static site compatibility:
 
 ### Alternative 1: Cloudflare Workers KV (Selected — Recommended for High Performance & Edge Security)
-- **Architecture**: A lightweight serverless Cloudflare Worker ([`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)) running on Cloudflare's global edge network backed by a Cloudflare KV namespace (`SCORECARD_KV`).
+- **Architecture**: A lightweight serverless Cloudflare Worker ([`backend/cloudflare/worker.js`](../../backend/cloudflare/worker.js#L1)) running on Cloudflare's global edge network backed by a Cloudflare KV namespace (`SCORECARD_KV`).
 - **Security**:
   - Validates `X-Write-Key` cryptographic authorization before writing to KV.
   - Enforces CORS policies (`Access-Control-Allow-Origin: *`, `Access-Control-Allow-Headers: Content-Type, X-Write-Key`).
@@ -36,14 +36,14 @@ We evaluate six potential architectures across latency, cost, setup friction, 1-
   - **Native 1-Year TTL**: Supports server-side expiration parameter (`expirationTtl: 31536000`) and client-side timestamp checks.
   - **Sub-50ms Edge Latency**: Global CDN caching (`Cache-Control: public, max-age=1`) delivers real-time score updates to spectators worldwide.
   - **Zero SDK Dependency**: Uses native browser `fetch()`; adds zero external bundles to the PWA.
-  - **Turnkey Deployment**: Pre-packaged in the repo with [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1) and [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1).
+  - **Turnkey Deployment**: Pre-packaged in the repo with [`backend/cloudflare/worker.js`](../../backend/cloudflare/worker.js#L1) and [`backend/cloudflare/wrangler.toml`](../../backend/cloudflare/wrangler.toml#L1).
 - **Cons**: Requires a free Cloudflare account for hosting the worker.
 - **Feasibility Assessment**: [PASS] Highest security, lowest latency, zero cost.
 
 ---
 
 ### Alternative 2: Google Sheets / Google Apps Script Web App (Selected Alternative — Easiest in Google Ecosystem)
-- **Architecture**: A free Google Apps Script web app ([`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1)) deployed under the user's personal Google account, storing live matches in `PropertiesService` or a linked Google Sheet.
+- **Architecture**: A free Google Apps Script web app ([`backend/google-apps-script/Code.gs`](../../backend/google-apps-script/Code.gs#L1)) deployed under the user's personal Google account, storing live matches in `PropertiesService` or a linked Google Sheet.
 - **Security**:
   - Validates `writeKeyHash` on `doPost(e)` before committing updates.
   - Operates under standard Google account security and HTTPS infrastructure.
@@ -113,17 +113,17 @@ We evaluate six potential architectures across latency, cost, setup friction, 1-
 
 ### 4.1 Storage Hosting Infrastructure & Endpoints
 
-Live match scorecards are persisted remotely using a serverless **REST Key-Value (KV) Storage Architecture** implemented via [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98) (and [`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L180)):
+Live match scorecards are persisted remotely using a serverless **REST Key-Value (KV) Storage Architecture** implemented via [`CloudflareKVStorageProvider`](../../src/sync.ts#L98) (and [`GoogleSheetsStorageProvider`](../../src/sync.ts#L180)):
 
 1. **Remote Cloud Storage Endpoint**:
    - **Primary Service Provider (Cloudflare Workers KV)**:
      `https://cricket-scorecard-live.khaneja.org/api/match/{matchId}`
-     Backed by the turnkey edge script [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1).
+     Backed by the turnkey edge script [`backend/cloudflare/worker.js`](../../backend/cloudflare/worker.js#L1).
    - **Google Apps Script Web App Provider (Google Ecosystem)**:
      `https://script.google.com/macros/s/.../exec`
-     Backed by the turnkey script [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1).
-   - **Pluggable Architecture**: The [`LiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L49) interface allows switching the underlying storage backend without changing application scoring logic.
-   - **In-Memory & Offline Provider**: [`MemoryStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L57) is provided for local automated test execution and offline simulation without network dependencies.
+     Backed by the turnkey script [`backend/google-apps-script/Code.gs`](../../backend/google-apps-script/Code.gs#L1).
+   - **Pluggable Architecture**: The [`LiveStorageProvider`](../../src/sync.ts#L49) interface allows switching the underlying storage backend without changing application scoring logic.
+   - **In-Memory & Offline Provider**: [`MemoryStorageProvider`](../../src/sync.ts#L57) is provided for local automated test execution and offline simulation without network dependencies.
 2. **Local Client-Side Storage**:
    - **Local Match Cache**: `localStorage.getItem('cricket_scorecard_state')` retains the complete active match state on the device.
    - **Umpire Secret Key Store**: `localStorage.getItem('liveWriteKey_${matchId}')` preserves the umpire's private write credentials across browser reloads.
@@ -152,7 +152,7 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
   ```
 - **1-Year Expiration Header/Param**: `ttl=31536000` instructs the KV backend to automatically evict the key after exactly 365 days (31,536,000 seconds).
 - **Debounced Umpire Synchronization**:
-  - Ball-by-ball updates are debounced by **150 ms** ([`DEBOUNCE_SYNC_MS = 150`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L12)) to coalesce rapid consecutive actions (e.g. wide + extra runs) into a single atomic network dispatch.
+  - Ball-by-ball updates are debounced by **150 ms** ([`DEBOUNCE_SYNC_MS = 150`](../../src/sync.ts#L12)) to coalesce rapid consecutive actions (e.g. wide + extra runs) into a single atomic network dispatch.
 
 #### B. Spectator State Ingestion (Reader)
 - **HTTP Method & URL**:
@@ -166,10 +166,10 @@ Live match scorecards are persisted remotely using a serverless **REST Key-Value
   - `Cache-Control: no-cache, no-store, must-revalidate, max-age=0`
   - `Pragma: no-cache`
   - `Expires: 0`
-- **Response**: HTTP 200 with the latest [`LiveMatchPacket`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/types.ts#L78) payload.
+- **Response**: HTTP 200 with the latest [`LiveMatchPacket`](../../src/types.ts#L78) payload.
 - **Adaptive Polling Intervals & Cache Elimination**:
-  - **Active Tab Focus**: Polled every **1.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 1500`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L10)).
-  - **Background / Hidden Tab**: Throttled to every **10 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 10000`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L11)) via `document.visibilityState` listeners.
+  - **Active Tab Focus**: Polled every **1.5 seconds** ([`ACTIVE_POLL_INTERVAL_MS = 1500`](../../src/sync.ts#L10)).
+  - **Background / Hidden Tab**: Throttled to every **10 seconds** ([`BACKGROUND_POLL_INTERVAL_MS = 10000`](../../src/sync.ts#L11)) via `document.visibilityState` listeners.
   - **Cache Elimination**: All client requests include a dynamic `_t={Date.now()}` query parameter, ensuring spectator polling and manual refreshes never serve stale CDN or browser cache.
 
 ### 4.3 Role Separation & URL Schema
@@ -254,10 +254,10 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
 2. **Takeover Token Publishing**:
    - When a new device or browser window opens with the Umpire key, `resumeUmpireSession()` creates and publishes a takeover packet containing its fresh `umpireClientId` and `seq: packet.seq + 1`.
 3. **Background Liveness & Takeover Detection**:
-   - Active Umpire sessions continuously monitor the storage provider via [`startUmpirePolling()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L482).
+   - Active Umpire sessions continuously monitor the storage provider via [`startUmpirePolling()`](../../src/sync.ts#L482).
    - If a poll reveals `remotePacket.umpireClientId !== currentSession.umpireClientId`, the session detects that another window has claimed the Umpire role.
 4. **Graceful Demotion to Spectator**:
-   - The displaced session invokes [`demoteUmpireToSpectator()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L385), which:
+   - The displaced session invokes [`demoteUmpireToSpectator()`](../../src/sync.ts#L385), which:
      - Halts pending umpire write queues and timers.
      - Removes `liveWriteKey_${matchId}` from `localStorage`.
      - Sanitizes the browser URL via `history.replaceState` to strip `&key=...`.

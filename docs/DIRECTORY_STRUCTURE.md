@@ -15,8 +15,8 @@ cricket-scorecard/
 │   ├── copilot-instructions.md      # GitHub Copilot pointer to canonical AGENTS.md
 │   └── workflows/                   # Automated GitHub Actions pipelines
 │       ├── ci.yml                   # Automated test & build verification gate
-│       ├── deploy.yml               # Reusable GitHub Pages production deployment workflow
-│       └── release.yml              # Automated main semantic release & chained Pages orchestration
+│       ├── deploy.yml               # Reusable (workflow_call) GitHub Pages production deployment workflow
+│       └── release.yml              # Automated main semantic release, GitHub Release & chained Pages orchestration
 ├── backend/                         # Serverless Backend & Cloud Edge Integrations
 │   ├── README.md                    # Backend integration overview & architectural diagram
 │   ├── cloudflare/                  # Cloudflare Workers KV Live Sync Edge Worker
@@ -55,6 +55,7 @@ cricket-scorecard/
 ├── src/                             # Client Modular TypeScript Source Code
 │   ├── app.ts                       # Main PWA entry point & Service Worker registration
 │   ├── feedback.ts                  # In-app bug reporter & GitHub Issue compiler
+│   ├── god_mode.ts                  # Umpire God Mode override modal controller & spectator lockout
 │   ├── modal.ts                     # Accessible modal dialog controller (W3C WAI-ARIA)
 │   ├── reducer.ts                   # Pure deterministic state machine & cricket rules
 │   ├── release_notes.ts             # Dynamic release notes modal renderer & event handler
@@ -75,7 +76,7 @@ cricket-scorecard/
 │       └── types.ts                 # Event-sourced DeliveryEvent schemas & interfaces
 ├── test/                            # Automated Unit & Regression Test Suites
 │   ├── test.ts                      # Test harness & JSDOM test runner
-│   ├── test_cases.ts                # Core regression test cases (Tests 1–84, 94–103)
+│   ├── test_cases.ts                # Core regression test cases (Tests 1–84, 94–103, 105–113)
 │   └── v2_test_cases.ts             # v2 Architecture, Analytics & Hygiene test suite (Tests 85–93, 104)
 ├── .gitignore                       # Git ignore patterns
 ├── .npmrc                           # Public npmjs.org registry pin for hermetic lockfiles
@@ -108,7 +109,7 @@ Only fundamental repository-level configuration and entry-point files are permit
 - Pure state transitions belong exclusively in `src/reducer.ts`.
 - Modal interactions must use the universal modal manager in `src/modal.ts`.
 - Release version constants belong in `src/version.ts`.
-- No single file should exceed 2,000 lines; decouple large sub-systems into dedicated modules (e.g., `src/release_notes.ts`, `src/feedback.ts`).
+- No single file should exceed 2,000 lines; decouple large sub-systems into dedicated modules (e.g., `src/god_mode.ts`, `src/release_notes.ts`, `src/feedback.ts`).
 
 ### Rule 3: Cloud Integrations & Backend Services (`backend/`)
 - Serverless worker scripts, cloud configurations, and cloud deployment manifests MUST be placed under `backend/<provider-name>/` (e.g., `backend/cloudflare/`, `backend/google-apps-script/`).

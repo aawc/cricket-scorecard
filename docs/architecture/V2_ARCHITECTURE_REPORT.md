@@ -2,7 +2,7 @@
 
 **Author**: Lead Web Architect & Cricket Statistics Specialist  
 **Target Branch**: `v2`  
-**Governance**: [`docs/DIRECTORY_STRUCTURE.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/DIRECTORY_STRUCTURE.md#L1) | [`docs/architecture/DESIGN.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/docs/architecture/DESIGN.md#L1)
+**Governance**: [`docs/DIRECTORY_STRUCTURE.md`](../DIRECTORY_STRUCTURE.md#L1) | [`docs/architecture/DESIGN.md`](DESIGN.md#L1)
 
 ---
 

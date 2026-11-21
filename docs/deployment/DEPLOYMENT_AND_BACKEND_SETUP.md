@@ -52,7 +52,7 @@ Both supported solutions operate with **100% zero ongoing cost ($0.00 forever)**
 
 ### 1.3 How to Switch Backends in the Production App
 
-The PWA is built with a pluggable storage architecture governed by [`LiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L49). You can switch backends at runtime using any of the following methods:
+The PWA is built with a pluggable storage architecture governed by [`LiveStorageProvider`](../../src/sync.ts#L49). You can switch backends at runtime using any of the following methods:
 
 #### Method 1: URL Query Parameter (Instant Switching)
 Append `?endpoint=` or `?backend=` to your PWA URL:
@@ -66,7 +66,7 @@ Append `?endpoint=` or `?backend=` to your PWA URL:
   https://varun.khaneja.org/cricket-scorecard/?endpoint=https://script.google.com/macros/s/AKfycb.../exec
   ```
 
-[`initLiveProviderFromUrlOrStorage()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L971) automatically detects whether the endpoint is Google Apps Script (`script.google.com`) or Cloudflare KV, initializes the matching provider ([`GoogleSheetsStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L180) or [`CloudflareKVStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L98)), and caches the choice in `localStorage`.
+[`initLiveProviderFromUrlOrStorage()`](../../src/sync.ts#L980) automatically detects whether the endpoint is Google Apps Script (`script.google.com`) or Cloudflare KV, initializes the matching provider ([`GoogleSheetsStorageProvider`](../../src/sync.ts#L180) or [`CloudflareKVStorageProvider`](../../src/sync.ts#L98)), and caches the choice in `localStorage`.
 
 #### Method 2: Browser LocalStorage Configuration
 Open your browser developer console (F12) and run:
@@ -80,7 +80,7 @@ localStorage.setItem('custom_live_endpoint', 'https://script.google.com/macros/s
 ```
 
 #### Method 3: TypeScript Source Default Configuration
-In [`src/sync.ts:L264`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L264), update the default instance initialized or call [`setLiveStorageProvider`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L273):
+In [`src/sync.ts:L271`](../../src/sync.ts#L271), update the default instance initialized or call [`setLiveStorageProvider`](../../src/sync.ts#L273):
 
 ```typescript
 // Default to your Cloudflare Worker:
@@ -94,9 +94,9 @@ setLiveStorageProvider(new GoogleSheetsStorageProvider('https://script.google.co
 
 ## 2. Step-by-Step Setup: Cloudflare Workers KV
 
-All source files for Cloudflare deployment are pre-packaged in the [`backend/cloudflare/`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare) directory:
-- Worker Script: [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)
-- Wrangler Configuration: [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1)
+All source files for Cloudflare deployment are pre-packaged in the [`backend/cloudflare/`](../../backend/cloudflare) directory:
+- Worker Script: [`backend/cloudflare/worker.js`](../../backend/cloudflare/worker.js#L1)
+- Wrangler Configuration: [`backend/cloudflare/wrangler.toml`](../../backend/cloudflare/wrangler.toml#L1)
 
 ### Option A: 1-Click CLI Deployment via Wrangler (Recommended)
 
@@ -121,8 +121,8 @@ All source files for Cloudflare deployment are pre-packaged in the [`backend/clo
    id = "8f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c"
    ```
 
-4. **Update [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1)**:
-   Open [`backend/cloudflare/wrangler.toml`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/wrangler.toml#L1) and replace the placeholder `id` with your generated KV namespace ID:
+4. **Update [`backend/cloudflare/wrangler.toml`](../../backend/cloudflare/wrangler.toml#L1)**:
+   Open [`backend/cloudflare/wrangler.toml`](../../backend/cloudflare/wrangler.toml#L1) and replace the placeholder `id` with your generated KV namespace ID:
    ```toml
    name = "cricket-scorecard-live"
    main = "worker.js"
@@ -161,7 +161,7 @@ All source files for Cloudflare deployment are pre-packaged in the [`backend/clo
    - Name your worker: `cricket-scorecard-live` and click **Deploy**.
 4. **Paste Worker Code**:
    - On the worker summary page, click **Edit code** (or **Quick Edit**).
-   - Replace the default template by pasting the complete contents of [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1).
+   - Replace the default template by pasting the complete contents of [`backend/cloudflare/worker.js`](../../backend/cloudflare/worker.js#L1).
    - Click **Save and deploy**.
 5. **Bind the KV Namespace**:
    - Go to your Worker's dashboard page (`cricket-scorecard-live`).
@@ -170,7 +170,7 @@ All source files for Cloudflare deployment are pre-packaged in the [`backend/clo
    - Click **Add** (or **Add binding**).
    - **Select Binding Type (KV Namespace)**: In the modal or side drawer that appears, Cloudflare presents a selector for binding types (D1 Database, KV Namespace, R2 Bucket, Queue, Vectorize, etc.). If the dialog defaults to **D1 Database** (which shows SQL queries and database schemas), click the **Type** dropdown or card list and select **KV namespace** (or **KV**).
    - Fill in the two KV configuration fields:
-     - **Variable name**: Type `SCORECARD_KV` (this maps to `env.SCORECARD_KV` in [`backend/cloudflare/worker.js`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/cloudflare/worker.js#L1)).
+     - **Variable name**: Type `SCORECARD_KV` (this maps to `env.SCORECARD_KV` in [`backend/cloudflare/worker.js`](../../backend/cloudflare/worker.js#L1)).
      - **KV namespace**: Select `SCORECARD_KV` from the dropdown list of namespaces created in Step 2.
    - Click **Deploy** (or **Save and deploy** / **Add binding**).
 6. **Copy Worker URL**:
@@ -201,7 +201,7 @@ Test the endpoint using `curl` (pointing to production `https://cricket-scorecar
 
 ## 3. Step-by-Step Setup: Google Apps Script (Google Sheets / Drive)
 
-The complete backend code is pre-packaged in [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1).
+The complete backend code is pre-packaged in [`backend/google-apps-script/Code.gs`](../../backend/google-apps-script/Code.gs#L1).
 
 ### 3.1 Deployment Walkthrough
 
@@ -211,7 +211,7 @@ The complete backend code is pre-packaged in [`backend/google-apps-script/Code.g
    Click "Untitled project" in the top-left and rename it to `Cricket Scorecard Live Sync`.
 3. **Paste the Script Code**:
    - Select all existing placeholder code in `Code.gs` and delete it.
-   - Copy the entire contents of [`backend/google-apps-script/Code.gs`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/backend/google-apps-script/Code.gs#L1) and paste it into the editor.
+   - Copy the entire contents of [`backend/google-apps-script/Code.gs`](../../backend/google-apps-script/Code.gs#L1) and paste it into the editor.
    - Click the **Save** icon (diskette) or press `Ctrl+S` / `Cmd+S`.
 4. **Deploy as Web App**:
    - In the top-right corner, click **Deploy** > **New deployment**.
@@ -255,7 +255,7 @@ Test the endpoint using `curl`:
 ## 4. Security & Maintenance Best Practices
 
 1. **Write Key Protection**:
-   - The umpire's `writeKey` is generated randomly on match creation ([`generateWriteKey`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L30)) and stored exclusively in the scorer's local `localStorage`.
+   - The umpire's `writeKey` is generated randomly on match creation ([`generateWriteKey`](../../src/sync.ts#L30)) and stored exclusively in the scorer's local `localStorage`.
    - Never share the umpire URL (`?live=m_...&key=k_...`) publicly. Share only the spectator link (`?live=m_...`).
 2. **Automatic 1-Year Cleanup**:
    - On Cloudflare: `expirationTtl: 31536000` guarantees automatic key eviction after 365 days.

@@ -30,6 +30,7 @@ declare function executeEndInnings(): void;
 declare function clearState(): void;
 declare function openBulkImportModal(teamNum: number, triggerEl?: any): void;
 declare function handleBulkImport(): void;
+declare function renderRosters(): void;
 declare function openModal(modal: any, trigger?: any): void;
 declare function closeModal(modal: any): void;
 declare function cleanupModalScrollLock(): void;
@@ -90,6 +91,15 @@ declare function buildGodModeDraftFromState(state: any): any;
 declare function validateGodModePayload(state: any, payload: any): string | null;
 declare function parseSyntheticDeliveryToken(token: string): any;
 declare function parseBallLog(b: string): { runs: number; wicket: number };
+declare function initGodModeUI(onRefresh?: () => void): void;
+declare function openGodModeModal(triggerEl?: any): void;
+declare function applyGodModeModal(): boolean;
+declare function swapGodModeStrike(): void;
+declare function handleGodModeBowlerInput(): void;
+declare function handleGodModeBatterInput(slot: 1 | 2): void;
+declare function handleGodModeInningsChange(): void;
+declare function handleGodModePhaseOrInningsChange(): void;
+declare function syncGodModeVisibility(): void;
 
 const doc = document as any;
 
@@ -2582,7 +2592,8 @@ console.log("Running Test 56...");
         ".github/ISSUE_TEMPLATE/bug_report.yml",
         ".github/ISSUE_TEMPLATE/feature_request.yml",
         "scripts/extract-release-notes.js",
-        "scripts/release.js"
+        "scripts/release.js",
+        "src/god_mode.ts"
     ];
 
     for (const relPath of requiredFiles) {
@@ -2611,6 +2622,7 @@ console.log("Running Test 56...");
         { label: "src/app.ts module", test: (s) => s.includes("src/app.ts") },
         { label: "src/rules.ts module", test: (s) => s.includes("src/rules.ts") },
         { label: "src/reducer.ts module", test: (s) => s.includes("src/reducer.ts") },
+        { label: "src/god_mode.ts module & Umpire God Mode (openGodModeModal, applyGodModeModal, APPLY_GOD_MODE)", test: (s) => s.includes("src/god_mode.ts") && s.includes("openGodModeModal") && s.includes("applyGodModeModal") && s.includes("APPLY_GOD_MODE") },
         { label: "src/v2/ module", test: (s) => s.includes("src/v2/") },
         { label: "ICC Men's ODI Playing Conditions partial-coverage rule", test: (s) => s.includes("ICC Men's One Day International Playing Conditions") && s.includes("docs/rules/README.md") && /partial/i.test(s) },
         { label: "red-green colorblind accessibility (#0072B2 vs #D55E00, [PASS]/[FAIL])", test: (s) => s.includes("#0072B2") && s.includes("#D55E00") && s.includes("[PASS]") && s.includes("[FAIL]") },
@@ -2715,14 +2727,39 @@ console.log("Running Test 56...");
     };
     const activeMdFiles = [
         ...collectMarkdownFiles(process.cwd(), false),
-        ...collectMarkdownFiles(path.resolve(process.cwd(), "docs"), true)
+        path.resolve(process.cwd(), ".github/copilot-instructions.md"),
+        ...collectMarkdownFiles(path.resolve(process.cwd(), "docs"), true),
+        ...collectMarkdownFiles(path.resolve(process.cwd(), "backend"), true)
     ];
+    const mdAnchorRegex = /\[[^\]]+\]\(([^)#\s]+)#L(\d+)(?:-L(\d+))?\)/g;
     for (const mdFile of activeMdFiles) {
         const mdText = fs.readFileSync(mdFile, "utf8");
+        const relMd = path.relative(process.cwd(), mdFile);
         if (mdText.includes("PROMPT.md")) {
-            const relMd = path.relative(process.cwd(), mdFile);
             console.error(`[FAIL] Test 79 Failed: Stale reference to PROMPT.md found in ${relMd}`);
             process.exit(1);
+        }
+        if (mdText.includes("file://") || mdText.includes("/usr/local/google/home")) {
+            console.error(`[FAIL] Test 79 Failed: Local file:// URI or workstation path found in ${relMd}`);
+            process.exit(1);
+        }
+        mdAnchorRegex.lastIndex = 0;
+        let mdMatch: RegExpExecArray | null;
+        while ((mdMatch = mdAnchorRegex.exec(mdText)) !== null) {
+            const rawTarget = mdMatch[1];
+            if (!rawTarget || /^https?:\/\//.test(rawTarget) || rawTarget.startsWith("#")) continue;
+            const targetAbs = path.resolve(path.dirname(mdFile), rawTarget);
+            if (!fs.existsSync(targetAbs)) {
+                console.error(`[FAIL] Test 79 Failed: Broken #L anchor target in ${relMd}: ${rawTarget} -> ${targetAbs}`);
+                process.exit(1);
+            }
+            const totalLines = fs.readFileSync(targetAbs, "utf8").replace(/\r?\n$/, "").split(/\r?\n/).length;
+            const startLine = parseInt(mdMatch[2], 10);
+            const endLine = mdMatch[3] ? parseInt(mdMatch[3], 10) : startLine;
+            if (startLine < 1 || startLine > totalLines || endLine < startLine || endLine > totalLines) {
+                console.error(`[FAIL] Test 79 Failed: Out-of-bounds #L anchor in ${relMd}: ${rawTarget}#L${startLine}${mdMatch[3] ? `-L${endLine}` : ""} (file has ${totalLines} lines)`);
+                process.exit(1);
+            }
         }
     }
 
@@ -5293,14 +5330,14 @@ console.log("Running Test 56...");
     }
 
     // =========================================================================
-    // Test 104: Umpire God Mode - Lossless Zero-Edit Round-Trip, Partial Edit Merge & Undo Recovery
+    // Test 105: Umpire God Mode - Lossless Zero-Edit Round-Trip, Partial Edit Merge & Undo Recovery
     // =========================================================================
-    console.log("Running Test 104 (God Mode: Lossless Zero-Edit Round-Trip, Partial Edit Merge & Undo Recovery)...");
+    console.log("Running Test 105 (God Mode: Lossless Zero-Edit Round-Trip, Partial Edit Merge & Undo Recovery)...");
     {
         const { getSelectableBowlers } = await import('../src/rules.js');
 
         if (typeof buildGodModeDraftFromState !== 'function' || typeof validateGodModePayload !== 'function') {
-            console.error("[FAIL] Test 104 Failed: buildGodModeDraftFromState and validateGodModePayload must be exported from src/reducer.ts");
+            console.error("[FAIL] Test 105 Failed: buildGodModeDraftFromState and validateGodModePayload must be exported from src/reducer.ts");
             process.exit(1);
         }
 
@@ -5313,7 +5350,7 @@ console.log("Running Test 56...");
         const setupDraft = buildGodModeDraftFromState(gameState);
         dispatch({ type: 'APPLY_GOD_MODE', payload: setupDraft });
         if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false || JSON.stringify(gameState.match) !== JSON.stringify(setupBefore)) {
-            console.error("[FAIL] Test 104 Failed: SETUP zero-edit round-trip mutated match state:", gameState);
+            console.error("[FAIL] Test 105 Failed: SETUP zero-edit round-trip mutated match state:", gameState);
             process.exit(1);
         }
 
@@ -5329,7 +5366,7 @@ console.log("Running Test 56...");
         const tossDraft = buildGodModeDraftFromState(gameState);
         dispatch({ type: 'APPLY_GOD_MODE', payload: tossDraft });
         if (gameState.phase !== 'TOSS' || gameState.matchStarted !== true || JSON.stringify(gameState.match) !== JSON.stringify(tossBefore)) {
-            console.error("[FAIL] Test 104 Failed: TOSS zero-edit round-trip mutated match state:", gameState);
+            console.error("[FAIL] Test 105 Failed: TOSS zero-edit round-trip mutated match state:", gameState);
             process.exit(1);
         }
 
@@ -5395,18 +5432,18 @@ console.log("Running Test 56...");
         const activeDraft = buildGodModeDraftFromState(gameState);
 
         if (validateGodModePayload(gameState, activeDraft) !== null) {
-            console.error("[FAIL] Test 104 Failed: buildGodModeDraftFromState produced invalid draft:", validateGodModePayload(gameState, activeDraft));
+            console.error("[FAIL] Test 105 Failed: buildGodModeDraftFromState produced invalid draft:", validateGodModePayload(gameState, activeDraft));
             process.exit(1);
         }
 
         dispatch({ type: 'APPLY_GOD_MODE', payload: activeDraft });
 
         if (JSON.stringify(gameState.match.liveInnings) !== JSON.stringify(liveBeforeRoundTrip)) {
-            console.error("[FAIL] Test 104 Failed: Zero-edit APPLY_GOD_MODE mutated liveInnings.\nExpected:", JSON.stringify(liveBeforeRoundTrip), "\nGot:", JSON.stringify(gameState.match.liveInnings));
+            console.error("[FAIL] Test 105 Failed: Zero-edit APPLY_GOD_MODE mutated liveInnings.\nExpected:", JSON.stringify(liveBeforeRoundTrip), "\nGot:", JSON.stringify(gameState.match.liveInnings));
             process.exit(1);
         }
         if (JSON.stringify(gameState.match) !== JSON.stringify(matchBeforeRoundTrip)) {
-            console.error("[FAIL] Test 104 Failed: Zero-edit APPLY_GOD_MODE mutated match wrapper.");
+            console.error("[FAIL] Test 105 Failed: Zero-edit APPLY_GOD_MODE mutated match wrapper.");
             process.exit(1);
         }
 
@@ -5426,51 +5463,51 @@ console.log("Running Test 56...");
         });
 
         if (gameState.match.team1.name !== "MI" || gameState.match.team2.name !== "CSK" || gameState.settings.oversPerInnings !== 12) {
-            console.error("[FAIL] Test 104 Failed: Partial edit failed to update team names or oversPerInnings:", gameState.match.team1.name, gameState.match.team2.name, gameState.settings.oversPerInnings);
+            console.error("[FAIL] Test 105 Failed: Partial edit failed to update team names or oversPerInnings:", gameState.match.team1.name, gameState.match.team2.name, gameState.settings.oversPerInnings);
             process.exit(1);
         }
         const liveAfterPartial = gameState.match.liveInnings;
         if (liveAfterPartial.batsmen["Tilak"]?.active !== true || liveAfterPartial.batsmen["Surya"]?.active !== false) {
-            console.error("[FAIL] Test 104 Failed: activeStriker: 2 did not transfer strike to Tilak:", liveAfterPartial.batsmen);
+            console.error("[FAIL] Test 105 Failed: activeStriker: 2 did not transfer strike to Tilak:", liveAfterPartial.batsmen);
             process.exit(1);
         }
         if (liveAfterPartial.batsmen["Rohit"]?.runs !== 14 || liveAfterPartial.batsmen["Rohit"]?.fours !== 2 || liveAfterPartial.batsmen["Ishan"]?.runs !== 9) {
-            console.error("[FAIL] Test 104 Failed: Dismissed batters' historical stats were wiped on partial edit:", liveAfterPartial.batsmen);
+            console.error("[FAIL] Test 105 Failed: Dismissed batters' historical stats were wiped on partial edit:", liveAfterPartial.batsmen);
             process.exit(1);
         }
         if (JSON.stringify(liveAfterPartial.outBatsmen) !== JSON.stringify(["Rohit", "Ishan"]) || liveAfterPartial.overs.length !== 4 || JSON.stringify(liveAfterPartial.overLog) !== JSON.stringify(["6", "4", "2"])) {
-            console.error("[FAIL] Test 104 Failed: outBatsmen, overs, or overLog corrupted on partial edit:", liveAfterPartial);
+            console.error("[FAIL] Test 105 Failed: outBatsmen, overs, or overLog corrupted on partial edit:", liveAfterPartial);
             process.exit(1);
         }
         if (liveAfterPartial.bowlers["Chahar"]?.balls !== 12 || liveAfterPartial.bowlers["Chahar"]?.maidens !== 1 || liveAfterPartial.bowlers["Jadeja"]?.balls !== 12 || liveAfterPartial.bowlers["Jadeja"]?.wides !== 1 || liveAfterPartial.bowlers["Pathirana"]?.balls !== 3) {
-            console.error("[FAIL] Test 104 Failed: Prior bowler quotas/maidens/wides corrupted on partial edit:", liveAfterPartial.bowlers);
+            console.error("[FAIL] Test 105 Failed: Prior bowler quotas/maidens/wides corrupted on partial edit:", liveAfterPartial.bowlers);
             process.exit(1);
         }
         const selectable = getSelectableBowlers(liveAfterPartial, gameState.match.team2.players, gameState.settings);
         if (selectable.bowlers.includes("Chahar") || selectable.bowlers.includes("Jadeja") || !selectable.bowlers.includes("Deshpande")) {
-            console.error("[FAIL] Test 104 Failed: ICC Clause 12/13 bowler quotas lost after partial edit:", selectable);
+            console.error("[FAIL] Test 105 Failed: ICC Clause 12/13 bowler quotas lost after partial edit:", selectable);
             process.exit(1);
         }
 
         // 4. Undo recovery restores exact pre-God-Mode state
         if (gameState.history.length !== 1) {
-            console.error(`[FAIL] Test 104 Failed: Expected history.length === 1 after mid-match God Mode, got ${gameState.history.length}`);
+            console.error(`[FAIL] Test 105 Failed: Expected history.length === 1 after mid-match God Mode, got ${gameState.history.length}`);
             process.exit(1);
         }
         dispatch({ type: 'UNDO' });
         if (JSON.stringify(gameState.match) !== JSON.stringify(prePartialMatch) || JSON.stringify(gameState.settings) !== JSON.stringify(prePartialSettings)) {
-            console.error("[FAIL] Test 104 Failed: UNDO did not restore exact pre-God-Mode state");
+            console.error("[FAIL] Test 105 Failed: UNDO did not restore exact pre-God-Mode state");
             process.exit(1);
         }
     }
 
     // =========================================================================
-    // Test 105: Fresh Sync from SETUP, Roster Disjointness, Auto-Padding & ICC Clause 17 Maiden Lock
+    // Test 106: Fresh Sync from SETUP, Roster Disjointness, Auto-Padding & ICC Clause 17 Maiden Lock
     // =========================================================================
-    console.log("Running Test 105 (God Mode: Fresh SETUP Sync, Roster Disjointness, Auto-Padding & Clause 17 Maiden Lock)...");
+    console.log("Running Test 106 (God Mode: Fresh SETUP Sync, Roster Disjointness, Auto-Padding & Clause 17 Maiden Lock)...");
     {
         if (typeof parseSyntheticDeliveryToken !== 'function') {
-            console.error("[FAIL] Test 105 Failed: parseSyntheticDeliveryToken must be exported from src/rules.ts");
+            console.error("[FAIL] Test 106 Failed: parseSyntheticDeliveryToken must be exported from src/rules.ts");
             process.exit(1);
         }
 
@@ -5487,7 +5524,7 @@ console.log("Running Test 56...");
             !tRunsWkt || !tRunsWkt.isLegal || tRunsWkt.runs !== 4 || tRunsWkt.isWicket !== true ||
             !tZeroBall || tZeroBall.isLegal !== false || tZeroBall.runs !== 5 || tZeroBall.isWicket !== false ||
             tGenuine !== null) {
-            console.error("[FAIL] Test 105 Failed: parseSyntheticDeliveryToken grammar mismatch:", { tDot, tRuns, tWkt, tRunsWkt, tZeroBall, tGenuine });
+            console.error("[FAIL] Test 106 Failed: parseSyntheticDeliveryToken grammar mismatch:", { tDot, tRuns, tWkt, tRunsWkt, tZeroBall, tGenuine });
             process.exit(1);
         }
 
@@ -5498,7 +5535,7 @@ console.log("Running Test 56...");
         gameState.match.team2.players = [];
 
         if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false || gameState.history.length !== 0) {
-            console.error("[FAIL] Test 105 Failed: Expected clean SETUP baseline");
+            console.error("[FAIL] Test 106 Failed: Expected clean SETUP baseline");
             process.exit(1);
         }
 
@@ -5518,42 +5555,42 @@ console.log("Running Test 56...");
         });
 
         if (gameState.phase !== 'PLAYING_INNINGS' || !gameState.matchStarted) {
-            console.error(`[FAIL] Test 105 Failed: Expected phase PLAYING_INNINGS after fresh SETUP sync, got ${gameState.phase}`);
+            console.error(`[FAIL] Test 106 Failed: Expected phase PLAYING_INNINGS after fresh SETUP sync, got ${gameState.phase}`);
             process.exit(1);
         }
         if (gameState.history.length !== 0) {
-            console.error(`[FAIL] Test 105 Failed: Fresh SETUP sync must leave history.length === 0, got ${gameState.history.length}`);
+            console.error(`[FAIL] Test 106 Failed: Fresh SETUP sync must leave history.length === 0, got ${gameState.history.length}`);
             process.exit(1);
         }
 
         const t1Players: string[] = gameState.match.team1.players;
         const t2Players: string[] = gameState.match.team2.players;
         if (t1Players.some(p => t2Players.includes(p))) {
-            console.error("[FAIL] Test 105 Failed: Batting and bowling rosters must be strictly disjoint:", { t1Players, t2Players });
+            console.error("[FAIL] Test 106 Failed: Batting and bowling rosters must be strictly disjoint:", { t1Players, t2Players });
             process.exit(1);
         }
         if (t1Players.includes("Starc") || t2Players.includes("Head") || t2Players.includes("Marsh")) {
-            console.error("[FAIL] Test 105 Failed: Bowler leaked into batting roster or batter leaked into bowling roster:", { t1Players, t2Players });
+            console.error("[FAIL] Test 106 Failed: Bowler leaked into batting roster or batter leaked into bowling roster:", { t1Players, t2Players });
             process.exit(1);
         }
         if (t1Players.length < 5 || t2Players.length !== 4) {
-            console.error(`[FAIL] Test 105 Failed: Expected auto-padded t1Players.length >= 5 and t2Players.length === 4 (Math.max(2, Math.ceil(10/3))), got ${t1Players.length} and ${t2Players.length}`);
+            console.error(`[FAIL] Test 106 Failed: Expected auto-padded t1Players.length >= 5 and t2Players.length === 4 (Math.max(2, Math.ceil(10/3))), got ${t1Players.length} and ${t2Players.length}`);
             process.exit(1);
         }
 
         if (gameState.match.liveInnings.bowlers["Starc"]?.balls !== 2) {
-            console.error(`[FAIL] Test 105 Failed: Newly added currentBowler Starc at 7.2 ov must default to 2 balls (44 % 6), got ${gameState.match.liveInnings.bowlers["Starc"]?.balls}`);
+            console.error(`[FAIL] Test 106 Failed: Newly added currentBowler Starc at 7.2 ov must default to 2 balls (44 % 6), got ${gameState.match.liveInnings.bowlers["Starc"]?.balls}`);
             process.exit(1);
         }
         if (gameState.match.liveInnings.overs.length !== 7 || gameState.match.liveInnings.overLog.length !== 2) {
-            console.error(`[FAIL] Test 105 Failed: Expected 7 completed synthetic overs and 2 balls in overLog at 7.2 ov, got overs=${gameState.match.liveInnings.overs.length}, overLog=${JSON.stringify(gameState.match.liveInnings.overLog)}`);
+            console.error(`[FAIL] Test 106 Failed: Expected 7 completed synthetic overs and 2 balls in overLog at 7.2 ov, got overs=${gameState.match.liveInnings.overs.length}, overLog=${JSON.stringify(gameState.match.liveInnings.overLog)}`);
             process.exit(1);
         }
 
         // Score 1 run -> advances to 68/3 at 7.3 overs in PLAYING_INNINGS (no premature all-out / INNINGS_BREAK!)
         dispatch({ type: 'ADD_RUNS', payload: { runs: 1 } });
         if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.liveInnings.score !== 68 || gameState.match.liveInnings.balls !== 45) {
-            console.error(`[FAIL] Test 105 Failed: Expected 68/3 at 45 balls in PLAYING_INNINGS, got phase=${gameState.phase}, score=${gameState.match.liveInnings.score}, balls=${gameState.match.liveInnings.balls}`);
+            console.error(`[FAIL] Test 106 Failed: Expected 68/3 at 45 balls in PLAYING_INNINGS, got phase=${gameState.phase}, score=${gameState.match.liveInnings.score}, balls=${gameState.match.liveInnings.balls}`);
             process.exit(1);
         }
 
@@ -5562,7 +5599,7 @@ console.log("Running Test 56...");
         dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
         dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
         if (gameState.match.liveInnings.balls !== 48 || gameState.match.liveInnings.overs.length !== 8 || gameState.match.liveInnings.bowlers["Starc"]?.maidens !== 0) {
-            console.error("[FAIL] Test 105 Failed: Over 8 completion mismatch:", gameState.match.liveInnings);
+            console.error("[FAIL] Test 106 Failed: Over 8 completion mismatch:", gameState.match.liveInnings);
             process.exit(1);
         }
 
@@ -5577,18 +5614,18 @@ console.log("Running Test 56...");
             }
         });
         if (JSON.stringify(gameState.match.liveInnings.overLog) !== JSON.stringify(["~0", "~0"])) {
-            console.error(`[FAIL] Test 105 Failed: Expected ['~0', '~0'] in overLog at 8.2, got ${JSON.stringify(gameState.match.liveInnings.overLog)}`);
+            console.error(`[FAIL] Test 106 Failed: Expected ['~0', '~0'] in overLog at 8.2, got ${JSON.stringify(gameState.match.liveInnings.overLog)}`);
             process.exit(1);
         }
         for (let i = 0; i < 4; i++) {
             dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
         }
         if (gameState.match.liveInnings.balls !== 54 || gameState.match.liveInnings.overs.length !== 9) {
-            console.error(`[FAIL] Test 105 Failed: Expected 54 balls and 9 overs, got balls=${gameState.match.liveInnings.balls}, overs=${gameState.match.liveInnings.overs.length}`);
+            console.error(`[FAIL] Test 106 Failed: Expected 54 balls and 9 overs, got balls=${gameState.match.liveInnings.balls}, overs=${gameState.match.liveInnings.overs.length}`);
             process.exit(1);
         }
         if ((gameState.match.liveInnings.bowlers[secondBowler]?.maidens || 0) !== 0 || gameState.match.liveInnings.bowlers[secondBowler]?.balls !== 6) {
-            console.error(`[FAIL] Test 105 Failed: Synthetic '~0' balls + 4 genuine dot balls MUST NOT award a false maiden under ICC Clause 17 and must tally 6 balls! Got:`, gameState.match.liveInnings.bowlers[secondBowler]);
+            console.error(`[FAIL] Test 106 Failed: Synthetic '~0' balls + 4 genuine dot balls MUST NOT award a false maiden under ICC Clause 17 and must tally 6 balls! Got:`, gameState.match.liveInnings.bowlers[secondBowler]);
             process.exit(1);
         }
 
@@ -5598,7 +5635,7 @@ console.log("Running Test 56...");
             dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
         }
         if (gameState.match.liveInnings.bowlers["Starc"]?.maidens !== 1) {
-            console.error(`[FAIL] Test 105 Failed: 6 genuine dot balls in Over 10 must award maidens === 1, got ${gameState.match.liveInnings.bowlers["Starc"]?.maidens}`);
+            console.error(`[FAIL] Test 106 Failed: 6 genuine dot balls in Over 10 must award maidens === 1, got ${gameState.match.liveInnings.bowlers["Starc"]?.maidens}`);
             process.exit(1);
         }
 
@@ -5620,7 +5657,7 @@ console.log("Running Test 56...");
             }
         });
         if (gameState.phase !== 'INNINGS_BREAK' || gameState.match.team2.players.length < 2) {
-            console.error(`[FAIL] Test 105 Failed: 4/4 fresh sync must pad team2.players to >= 2 so Innings 2 is playable, got phase=${gameState.phase}, team2=${JSON.stringify(gameState.match.team2.players)}`);
+            console.error(`[FAIL] Test 106 Failed: 4/4 fresh sync must pad team2.players to >= 2 so Innings 2 is playable, got phase=${gameState.phase}, team2=${JSON.stringify(gameState.match.team2.players)}`);
             process.exit(1);
         }
         dispatch({ type: 'START_NEXT_INNINGS' });
@@ -5629,7 +5666,7 @@ console.log("Running Test 56...");
         dispatch({ type: 'CHANGE_BOWLER', payload: { name: gameState.match.team1.players[0] } });
         dispatch({ type: 'ADD_RUNS', payload: { runs: 1 } });
         if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.liveInnings.score !== 1) {
-            console.error(`[FAIL] Test 105 Failed: Innings 2 ball 1 prematurely ended match! phase=${gameState.phase}`);
+            console.error(`[FAIL] Test 106 Failed: Innings 2 ball 1 prematurely ended match! phase=${gameState.phase}`);
             process.exit(1);
         }
 
@@ -5647,15 +5684,15 @@ console.log("Running Test 56...");
             }
         });
         if (gameState.match.liveInnings.currentBatsman1 !== "Solo2" || gameState.match.liveInnings.currentBatsman2 !== "") {
-            console.error("[FAIL] Test 105 Failed: Lone Slot 2 survivor in allowSingleBatsman mode must promote to currentBatsman1:", gameState.match.liveInnings);
+            console.error("[FAIL] Test 106 Failed: Lone Slot 2 survivor in allowSingleBatsman mode must promote to currentBatsman1:", gameState.match.liveInnings);
             process.exit(1);
         }
     }
 
     // =========================================================================
-    // Test 106: All-Phase Transitions, Innings 1 <-> 2 Rollback/Promotion, Archive/Unarchive & Permalink Round-Trip
+    // Test 107: All-Phase Transitions, Innings 1 <-> 2 Rollback/Promotion, Archive/Unarchive & Permalink Round-Trip
     // =========================================================================
-    console.log("Running Test 106 (God Mode: Phase Transitions, Innings 1<->2, Duplicate-Free Archive & Permalink Round-Trip)...");
+    console.log("Running Test 107 (God Mode: Phase Transitions, Innings 1<->2, Duplicate-Free Archive & Permalink Round-Trip)...");
     {
         resetTestState();
         gameState.settings.oversPerInnings = 8;
@@ -5693,14 +5730,14 @@ console.log("Running Test 56...");
         // 1. PLAYING_INNINGS -> INNINGS_BREAK
         dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'INNINGS_BREAK' } });
         if (gameState.phase !== 'INNINGS_BREAK' || gameState.match.team1.innings.length !== 1 || gameState.match.target !== 20 || gameState.match.liveInnings.overLog.length !== 0 || gameState.match.liveInnings.overs.length !== 2) {
-            console.error("[FAIL] Test 106 Failed: PLAYING_INNINGS -> INNINGS_BREAK failed to archive cleanly:", gameState.match);
+            console.error("[FAIL] Test 107 Failed: PLAYING_INNINGS -> INNINGS_BREAK failed to archive cleanly:", gameState.match);
             process.exit(1);
         }
 
         // 2. Reopen INNINGS_BREAK -> PLAYING_INNINGS (partial overLog restored, team1.innings popped)
         dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'PLAYING_INNINGS' } });
         if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.team1.innings.length !== 0 || gameState.match.target !== null || gameState.match.liveInnings.overs.length !== 1 || JSON.stringify(gameState.match.liveInnings.overLog) !== JSON.stringify(["4", "1", "2"])) {
-            console.error("[FAIL] Test 106 Failed: INNINGS_BREAK -> PLAYING_INNINGS failed to unarchive or restore partial overLog:", gameState.match);
+            console.error("[FAIL] Test 107 Failed: INNINGS_BREAK -> PLAYING_INNINGS failed to unarchive or restore partial overLog:", gameState.match);
             process.exit(1);
         }
 
@@ -5720,19 +5757,19 @@ console.log("Running Test 56...");
             }
         });
         if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.currentInnings !== 2 || gameState.match.currentBattingTeam !== 2 || gameState.match.target !== 120 || gameState.match.team1.innings.length !== 1 || gameState.match.team1.innings[0].score !== 119 || gameState.match.team2.innings.length !== 0) {
-            console.error("[FAIL] Test 106 Failed: Promotion to Innings 2 mismatch:", gameState.match);
+            console.error("[FAIL] Test 107 Failed: Promotion to Innings 2 mismatch:", gameState.match);
             process.exit(1);
         }
 
         // 4. Finish to MATCH_OVER via normal scoring, verify UNDO remains blocked (Test 80 invariant)
         dispatch({ type: 'ADD_RUNS', payload: { runs: 6 } });
         if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver || gameState.match.team2.innings.length !== 1) {
-            console.error("[FAIL] Test 106 Failed: Expected MATCH_OVER with team2.innings.length === 1, got:", gameState.phase, gameState.match.team2.innings.length);
+            console.error("[FAIL] Test 107 Failed: Expected MATCH_OVER with team2.innings.length === 1, got:", gameState.phase, gameState.match.team2.innings.length);
             process.exit(1);
         }
         dispatch({ type: 'UNDO' });
         if (gameState.phase !== 'MATCH_OVER' || gameState.match.liveInnings.score !== 120) {
-            console.error("[FAIL] Test 106 Failed: UNDO must remain blocked in MATCH_OVER per Test 80!");
+            console.error("[FAIL] Test 107 Failed: UNDO must remain blocked in MATCH_OVER per Test 80!");
             process.exit(1);
         }
 
@@ -5746,7 +5783,7 @@ console.log("Running Test 56...");
             }
         });
         if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.matchOver !== false || gameState.match.team2.innings.length !== 0 || gameState.match.team1.innings.length !== 1 || gameState.match.target !== 120) {
-            console.error("[FAIL] Test 106 Failed: Reopen MATCH_OVER -> PLAYING_INNINGS left stale archive or matchOver flag:", gameState.match);
+            console.error("[FAIL] Test 107 Failed: Reopen MATCH_OVER -> PLAYING_INNINGS left stale archive or matchOver flag:", gameState.match);
             process.exit(1);
         }
 
@@ -5758,7 +5795,7 @@ console.log("Running Test 56...");
             }
         });
         if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver || gameState.match.team1.innings.length !== 1 || gameState.match.team2.innings.length !== 1) {
-            console.error(`[FAIL] Test 106 Failed: Re-completing match must maintain team2.innings.length === 1 (zero duplicates), got phase=${gameState.phase}, t1=${gameState.match.team1.innings.length}, t2=${gameState.match.team2.innings.length}`);
+            console.error(`[FAIL] Test 107 Failed: Re-completing match must maintain team2.innings.length === 1 (zero duplicates), got phase=${gameState.phase}, t1=${gameState.match.team1.innings.length}, t2=${gameState.match.team2.innings.length}`);
             process.exit(1);
         }
 
@@ -5775,7 +5812,7 @@ console.log("Running Test 56...");
             }
         });
         if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.currentInnings !== 1 || gameState.match.target !== null || gameState.match.matchOver !== false || gameState.match.team1.innings.length !== 0 || gameState.match.team2.innings.length !== 0) {
-            console.error("[FAIL] Test 106 Failed: Rollback 2 -> 1 did not clear target and both archived innings:", gameState.match);
+            console.error("[FAIL] Test 107 Failed: Rollback 2 -> 1 did not clear target and both archived innings:", gameState.match);
             process.exit(1);
         }
 
@@ -5784,7 +5821,7 @@ console.log("Running Test 56...");
         const restored1 = unminifyState(min1);
         healInningsOvers(restored1.match.liveInnings);
         if (restored1.match.liveInnings.score !== 95 || restored1.match.liveInnings.balls !== 38 || restored1.match.liveInnings.overs.length !== 6 || restored1.match.liveInnings.overLog.length !== 2) {
-            console.error("[FAIL] Test 106 Failed: Permalink round-trip corrupted synthetic overs:", restored1.match.liveInnings);
+            console.error("[FAIL] Test 107 Failed: Permalink round-trip corrupted synthetic overs:", restored1.match.liveInnings);
             process.exit(1);
         }
 
@@ -5797,14 +5834,14 @@ console.log("Running Test 56...");
             }
         });
         if (JSON.stringify(gameState.match.liveInnings.overLog) !== JSON.stringify(["~+10"]) || gameState.match.liveInnings.overs.length !== 0) {
-            console.error(`[FAIL] Test 106 Failed: Expected zero-ball run adjustment ['~+10'], got ${JSON.stringify(gameState.match.liveInnings.overLog)}`);
+            console.error(`[FAIL] Test 107 Failed: Expected zero-ball run adjustment ['~+10'], got ${JSON.stringify(gameState.match.liveInnings.overLog)}`);
             process.exit(1);
         }
         const minZero = minifyState(gameState);
         const restoredZero = unminifyState(minZero);
         healInningsOvers(restoredZero.match.liveInnings);
         if (restoredZero.match.liveInnings.overs.length !== 0 || JSON.stringify(restoredZero.match.liveInnings.overLog) !== JSON.stringify(["~+10"])) {
-            console.error("[FAIL] Test 106 Failed: healInningsOvers treated '~+10' as legal ball or corrupted overLog:", restoredZero.match.liveInnings);
+            console.error("[FAIL] Test 107 Failed: healInningsOvers treated '~+10' as legal ball or corrupted overLog:", restoredZero.match.liveInnings);
             process.exit(1);
         }
 
@@ -5823,36 +5860,36 @@ console.log("Running Test 56...");
         const loadedFromUrl = loadState();
         (global as any).window.location.search = '';
         if (!loadedFromUrl || loadedFromUrl.match.liveInnings.score !== 73 || loadedFromUrl.match.liveInnings.balls !== 32 || loadedFromUrl.match.liveInnings.overs.length !== 5 || loadedFromUrl.match.liveInnings.overLog.length !== 2) {
-            console.error("[FAIL] Test 106 Failed: End-to-end generatePermalink + loadState corrupted synthetic state:", loadedFromUrl);
+            console.error("[FAIL] Test 107 Failed: End-to-end generatePermalink + loadState corrupted synthetic state:", loadedFromUrl);
             process.exit(1);
         }
 
         // 9. Transitioning back to TOSS / SETUP via APPLY_GOD_MODE must clear undo history & preserve SETUP matchStarted===false on unminifyState
         if (gameState.history.length === 0) {
-            console.error("[FAIL] Test 106 Failed: Expected non-empty history before TOSS/SETUP reset check");
+            console.error("[FAIL] Test 107 Failed: Expected non-empty history before TOSS/SETUP reset check");
             process.exit(1);
         }
         dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'TOSS' } });
         if (gameState.phase !== 'TOSS' || gameState.history.length !== 0) {
-            console.error(`[FAIL] Test 106 Failed: APPLY_GOD_MODE -> TOSS must clear history, got phase=${gameState.phase}, history=${gameState.history.length}`);
+            console.error(`[FAIL] Test 107 Failed: APPLY_GOD_MODE -> TOSS must clear history, got phase=${gameState.phase}, history=${gameState.history.length}`);
             process.exit(1);
         }
         dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'SETUP' } });
         if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false || gameState.history.length !== 0) {
-            console.error(`[FAIL] Test 106 Failed: APPLY_GOD_MODE -> SETUP must set matchStarted=false and clear history, got`, gameState);
+            console.error(`[FAIL] Test 107 Failed: APPLY_GOD_MODE -> SETUP must set matchStarted=false and clear history, got`, gameState);
             process.exit(1);
         }
         const setupRestored = unminifyState(minifyState(gameState));
         if (setupRestored.phase !== 'SETUP' || setupRestored.matchStarted !== false) {
-            console.error("[FAIL] Test 106 Failed: unminifyState on SETUP payload must preserve matchStarted === false, got:", setupRestored);
+            console.error("[FAIL] Test 107 Failed: unminifyState on SETUP payload must preserve matchStarted === false, got:", setupRestored);
             process.exit(1);
         }
     }
 
     // =========================================================================
-    // Test 107: Payload Validation, Rejected Undo Stack Hygiene & v2 Analytics Bridge Projections
+    // Test 108: Payload Validation, Rejected Undo Stack Hygiene & v2 Analytics Bridge Projections
     // =========================================================================
-    console.log("Running Test 107 (God Mode: Payload Validation, Rejected Undo Hygiene & v2 Analytics Bridge)...");
+    console.log("Running Test 108 (God Mode: Payload Validation, Rejected Undo Hygiene & v2 Analytics Bridge)...");
     {
         const { getProjectionsFromGameState } = await import('../src/v2/bridge.js');
         const { findConsecutiveOverBreaches } = await import('../src/rules.js');
@@ -5895,16 +5932,16 @@ console.log("Running Test 56...");
         for (const item of invalidPayloads) {
             const err = validateGodModePayload(gameState, item.payload);
             if (!err || typeof err !== 'string' || err.startsWith('[ERROR]')) {
-                console.error(`[FAIL] Test 107 Failed: validateGodModePayload should return clean reason string for ${item.label}, got:`, err);
+                console.error(`[FAIL] Test 108 Failed: validateGodModePayload should return clean reason string for ${item.label}, got:`, err);
                 process.exit(1);
             }
             dispatch({ type: 'APPLY_GOD_MODE', payload: item.payload });
             if (gameState.history.length !== baselineHistoryLen) {
-                console.error(`[FAIL] Test 107 Failed: Rejected payload (${item.label}) polluted undo history! Expected ${baselineHistoryLen}, got ${gameState.history.length}`);
+                console.error(`[FAIL] Test 108 Failed: Rejected payload (${item.label}) polluted undo history! Expected ${baselineHistoryLen}, got ${gameState.history.length}`);
                 process.exit(1);
             }
             if (JSON.stringify(gameState) !== baselineStateJson) {
-                console.error(`[FAIL] Test 107 Failed: Rejected payload (${item.label}) mutated gameState!`);
+                console.error(`[FAIL] Test 108 Failed: Rejected payload (${item.label}) mutated gameState!`);
                 process.exit(1);
             }
         }
@@ -5932,27 +5969,27 @@ console.log("Running Test 56...");
 
         const proj = getProjectionsFromGameState(gameState);
         if (proj.innings1.totalScore !== 119 || proj.innings1.totalWickets !== 6 || proj.innings1.legalBalls !== 48) {
-            console.error("[FAIL] Test 107 Failed: Innings 1 v2 projection mismatch:", proj.innings1);
+            console.error("[FAIL] Test 108 Failed: Innings 1 v2 projection mismatch:", proj.innings1);
             process.exit(1);
         }
         if (!proj.innings2 || proj.innings2.totalScore !== 67 || proj.innings2.totalWickets !== 3 || proj.innings2.legalBalls !== 44 || proj.innings2.oversFormatted !== '7.2') {
-            console.error("[FAIL] Test 107 Failed: Innings 2 v2 projection totals mismatch:", proj.innings2);
+            console.error("[FAIL] Test 108 Failed: Innings 2 v2 projection totals mismatch:", proj.innings2);
             process.exit(1);
         }
         if (proj.innings2.extras.total !== 6 || proj.innings2.extras.wides !== 2 || proj.innings2.extras.noballs !== 1 || proj.innings2.extras.byes !== 3) {
-            console.error("[FAIL] Test 107 Failed: Innings 2 v2 extras reconciliation mismatch:", proj.innings2.extras);
+            console.error("[FAIL] Test 108 Failed: Innings 2 v2 extras reconciliation mismatch:", proj.innings2.extras);
             process.exit(1);
         }
         if (proj.innings2.batsmen["Head"]?.runs !== 34 || proj.innings2.batsmen["Head"]?.fours !== 4 || proj.innings2.batsmen["Head"]?.isOut || proj.innings2.batsmen["Marsh"]?.isOut || proj.innings2.bowlers["Starc"]?.balls !== 8 || proj.innings2.bowlers["Starc"]?.maidens !== 0 || proj.innings2.bowlers["Adjusted"]) {
-            console.error("[FAIL] Test 107 Failed: Innings 2 v2 batsmen/bowlers reconciliation mismatch (or active batters falsely marked out):", { batsmen: proj.innings2.batsmen, bowlers: proj.innings2.bowlers });
+            console.error("[FAIL] Test 108 Failed: Innings 2 v2 batsmen/bowlers reconciliation mismatch (or active batters falsely marked out):", { batsmen: proj.innings2.batsmen, bowlers: proj.innings2.bowlers });
             process.exit(1);
         }
         if (proj.innings2.fallOfWickets.length !== 0) {
-            console.error("[FAIL] Test 107 Failed: Synthetic innings with empty live.fow must yield empty fallOfWickets, got:", proj.innings2.fallOfWickets);
+            console.error("[FAIL] Test 108 Failed: Synthetic innings with empty live.fow must yield empty fallOfWickets, got:", proj.innings2.fallOfWickets);
             process.exit(1);
         }
         if (proj.innings1.partnerships.length !== 0 || proj.innings2.partnerships.length !== 0 || proj.innings2.currentPartnership !== null) {
-            console.error("[FAIL] Test 107 Failed: Synthetic jump innings must not retain fabricated partnerships:", {
+            console.error("[FAIL] Test 108 Failed: Synthetic jump innings must not retain fabricated partnerships:", {
                 p1: proj.innings1.partnerships,
                 p2: proj.innings2.partnerships,
                 cp2: proj.innings2.currentPartnership
@@ -5965,7 +6002,7 @@ console.log("Running Test 56...");
         const pSynZero = parseBallLog('~+10');
         const pSynWkt = parseBallLog('~2+W');
         if (pSyn4.runs !== 4 || pSyn4.wicket !== 0 || pSynZero.runs !== 10 || pSynZero.wicket !== 0 || pSynWkt.runs !== 2 || pSynWkt.wicket !== 1) {
-            console.error("[FAIL] Test 107 Failed: parseBallLog failed on synthetic '~' tokens:", { pSyn4, pSynZero, pSynWkt });
+            console.error("[FAIL] Test 108 Failed: parseBallLog failed on synthetic '~' tokens:", { pSyn4, pSynZero, pSynWkt });
             process.exit(1);
         }
 
@@ -5973,7 +6010,7 @@ console.log("Running Test 56...");
         const { renderWormChartSVG, renderPartnershipChartSVG } = await import('../src/v2/charts.js');
         const monoCard = formatMonospaceScorecard(proj.innings1, proj.innings2);
         if (monoCard.includes('NaN') || monoCard.includes('1st Wicket:') || monoCard.includes('1th Wicket:') || monoCard.includes('Partnerships:')) {
-            console.error("[FAIL] Test 107 Failed: formatMonospaceScorecard produced NaN or fabricated partnerships on synthetic match:\n", monoCard);
+            console.error("[FAIL] Test 108 Failed: formatMonospaceScorecard produced NaN or fabricated partnerships on synthetic match:\n", monoCard);
             process.exit(1);
         }
 
@@ -5998,15 +6035,15 @@ console.log("Running Test 56...");
             { wicketNumber: 1, player1Name: 'Head <svg onload=1>', player1Runs: 40, player1Balls: 12, player2Name: 'Marsh & Co', player2Runs: 15, player2Balls: 10, totalRuns: 25, totalBalls: 22, unbroken: true }
         ]);
         if (escapedPship.includes('width="-')) {
-            console.error("[FAIL] Test 107 Failed: renderPartnershipChartSVG produced negative rect width when player1Runs > totalRuns!");
+            console.error("[FAIL] Test 108 Failed: renderPartnershipChartSVG produced negative rect width when player1Runs > totalRuns!");
             process.exit(1);
         }
         if (summariesHtml.includes('NaN') || completedOversHtml.includes('NaN')) {
-            console.error("[FAIL] Test 107 Failed: UI summary or completed overs rendered NaN on synthetic '~' tokens!");
+            console.error("[FAIL] Test 108 Failed: UI summary or completed overs rendered NaN on synthetic '~' tokens!");
             process.exit(1);
         }
         if (summariesHtml.includes('<script>') || summariesHtml.includes('<img src=x') || escapedWorm.includes('<svg onload=') || escapedPship.includes('<svg onload=')) {
-            console.error("[FAIL] Test 107 Failed: Unescaped HTML/SVG injection found in rendered scorecard or charts!");
+            console.error("[FAIL] Test 108 Failed: Unescaped HTML/SVG injection found in rendered scorecard or charts!");
             process.exit(1);
         }
 
@@ -6019,7 +6056,7 @@ console.log("Running Test 56...");
         dispatch({ type: 'APPLY_GOD_MODE', payload: { batsman1Stats: { runs: 4, balls: 1, fours: 0, sixes: 0 }, currentBowlerStats: { runs: 4, balls: 1, wickets: 0, maidens: 1 } } });
         const nonSynProj = getProjectionsFromGameState(gameState);
         if (nonSynProj.innings1.batsmen["P1"]?.fours !== 0 || nonSynProj.innings1.bowlers["B1"]?.maidens !== 1) {
-            console.error("[FAIL] Test 107 Failed: Non-synthetic God Mode stat overrides not reflected in v2 projection:", nonSynProj.innings1);
+            console.error("[FAIL] Test 108 Failed: Non-synthetic God Mode stat overrides not reflected in v2 projection:", nonSynProj.innings1);
             process.exit(1);
         }
 
@@ -6038,7 +6075,7 @@ console.log("Running Test 56...");
         });
         const tiedProj = getProjectionsFromGameState(gameState);
         if (tiedProj.innings2?.equation !== 'Match Tied!') {
-            console.error(`[FAIL] Test 107 Failed: Tied chase in MATCH_OVER must report equation 'Match Tied!', got '${tiedProj.innings2?.equation}'`);
+            console.error(`[FAIL] Test 108 Failed: Tied chase in MATCH_OVER must report equation 'Match Tied!', got '${tiedProj.innings2?.equation}'`);
             process.exit(1);
         }
 
@@ -6046,24 +6083,24 @@ console.log("Running Test 56...");
         const pollutedMin = JSON.parse('{"ph":"PLAYING_INNINGS","m":{"ci":1,"cbt":1,"li":{"sc":5,"w":0,"b":1,"bat":{"__proto__":{"r":99,"b":1,"a":1},"Safe":{"r":5,"b":1,"a":1}},"bowl":{"constructor":{"r":5,"b":1,"wk":0}}}}}');
         const cleanedUnmin = unminifyState(pollutedMin);
         if (({} as any).runs !== undefined || Object.prototype.hasOwnProperty.call(cleanedUnmin.match.liveInnings.batsmen, '__proto__') || Object.prototype.hasOwnProperty.call(cleanedUnmin.match.liveInnings.bowlers, 'constructor')) {
-            console.error("[FAIL] Test 107 Failed: unminifyState failed to strip unsafe prototype keys!");
+            console.error("[FAIL] Test 108 Failed: unminifyState failed to strip unsafe prototype keys!");
             process.exit(1);
         }
         const breaches = findConsecutiveOverBreaches(gameState.match.liveInnings.overs, Object.keys(gameState.match.liveInnings.bowlers));
         if (breaches.length !== 0 || !proj.innings2.consecutiveOverBreaches || proj.innings2.consecutiveOverBreaches.length !== 0) {
-            console.error("[FAIL] Test 107 Failed: Synthetic 'Adjusted' overs caused false Clause 12/13 breaches:", breaches, proj.innings2.consecutiveOverBreaches);
+            console.error("[FAIL] Test 108 Failed: Synthetic 'Adjusted' overs caused false Clause 12/13 breaches:", breaches, proj.innings2.consecutiveOverBreaches);
             process.exit(1);
         }
         const worm1Last = proj.wormData.innings1[proj.wormData.innings1.length - 1];
         const worm2Last = proj.wormData.innings2[proj.wormData.innings2.length - 1];
         if (!worm1Last || worm1Last.score !== 119 || !worm2Last || worm2Last.score !== 67 || worm2Last.ballIndex !== 44) {
-            console.error("[FAIL] Test 107 Failed: Worm chart trajectory mismatch:", { worm1Last, worm2Last });
+            console.error("[FAIL] Test 108 Failed: Worm chart trajectory mismatch:", { worm1Last, worm2Last });
             process.exit(1);
         }
         const manhattan1Sum = proj.manhattan1.reduce((s, b) => s + b.runs, 0);
         const manhattan2Sum = proj.manhattan2.reduce((s, b) => s + b.runs, 0);
         if (manhattan1Sum !== 119 || manhattan2Sum !== 67) {
-            console.error(`[FAIL] Test 107 Failed: Manhattan bar sums mismatch (expected 119 and 67, got ${manhattan1Sum} and ${manhattan2Sum})`);
+            console.error(`[FAIL] Test 108 Failed: Manhattan bar sums mismatch (expected 119 and 67, got ${manhattan1Sum} and ${manhattan2Sum})`);
             process.exit(1);
         }
 
@@ -6081,7 +6118,7 @@ console.log("Running Test 56...");
         });
         const projInngs1Over = getProjectionsFromGameState(gameState);
         if (projInngs1Over.innings1.totalScore !== 45 || projInngs1Over.innings2 !== null) {
-            console.error("[FAIL] Test 107 Failed: MATCH_OVER in Innings 1 must yield innings2 === null, got:", projInngs1Over.innings2);
+            console.error("[FAIL] Test 108 Failed: MATCH_OVER in Innings 1 must yield innings2 === null, got:", projInngs1Over.innings2);
             process.exit(1);
         }
 
@@ -6117,7 +6154,7 @@ console.log("Running Test 56...");
             zeroWktProj.innings1.currentPartnership.totalBalls !== 12 ||
             !zeroWktProj.innings1.currentPartnership.unbroken
         ) {
-            console.error("[FAIL] Test 107 Failed: 0-wicket synthetic jump failed to reconcile unbroken 1st-wicket currentPartnership:", zeroWktProj.innings1.currentPartnership);
+            console.error("[FAIL] Test 108 Failed: 0-wicket synthetic jump failed to reconcile unbroken 1st-wicket currentPartnership:", zeroWktProj.innings1.currentPartnership);
             process.exit(1);
         }
 
@@ -6150,10 +6187,844 @@ console.log("Running Test 56...");
             mixedWktProj.innings1.partnerships[0].totalRuns !== 4 ||
             mixedWktProj.innings1.currentPartnership !== null
         ) {
-            console.error("[FAIL] Test 107 Failed: Genuine wicket before synthetic jump failed to preserve 1 genuine partnership and slice synthetic ones:", {
+            console.error("[FAIL] Test 108 Failed: Genuine wicket before synthetic jump failed to preserve 1 genuine partnership and slice synthetic ones:", {
                 partnerships: mixedWktProj.innings1.partnerships,
                 currentPartnership: mixedWktProj.innings1.currentPartnership
             });
+            process.exit(1);
+        }
+    }
+
+    // =========================================================================
+    // Test 109: Modal Hydration, Zero-Edit Lossless Apply, Swap Strike, Player Rename Guards & Stale DOM Clearing
+    // =========================================================================
+    console.log("Running Test 109 (God Mode UI: Hydration, Over-Break Apply, Strike Labels, Player Rename Guards & Roster XSS Escaping)...");
+    {
+        if (
+            typeof openGodModeModal !== 'function' ||
+            typeof applyGodModeModal !== 'function' ||
+            typeof swapGodModeStrike !== 'function' ||
+            typeof handleGodModeBowlerInput !== 'function' ||
+            typeof handleGodModeBatterInput !== 'function' ||
+            typeof handleGodModeInningsChange !== 'function' ||
+            typeof handleGodModePhaseOrInningsChange !== 'function' ||
+            typeof syncGodModeVisibility !== 'function'
+        ) {
+            console.error("[FAIL] Test 109 Failed: God Mode UI functions (openGodModeModal, applyGodModeModal, swapGodModeStrike, handleGodModeBowlerInput, handleGodModeBatterInput, handleGodModeInningsChange, handleGodModePhaseOrInningsChange, syncGodModeVisibility) must be exported from src/god_mode.ts");
+            process.exit(1);
+        }
+
+        setLiveStorageProvider(new MemoryStorageProvider());
+
+        // 1. Hydrate #godModeModal during PLAYING_INNINGS (42/2 in 4.2 overs = 26 balls) and submit with zero changes
+        resetTestState();
+        stopLiveSync();
+        gameState.settings = {
+            totalInnings: 1,
+            oversPerInnings: 8,
+            maxOversPerBowler: 2,
+            widePenalty: 1,
+            noBallPenalty: 1,
+            allowSingleBatsman: false,
+            theme: 'light',
+            enableLegByes: true
+        };
+        gameState.match = {
+            currentInnings: 1,
+            currentBattingTeam: 1,
+            team1: { name: "Mumbai", players: ["Rohit", "Ishan", "Surya", "Tilak", "Hardik"], innings: [] },
+            team2: { name: "Chennai", players: ["Chahar", "Jadeja", "Pathirana", "Deshpande"], innings: [] },
+            liveInnings: {
+                score: 42,
+                wickets: 2,
+                balls: 26,
+                extras: { wides: 1, noballs: 1, byes: 1, legbyes: 0 },
+                batsmen: {
+                    "Rohit": { runs: 14, balls: 8, fours: 2, sixes: 1, active: false },
+                    "Ishan": { runs: 9, balls: 6, fours: 1, sixes: 0, active: false },
+                    "Surya": { runs: 11, balls: 7, fours: 1, sixes: 1, active: true },
+                    "Tilak": { runs: 5, balls: 5, fours: 0, sixes: 0, active: false }
+                },
+                bowlers: {
+                    "Chahar": { runs: 12, balls: 12, wickets: 1, maidens: 1, wides: 0, noballs: 0 },
+                    "Jadeja": { runs: 17, balls: 12, wickets: 1, maidens: 0, wides: 1, noballs: 0 },
+                    "Pathirana": { runs: 12, balls: 2, wickets: 0, maidens: 0, wides: 0, noballs: 1 }
+                },
+                currentBatsman1: "Surya",
+                currentBatsman2: "Tilak",
+                currentBowler: "Pathirana",
+                previousBowler: "Jadeja",
+                outBatsmen: ["Rohit", "Ishan"],
+                overs: [
+                    { bowler: "Chahar", balls: ["0", "0", "0", "0", "0", "0"] },
+                    { bowler: "Jadeja", balls: ["4", "4", "1", "wd", "2", "0", "0"] },
+                    { bowler: "Chahar", balls: ["6", "4", "1", "1", "0", "W"] },
+                    { bowler: "Jadeja", balls: ["2", "W", "1b", "1", "1", "1"] }
+                ],
+                overLog: ["6", "nb", "5"],
+                fow: [
+                    { wicket: 1, score: 24, batsman: "Rohit", overs: "3.0" },
+                    { wicket: 2, score: 26, batsman: "Ishan", overs: "3.2" }
+                ]
+            },
+            target: null,
+            matchOver: false
+        };
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.matchStarted = true;
+        gameState.history = [];
+
+        const preZeroEditMatchJson = JSON.stringify(gameState.match);
+        openGodModeModal();
+
+        if (!elements['godModeModal']?.classList.contains('show')) {
+            console.error("[FAIL] Test 109 Failed: openGodModeModal() did not open #godModeModal");
+            process.exit(1);
+        }
+        if (
+            elements['gm-score']?.value !== '42' ||
+            elements['gm-wickets']?.value !== '2' ||
+            elements['gm-overs']?.value !== '4' ||
+            elements['gm-balls']?.value !== '2' ||
+            elements['gm-bat1-name']?.value !== 'Surya' ||
+            elements['gm-bat2-name']?.value !== 'Tilak' ||
+            elements['gm-bowler-name']?.value !== 'Pathirana' ||
+            !elements['gm-striker-1']?.checked ||
+            elements['gm-striker-2']?.checked ||
+            elements['gm-batting-team-opt-1']?.textContent !== 'Mumbai' ||
+            elements['gm-batting-team-opt-2']?.textContent !== 'Chennai' ||
+            elements['gm-striker-label-1']?.textContent !== '● Batter 1 [STRIKER]' ||
+            elements['gm-striker-label-2']?.textContent !== '○ Batter 2 [NON-STRIKER]'
+        ) {
+            console.error("[FAIL] Test 109 Failed: Hydration, batting-team option label, or striker pill label mismatch on PLAYING_INNINGS:", {
+                score: elements['gm-score']?.value,
+                wickets: elements['gm-wickets']?.value,
+                overs: elements['gm-overs']?.value,
+                balls: elements['gm-balls']?.value,
+                bat1: elements['gm-bat1-name']?.value,
+                bat2: elements['gm-bat2-name']?.value,
+                bowler: elements['gm-bowler-name']?.value,
+                s1: elements['gm-striker-1']?.checked,
+                s2: elements['gm-striker-2']?.checked,
+                opt1: elements['gm-batting-team-opt-1']?.textContent,
+                opt2: elements['gm-batting-team-opt-2']?.textContent,
+                lbl1: elements['gm-striker-label-1']?.textContent,
+                lbl2: elements['gm-striker-label-2']?.textContent
+            });
+            process.exit(1);
+        }
+
+        const zeroEditApplied = applyGodModeModal();
+        stopLiveSync();
+        if (zeroEditApplied !== true || elements['godModeModal']?.classList.contains('show')) {
+            console.error("[FAIL] Test 109 Failed: Zero-edit applyGodModeModal() must return true and close #godModeModal");
+            process.exit(1);
+        }
+        if (JSON.stringify(gameState.match) !== preZeroEditMatchJson) {
+            console.error("[FAIL] Test 109 Failed: Zero-edit applyGodModeModal() did not preserve prior batters, bowlers, outBatsmen, FOW, or overs losslessly.\nExpected:", preZeroEditMatchJson, "\nGot:", JSON.stringify(gameState.match));
+            process.exit(1);
+        }
+
+        // 2. Test swapGodModeStrike() toggling #gm-striker-1 / #gm-striker-2, dynamic [STRIKER]/[NON-STRIKER] labels, and applying activeStriker: 2
+        openGodModeModal();
+        swapGodModeStrike();
+        if (
+            elements['gm-striker-1']?.checked !== false ||
+            elements['gm-striker-2']?.checked !== true ||
+            elements['gm-striker-label-1']?.textContent !== '○ Batter 1 [NON-STRIKER]' ||
+            elements['gm-striker-label-2']?.textContent !== '● Batter 2 [STRIKER]'
+        ) {
+            console.error("[FAIL] Test 109 Failed: swapGodModeStrike() did not toggle strike and [STRIKER]/[NON-STRIKER] labels from Slot 1 to Slot 2:", {
+                lbl1: elements['gm-striker-label-1']?.textContent,
+                lbl2: elements['gm-striker-label-2']?.textContent
+            });
+            process.exit(1);
+        }
+        swapGodModeStrike();
+        if (
+            elements['gm-striker-1']?.checked !== true ||
+            elements['gm-striker-2']?.checked !== false ||
+            elements['gm-striker-label-1']?.textContent !== '● Batter 1 [STRIKER]' ||
+            elements['gm-striker-label-2']?.textContent !== '○ Batter 2 [NON-STRIKER]'
+        ) {
+            console.error("[FAIL] Test 109 Failed: swapGodModeStrike() did not toggle strike and labels back to Slot 1");
+            process.exit(1);
+        }
+        swapGodModeStrike();
+        const swapApplied = applyGodModeModal();
+        stopLiveSync();
+        if (!swapApplied || gameState.match.liveInnings.batsmen["Tilak"]?.active !== true || gameState.match.liveInnings.batsmen["Surya"]?.active !== false) {
+            console.error("[FAIL] Test 109 Failed: Applying swapped strike did not set activeStriker: 2 on Tilak:", gameState.match.liveInnings.batsmen);
+            process.exit(1);
+        }
+
+        // 3. Test handleGodModeBowlerInput() & handleGodModeBatterInput(1): new player zeroes stats, existing player restores recorded stats
+        openGodModeModal();
+        elements['gm-bowler-name'].value = 'Deshpande';
+        handleGodModeBowlerInput();
+        if (
+            elements['gm-bowler-balls']?.value !== '2' ||
+            elements['gm-bowler-runs']?.value !== '0' ||
+            elements['gm-bowler-wickets']?.value !== '0' ||
+            elements['gm-bowler-maidens']?.value !== '0'
+        ) {
+            console.error("[FAIL] Test 109 Failed: handleGodModeBowlerInput() for brand-new bowler at 4.2 overs must auto-fill balls='2', runs='0', wickets='0', maidens='0', got:", {
+                balls: elements['gm-bowler-balls']?.value,
+                runs: elements['gm-bowler-runs']?.value,
+                wickets: elements['gm-bowler-wickets']?.value,
+                maidens: elements['gm-bowler-maidens']?.value
+            });
+            process.exit(1);
+        }
+
+        elements['gm-bowler-name'].value = 'Chahar';
+        handleGodModeBowlerInput();
+        if (
+            elements['gm-bowler-balls']?.value !== '12' ||
+            elements['gm-bowler-runs']?.value !== '12' ||
+            elements['gm-bowler-wickets']?.value !== '1' ||
+            elements['gm-bowler-maidens']?.value !== '1'
+        ) {
+            console.error("[FAIL] Test 109 Failed: handleGodModeBowlerInput() for existing bowler Chahar did not restore recorded stats:", {
+                balls: elements['gm-bowler-balls']?.value,
+                runs: elements['gm-bowler-runs']?.value,
+                wickets: elements['gm-bowler-wickets']?.value,
+                maidens: elements['gm-bowler-maidens']?.value
+            });
+            process.exit(1);
+        }
+
+        elements['gm-bat1-name'].value = 'Hardik';
+        handleGodModeBatterInput(1);
+        if (
+            elements['gm-bat1-runs']?.value !== '0' ||
+            elements['gm-bat1-balls']?.value !== '0' ||
+            elements['gm-bat1-fours']?.value !== '0' ||
+            elements['gm-bat1-sixes']?.value !== '0'
+        ) {
+            console.error("[FAIL] Test 109 Failed: handleGodModeBatterInput(1) for new batter 'Hardik' must zero runs/balls/fours/sixes, got:", {
+                runs: elements['gm-bat1-runs']?.value,
+                balls: elements['gm-bat1-balls']?.value,
+                fours: elements['gm-bat1-fours']?.value,
+                sixes: elements['gm-bat1-sixes']?.value
+            });
+            process.exit(1);
+        }
+
+        elements['gm-bat1-name'].value = 'Rohit';
+        handleGodModeBatterInput(1);
+        if (
+            elements['gm-bat1-runs']?.value !== '14' ||
+            elements['gm-bat1-balls']?.value !== '8' ||
+            elements['gm-bat1-fours']?.value !== '2' ||
+            elements['gm-bat1-sixes']?.value !== '1'
+        ) {
+            console.error("[FAIL] Test 109 Failed: handleGodModeBatterInput(1) for existing batter 'Rohit' did not restore recorded stats");
+            process.exit(1);
+        }
+        closeModal('godModeModal');
+
+        // 4. Direct .value rename without firing 'input'/'change' must NOT copy outgoing batter/bowler stats onto incoming player
+        openGodModeModal();
+        elements['gm-bat1-name'].value = 'Hardik';
+        elements['gm-bowler-name'].value = 'Deshpande';
+        const directRenameApplied = applyGodModeModal();
+        stopLiveSync();
+        if (
+            directRenameApplied !== true ||
+            gameState.match.liveInnings.batsmen['Hardik']?.runs !== 0 ||
+            gameState.match.liveInnings.batsmen['Hardik']?.balls !== 0 ||
+            gameState.match.liveInnings.batsmen['Surya']?.runs !== 11 ||
+            gameState.match.liveInnings.bowlers['Deshpande']?.runs !== 0 ||
+            gameState.match.liveInnings.bowlers['Deshpande']?.balls !== 2
+        ) {
+            console.error("[FAIL] Test 109 Failed: Unhydrated direct .value rename copied outgoing player stats onto Hardik/Deshpande:", {
+                applied: directRenameApplied,
+                hardik: gameState.match.liveInnings.batsmen['Hardik'],
+                surya: gameState.match.liveInnings.batsmen['Surya'],
+                deshpande: gameState.match.liveInnings.bowlers['Deshpande']
+            });
+            process.exit(1);
+        }
+
+        // 5. Over-break 1.0 (PLAYING_INNINGS, currentBowler === "") and post-wicket (currentBatsman1 === "") must apply cleanly
+        gameState.match.liveInnings.balls = 6;
+        gameState.match.liveInnings.overs = [{ bowler: "Chahar", balls: ["0", "0", "0", "0", "0", "0"] }];
+        gameState.match.liveInnings.overLog = [];
+        gameState.match.liveInnings.currentBowler = "";
+        gameState.match.liveInnings.previousBowler = "Chahar";
+        openGodModeModal();
+        const overBreakApplied = applyGodModeModal();
+        stopLiveSync();
+        if (overBreakApplied !== true || gameState.phase !== 'PLAYING_INNINGS' || gameState.match.liveInnings.currentBowler !== "") {
+            console.error("[FAIL] Test 109 Failed: Over-break 1.0 (currentBowler === '') lossless applyGodModeModal() failed:", {
+                overBreakApplied,
+                phase: gameState.phase,
+                currentBowler: gameState.match.liveInnings.currentBowler
+            });
+            process.exit(1);
+        }
+
+        gameState.match.liveInnings.currentBatsman1 = "";
+        openGodModeModal();
+        const postWicketApplied = applyGodModeModal();
+        stopLiveSync();
+        if (postWicketApplied !== true || gameState.phase !== 'PLAYING_INNINGS' || gameState.match.liveInnings.currentBatsman1 !== "") {
+            console.error("[FAIL] Test 109 Failed: Post-wicket empty currentBatsman1 === '' applyGodModeModal() failed:", {
+                postWicketApplied,
+                currentBatsman1: gameState.match.liveInnings.currentBatsman1
+            });
+            process.exit(1);
+        }
+
+        // 6. Open #godModeModal in INNINGS_BREAK, test handleGodModeInningsChange() (1 <-> 2), MATCH_OVER, TOSS, and SETUP
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'INNINGS_BREAK', currentBatsman1: 'Hardik', outBatsmen: [], currentBowler: '' } });
+        openGodModeModal();
+        if (
+            elements['gm-phase']?.value !== 'INNINGS_BREAK' ||
+            elements['gm-bowler-name']?.value !== '' ||
+            elements['gm-bowler-balls']?.value !== '' ||
+            elements['gm-out-batsmen']?.value !== '' ||
+            elements['gm-inn1-score']?.value !== ''
+        ) {
+            console.error("[FAIL] Test 109 Failed: Stale optional fields leaked into INNINGS_BREAK hydration");
+            process.exit(1);
+        }
+
+        elements['gm-innings'].value = '2';
+        handleGodModeInningsChange();
+        if (
+            elements['gm-phase']?.value !== 'PLAYING_INNINGS' ||
+            elements['gm-batting-team']?.value !== '2' ||
+            elements['gm-inn1-score']?.value !== '42' ||
+            elements['gm-target']?.value !== '43' ||
+            elements['gm-score']?.value !== '0' ||
+            elements['gm-bat1-name']?.value !== '' ||
+            elements['gm-bowler-name']?.value !== ''
+        ) {
+            console.error("[FAIL] Test 109 Failed: handleGodModeInningsChange() (1 -> 2) failed to sync phase, batting team, inn1 summary, target, or live slots:", {
+                phase: elements['gm-phase']?.value,
+                batTeam: elements['gm-batting-team']?.value,
+                inn1Score: elements['gm-inn1-score']?.value,
+                target: elements['gm-target']?.value,
+                score: elements['gm-score']?.value,
+                bat1: elements['gm-bat1-name']?.value
+            });
+            process.exit(1);
+        }
+
+        elements['gm-innings'].value = '1';
+        handleGodModeInningsChange();
+        if (
+            elements['gm-phase']?.value !== 'INNINGS_BREAK' ||
+            elements['gm-batting-team']?.value !== '1' ||
+            elements['gm-score']?.value !== '42' ||
+            elements['gm-inn1-score']?.value !== ''
+        ) {
+            console.error("[FAIL] Test 109 Failed: handleGodModeInningsChange() (2 -> 1) failed to restore Innings 1 draft state:", {
+                phase: elements['gm-phase']?.value,
+                batTeam: elements['gm-batting-team']?.value,
+                score: elements['gm-score']?.value,
+                inn1Score: elements['gm-inn1-score']?.value
+            });
+            process.exit(1);
+        }
+        closeModal('godModeModal');
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 2,
+                currentBattingTeam: 2,
+                innings1Summary: { score: 42, wickets: 2, balls: 26 },
+                target: 43,
+                score: 44,
+                wickets: 1,
+                balls: 20,
+                currentBatsman1: 'Deshpande',
+                currentBatsman2: '',
+                currentBowler: 'Rohit',
+                targetPhase: 'MATCH_OVER'
+            }
+        });
+        openGodModeModal();
+        if (
+            elements['gm-phase']?.value !== 'MATCH_OVER' ||
+            elements['gm-bat2-name']?.value !== '' ||
+            elements['gm-bat2-runs']?.value !== '' ||
+            elements['gm-inn1-score']?.value !== '42'
+        ) {
+            console.error("[FAIL] Test 109 Failed: Hydration mismatch or leaked Slot 2 stats in MATCH_OVER");
+            process.exit(1);
+        }
+        closeModal('godModeModal');
+
+        // Apply TOSS via God Mode UI -> #settings-section remains visible and .flip-container stays hidden
+        openGodModeModal();
+        elements['gm-phase'].value = 'TOSS';
+        const tossApplied = applyGodModeModal();
+        stopLiveSync();
+        const flipContainerToss = document.querySelector('.flip-container') as any;
+        if (
+            tossApplied !== true ||
+            gameState.phase !== 'TOSS' ||
+            elements['settings-section']?.classList.contains('hidden') ||
+            !flipContainerToss?.classList.contains('hidden')
+        ) {
+            console.error("[FAIL] Test 109 Failed: Applying TOSS via God Mode must keep #settings-section visible and .flip-container hidden");
+            process.exit(1);
+        }
+        openGodModeModal();
+        if (elements['gm-phase']?.value !== 'TOSS' || elements['gm-bat1-name']?.value !== '' || elements['gm-bowler-name']?.value !== '') {
+            console.error("[FAIL] Test 109 Failed: Stale player fields leaked into TOSS hydration");
+            process.exit(1);
+        }
+        closeModal('godModeModal');
+
+        resetMatch();
+        openGodModeModal();
+        const optionalGmIds = [
+            'gm-target',
+            'gm-bat1-name', 'gm-bat1-runs', 'gm-bat1-balls', 'gm-bat1-fours', 'gm-bat1-sixes',
+            'gm-bat2-name', 'gm-bat2-runs', 'gm-bat2-balls', 'gm-bat2-fours', 'gm-bat2-sixes',
+            'gm-bowler-name', 'gm-bowler-runs', 'gm-bowler-balls', 'gm-bowler-wickets', 'gm-bowler-maidens',
+            'gm-prev-bowler', 'gm-out-batsmen',
+            'gm-inn1-score', 'gm-inn1-wickets', 'gm-inn1-overs', 'gm-inn1-balls'
+        ];
+        for (const optId of optionalGmIds) {
+            if (elements[optId]?.value !== '') {
+                console.error(`[FAIL] Test 109 Failed: Expected #${optId}.value === '' after resetMatch() (SETUP), got ${JSON.stringify(elements[optId]?.value)}`);
+                process.exit(1);
+            }
+        }
+
+        closeModal('godModeModal');
+
+        // Quick-jump from fresh empty SETUP -> PLAYING_INNINGS with blank player slots auto-pads & auto-selects players
+        gameState.match.team1.players = [];
+        gameState.match.team2.players = [];
+        openGodModeModal();
+        elements['gm-phase'].value = 'PLAYING_INNINGS';
+        elements['gm-score'].value = '18';
+        elements['gm-wickets'].value = '0';
+        elements['gm-overs'].value = '2';
+        elements['gm-balls'].value = '2';
+        const quickJumpApplied = applyGodModeModal();
+        stopLiveSync();
+        if (
+            quickJumpApplied !== true ||
+            gameState.phase !== 'PLAYING_INNINGS' ||
+            !gameState.match.liveInnings.currentBatsman1 ||
+            !gameState.match.liveInnings.currentBowler
+        ) {
+            console.error("[FAIL] Test 109 Failed: Quick-jump SETUP -> PLAYING_INNINGS with blank player slots failed to auto-select batters/bowler:", gameState.match.liveInnings);
+            process.exit(1);
+        }
+
+        // 7. Roster DOM XSS escaping in renderRosters() and handleBulkImport()
+        resetMatch();
+        if (elements['team1-roster-list']) elements['team1-roster-list'].children = [];
+        gameState.match.team1.players = ['Gamma <img src=x onerror=alert(1)>'];
+        renderRosters();
+        const rosterItemHtml = elements['team1-roster-list']?.appendedChildren?.[0]?.innerHTML || '';
+        if (!rosterItemHtml.includes('&lt;img') || rosterItemHtml.includes('<img src=x')) {
+            console.error("[FAIL] Test 109 Failed: renderRosters() failed to escape HTML in player name:", rosterItemHtml);
+            process.exit(1);
+        }
+
+        if (elements['team1-roster-list']) {
+            elements['team1-roster-list'].innerHTML = '';
+            elements['team1-roster-list'].children = [];
+        }
+        openBulkImportModal(1);
+        elements['bulk-import-textarea'].value = 'Delta <svg onload=alert(1)>';
+        handleBulkImport();
+        const bulkItemHtml = elements['team1-roster-list']?.appendedChildren?.[0]?.innerHTML || '';
+        if (!bulkItemHtml.includes('&lt;svg') || bulkItemHtml.includes('<svg onload=')) {
+            console.error("[FAIL] Test 109 Failed: handleBulkImport() failed to escape HTML in player name:", bulkItemHtml);
+            process.exit(1);
+        }
+    }
+
+    // =========================================================================
+    // Test 110: 4-Layer Spectator Security Lockout (CSS, Runtime DOM, Programmatic Guards & Mid-Edit Demotion)
+    // =========================================================================
+    console.log("Running Test 110 (God Mode UI: 4-Layer Spectator Security Lockout & Mid-Edit Demotion)...");
+    {
+        resetTestState();
+        stopLiveSync();
+        gameState.match.liveInnings.score = 24;
+
+        // Layer 1 & 2: Activate Spectator Session & run updateUI()
+        updateLiveSession({
+            matchId: 'm_spec_gm',
+            isLive: true,
+            role: 'SPECTATOR',
+            status: 'SYNCED',
+            seq: 1
+        });
+        updateUI();
+
+        if (
+            !elements['app-container']?.classList.contains('spectator-locked') ||
+            elements['god-mode-btn']?.disabled !== true ||
+            !elements['god-mode-btn']?.classList.contains('d-none')
+        ) {
+            console.error("[FAIL] Test 110 Failed: Spectator mode failed to lock #app-container or disable/hide #god-mode-btn:", {
+                spectatorLocked: elements['app-container']?.classList.contains('spectator-locked'),
+                btnDisabled: elements['god-mode-btn']?.disabled,
+                btnHidden: elements['god-mode-btn']?.classList.contains('d-none')
+            });
+            process.exit(1);
+        }
+
+        // Layer 3a: Programmatic openGodModeModal() blocked in Spectator Mode
+        openGodModeModal();
+        if (elements['godModeModal']?.classList.contains('show')) {
+            console.error("[FAIL] Test 110 Failed: openGodModeModal() must be blocked during Spectator Mode");
+            process.exit(1);
+        }
+
+        // Layer 3b: Programmatic applyGodModeModal() blocked in Spectator Mode without mutating state
+        elements['gm-score'].value = '999';
+        const spectatorApply = applyGodModeModal();
+        if (spectatorApply !== false || gameState.match.liveInnings.score !== 24) {
+            console.error(`[FAIL] Test 110 Failed: applyGodModeModal() must return false and preserve score=24 in Spectator Mode, got return=${spectatorApply}, score=${gameState.match.liveInnings.score}`);
+            process.exit(1);
+        }
+
+        // Layer 4: Switch to Umpire, open #godModeModal, then trigger demoteUmpireToSpectator()
+        updateLiveSession({
+            matchId: 'm_spec_gm',
+            isLive: true,
+            role: 'UMPIRE',
+            writeKey: 'wk_test_110',
+            umpireClientId: 'c_umpire_1',
+            status: 'SYNCED',
+            seq: 2
+        });
+        updateUI();
+
+        if (elements['god-mode-btn']?.disabled !== false || elements['god-mode-btn']?.classList.contains('d-none')) {
+            console.error("[FAIL] Test 110 Failed: Switching back to UMPIRE did not unlock #god-mode-btn");
+            process.exit(1);
+        }
+
+        openGodModeModal();
+        if (!elements['godModeModal']?.classList.contains('show')) {
+            console.error("[FAIL] Test 110 Failed: UMPIRE session failed to open #godModeModal");
+            process.exit(1);
+        }
+
+        const takeoverPacket = createLiveMatchPacket('m_spec_gm', 'wk_test_110', 3, gameState, Date.now());
+        takeoverPacket.umpireClientId = 'c_umpire_2_remote';
+        demoteUmpireToSpectator('m_spec_gm', takeoverPacket);
+
+        if (
+            elements['godModeModal']?.classList.contains('show') ||
+            elements['god-mode-btn']?.disabled !== true ||
+            !elements['god-mode-btn']?.classList.contains('d-none') ||
+            !elements['app-container']?.classList.contains('spectator-locked')
+        ) {
+            console.error("[FAIL] Test 110 Failed: Mid-edit umpire demotion did not close #godModeModal and lock #god-mode-btn:", {
+                modalShow: elements['godModeModal']?.classList.contains('show'),
+                btnDisabled: elements['god-mode-btn']?.disabled,
+                btnHidden: elements['god-mode-btn']?.classList.contains('d-none'),
+                spectatorLocked: elements['app-container']?.classList.contains('spectator-locked')
+            });
+            process.exit(1);
+        }
+
+        stopLiveSync();
+        updateLiveSession({
+            matchId: null,
+            isLive: false,
+            role: 'NONE',
+            status: 'DISCONNECTED',
+            seq: 0
+        });
+        updateUI();
+    }
+
+    // =========================================================================
+    // Test 111: Live Sync Auto-Start from SETUP & Immediate Non-Debounced Sync Flush
+    // =========================================================================
+    console.log("Running Test 111 (God Mode UI: Live Sync Auto-Start from SETUP & Immediate Sync Flush)...");
+    {
+        const mockLiveStore111 = new MemoryStorageProvider();
+        setLiveStorageProvider(mockLiveStore111);
+
+        resetMatch();
+        if (getLiveSession().isLive || gameState.phase !== 'SETUP') {
+            console.error("[FAIL] Test 111 Failed: Expected disconnected SETUP state after resetMatch()");
+            process.exit(1);
+        }
+
+        openGodModeModal();
+        elements['gm-phase'].value = 'PLAYING_INNINGS';
+        elements['gm-score'].value = '32';
+        elements['gm-wickets'].value = '1';
+        elements['gm-overs'].value = '3';
+        elements['gm-balls'].value = '2';
+        elements['gm-bat1-name'].value = 'Warner';
+        elements['gm-bat2-name'].value = 'Head';
+        elements['gm-bowler-name'].value = 'Bumrah';
+
+        const appliedFromSetup = applyGodModeModal();
+        if (appliedFromSetup !== true) {
+            console.error("[FAIL] Test 111 Failed: applyGodModeModal() from SETUP -> PLAYING_INNINGS returned false");
+            process.exit(1);
+        }
+
+        await new Promise(r => setTimeout(r, 25));
+
+        const session111 = getLiveSession();
+        const flipContainer111 = document.querySelector('.flip-container') as any;
+        if (
+            !session111.isLive ||
+            session111.role !== 'UMPIRE' ||
+            !session111.matchId ||
+            !elements['settings-section']?.classList.contains('hidden') ||
+            flipContainer111?.classList.contains('hidden')
+        ) {
+            console.error("[FAIL] Test 111 Failed: Applying God Mode from SETUP did not auto-initialize live UMPIRE session or transition layout:", {
+                session: session111,
+                settingsHidden: elements['settings-section']?.classList.contains('hidden'),
+                flipHidden: flipContainer111?.classList.contains('hidden')
+            });
+            process.exit(1);
+        }
+
+        const fetched1 = await mockLiveStore111.fetchPacket(session111.matchId);
+        if (!fetched1.success || !fetched1.packet) {
+            console.error("[FAIL] Test 111 Failed: Initial 32/1 God Mode packet was not persisted to MemoryStorageProvider");
+            process.exit(1);
+        }
+        const syncedState1 = unminifyState(fetched1.packet.state);
+        if (syncedState1.match.liveInnings.score !== 32 || syncedState1.match.liveInnings.wickets !== 1 || syncedState1.match.liveInnings.balls !== 20) {
+            console.error("[FAIL] Test 111 Failed: Persisted initial packet mismatch:", syncedState1.match.liveInnings);
+            process.exit(1);
+        }
+
+        const firstSeq = fetched1.packet.seq;
+
+        // Open God Mode again and update score to 48 -> must flush immediately without waiting 1500ms debounce
+        openGodModeModal();
+        elements['gm-score'].value = '48';
+        const appliedSecond = applyGodModeModal();
+        if (appliedSecond !== true) {
+            console.error("[FAIL] Test 111 Failed: Second applyGodModeModal() returned false");
+            process.exit(1);
+        }
+
+        await new Promise(r => setTimeout(r, 25));
+
+        const fetched2 = await mockLiveStore111.fetchPacket(session111.matchId);
+        if (!fetched2.success || !fetched2.packet || fetched2.packet.seq <= firstSeq) {
+            console.error(`[FAIL] Test 111 Failed: Expected immediate seq increment > ${firstSeq} without waiting for debounce, got:`, fetched2.packet?.seq);
+            process.exit(1);
+        }
+        const syncedState2 = unminifyState(fetched2.packet.state);
+        if (syncedState2.match.liveInnings.score !== 48) {
+            console.error(`[FAIL] Test 111 Failed: Expected immediate synced score 48, got ${syncedState2.match.liveInnings.score}`);
+            process.exit(1);
+        }
+
+        stopLiveSync();
+    }
+
+    // =========================================================================
+    // Test 112: Flipped Full Scorecard Refresh in MATCH_OVER & Reopening MATCH_OVER Unflips 3D Card
+    // =========================================================================
+    console.log("Running Test 112 (God Mode UI: Flipped Scorecard Refresh & Reopening MATCH_OVER Unflips 3D Card)...");
+    {
+        setLiveStorageProvider(new MemoryStorageProvider());
+        resetTestState();
+        stopLiveSync();
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 2,
+                currentBattingTeam: 2,
+                innings1Summary: { score: 49, wickets: 4, balls: 48 },
+                target: 50,
+                score: 52,
+                wickets: 2,
+                balls: 20,
+                currentBatsman1: 'B1',
+                currentBatsman2: 'B2',
+                currentBowler: 'P1',
+                targetPhase: 'MATCH_OVER'
+            }
+        });
+
+        const flipContainer112 = document.querySelector('.flip-container') as any;
+        flipContainer112.classList.add('flipped');
+        document.body.classList.add('screenshot-mode');
+        generateSummaryView();
+
+        // Edit score in MATCH_OVER while .flipped -> #innings-summaries must refresh immediately
+        const collectMockHtml = (el: any): string =>
+            String(el?.innerHTML || '') + String(el?.textContent || '') + (el?.appendedChildren || []).map(collectMockHtml).join('');
+        openGodModeModal();
+        elements['gm-score'].value = '55';
+        const updatedMatchOver = applyGodModeModal();
+        stopLiveSync();
+        const refreshedSummariesHtml = collectMockHtml(elements['innings-summaries']);
+        if (
+            updatedMatchOver !== true ||
+            !flipContainer112.classList.contains('flipped') ||
+            !refreshedSummariesHtml.includes('55/2')
+        ) {
+            console.error("[FAIL] Test 112 Failed: Editing MATCH_OVER while .flipped did not immediately refresh #innings-summaries:", refreshedSummariesHtml);
+            process.exit(1);
+        }
+
+        openGodModeModal();
+        elements['gm-phase'].value = 'PLAYING_INNINGS';
+        elements['gm-score'].value = '44';
+
+        const reopened = applyGodModeModal();
+        stopLiveSync();
+
+        if (
+            reopened !== true ||
+            gameState.phase !== 'PLAYING_INNINGS' ||
+            gameState.match.matchOver !== false ||
+            flipContainer112.classList.contains('flipped') ||
+            document.body.classList.contains('screenshot-mode')
+        ) {
+            console.error("[FAIL] Test 112 Failed: Reopening MATCH_OVER -> PLAYING_INNINGS failed to unflip 3D card or exit screenshot-mode:", {
+                reopened,
+                phase: gameState.phase,
+                matchOver: gameState.match.matchOver,
+                flipped: flipContainer112.classList.contains('flipped'),
+                screenshotMode: document.body.classList.contains('screenshot-mode')
+            });
+            process.exit(1);
+        }
+    }
+
+    // =========================================================================
+    // Test 113: Colorblind-Safe [ERROR] Banner, Input Validation, Modal Scroll Cleanup & < 500 Line Budget
+    // =========================================================================
+    console.log("Running Test 113 (God Mode UI: [ERROR] Banner, Input Validation, Modal Scroll Cleanup & < 500 Line Budget)...");
+    {
+        const fs113 = await import("fs");
+        const path113 = await import("path");
+
+        setLiveStorageProvider(new MemoryStorageProvider());
+        resetTestState();
+        stopLiveSync();
+
+        openGodModeModal();
+
+        // 1. Invalid #gm-balls = '7' (outside 0..5)
+        elements['gm-balls'].value = '7';
+        const resBalls = applyGodModeModal();
+        const errTextBalls = String(elements['gm-error-banner']?.textContent || '');
+        if (
+            resBalls !== false ||
+            !elements['godModeModal']?.classList.contains('show') ||
+            elements['gm-error-banner']?.classList.contains('d-none') ||
+            !errTextBalls.startsWith('[ERROR]')
+        ) {
+            console.error("[FAIL] Test 113 Failed: Invalid #gm-balls='7' must return false, keep modal open, and show [ERROR] banner:", {
+                resBalls,
+                modalShow: elements['godModeModal']?.classList.contains('show'),
+                errHidden: elements['gm-error-banner']?.classList.contains('d-none'),
+                errTextBalls
+            });
+            process.exit(1);
+        }
+
+        // 2. Fix #gm-balls = '2', set duplicate active batters
+        elements['gm-balls'].value = '2';
+        elements['gm-bat1-name'].value = 'Same';
+        elements['gm-bat2-name'].value = 'Same';
+        const resDup = applyGodModeModal();
+        const errTextDup = String(elements['gm-error-banner']?.textContent || '');
+        if (
+            resDup !== false ||
+            !elements['godModeModal']?.classList.contains('show') ||
+            elements['gm-error-banner']?.classList.contains('d-none') ||
+            !errTextDup.startsWith('[ERROR]')
+        ) {
+            console.error("[FAIL] Test 113 Failed: Duplicate active batters must return false and show [ERROR] banner:", {
+                resDup,
+                errTextDup
+            });
+            process.exit(1);
+        }
+
+        // 3. Negative numeric input rejected before clamping
+        elements['gm-bat2-name'].value = 'Other';
+        elements['gm-score'].value = '-4';
+        const resNeg = applyGodModeModal();
+        const errTextNeg = String(elements['gm-error-banner']?.textContent || '');
+        if (resNeg !== false || elements['gm-error-banner']?.classList.contains('d-none') || !errTextNeg.startsWith('[ERROR]')) {
+            console.error("[FAIL] Test 113 Failed: Negative numeric input must return false and show [ERROR] banner");
+            process.exit(1);
+        }
+
+        // 4. Valid submission closes modal and clears modal-open scroll lock
+        elements['gm-score'].value = '15';
+        const resFixed = applyGodModeModal();
+        stopLiveSync();
+        if (
+            resFixed !== true ||
+            elements['godModeModal']?.classList.contains('show') ||
+            document.body.classList.contains('modal-open')
+        ) {
+            console.error("[FAIL] Test 113 Failed: Valid applyGodModeModal() must return true, close modal, and release body.modal-open:", {
+                resFixed,
+                modalShow: elements['godModeModal']?.classList.contains('show'),
+                modalOpen: document.body.classList.contains('modal-open')
+            });
+            process.exit(1);
+        }
+
+        // 5. Verify HTML, CSS, and < 500 line budget invariants
+        const html113 = fs113.readFileSync(path113.resolve(process.cwd(), "index.html"), "utf8");
+        if (
+            !html113.includes('id="god-mode-btn"') ||
+            !html113.includes('id="godModeModal"') ||
+            !html113.includes('id="gm-error-banner"') ||
+            !html113.includes('role="alert"') ||
+            !html113.includes('for="gm-score"') ||
+            !html113.includes('id="gm-batting-datalist"') ||
+            !html113.includes('id="gm-bowling-datalist"') ||
+            !html113.includes('id="gm-striker-label-1"') ||
+            !html113.includes('id="gm-striker-label-2"') ||
+            !html113.includes('id="gm-batting-team-opt-1"') ||
+            !html113.includes('id="gm-batting-team-opt-2"')
+        ) {
+            console.error("[FAIL] Test 113 Failed: index.html missing #god-mode-btn, #godModeModal, role='alert' #gm-error-banner, striker label IDs, batting team option IDs, or roster <datalist> elements");
+            process.exit(1);
+        }
+
+        const css113 = fs113.readFileSync(path113.resolve(process.cwd(), "src/style.css"), "utf8");
+        if (
+            !css113.includes('.spectator-locked #god-mode-btn') ||
+            !/#d55e00/i.test(css113) ||
+            !/\.gm-[^{]*\{[^}]*min-height:\s*48px/is.test(css113) ||
+            !css113.includes('#godModeModal .btn-close') ||
+            !css113.includes('.modal-dialog.modal-lg') ||
+            !css113.includes('.gm-modal-body')
+        ) {
+            console.error("[FAIL] Test 113 Failed: src/style.css missing .spectator-locked #god-mode-btn, #D55E00 error styling, 48px touch target rules (#godModeModal .btn-close), .modal-dialog.modal-lg, or .gm-modal-body");
+            process.exit(1);
+        }
+
+        const godModeTsPath = path113.resolve(process.cwd(), "src/god_mode.ts");
+        if (!fs113.existsSync(godModeTsPath)) {
+            console.error("[FAIL] Test 113 Failed: src/god_mode.ts does not exist");
+            process.exit(1);
+        }
+        const godModeLines = fs113.readFileSync(godModeTsPath, "utf8").replace(/\r?\n$/, "").split(/\r?\n/).length;
+        if (godModeLines >= 500) {
+            console.error(`[FAIL] Test 113 Failed: src/god_mode.ts must be < 500 lines, got ${godModeLines}`);
             process.exit(1);
         }
     }

@@ -1049,8 +1049,170 @@ button:disabled {
 }
 
 /* Spectator Mode Lockout */
-.spectator-locked .cric-keypad-console {
+.spectator-locked .cric-keypad-console,
+.spectator-locked #god-mode-btn,
+.spectator-locked #godModeModal {
     display: none !important;
+}
+
+/* Umpire God Mode Modal (Colorblind-Safe #0072B2 / #D55E00 & 48px Touch Targets) */
+.gm-nav-btn,
+.gm-touch-btn,
+.gm-input,
+.gm-striker-pill,
+.gm-check-label,
+.gm-details-summary,
+#godModeModal .btn-close {
+    min-height: 48px;
+}
+
+#godModeModal .btn-close {
+    min-width: 48px;
+}
+
+.gm-modal-body {
+    max-height: 75vh;
+    overflow-y: auto;
+}
+
+.gm-error-banner {
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    border-radius: var(--radius-xs);
+    border: 1px solid #D55E00;
+    border-left: 6px solid #D55E00;
+    background: rgba(213, 94, 0, 0.12);
+    color: #D55E00;
+    font-size: 0.84rem;
+    font-weight: 700;
+}
+
+.gm-section {
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-card);
+}
+
+.gm-section-title {
+    margin: 0 0 8px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--color-primary);
+}
+
+.gm-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.gm-grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gm-grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.gm-grid-5 {
+    grid-template-columns: 2fr repeat(4, minmax(0, 1fr));
+}
+
+.gm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.gm-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-card-subtle);
+    color: var(--text-main);
+    font-size: 0.88rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.gm-input:focus {
+    outline: 2px solid #0072B2;
+    border-color: #0072B2;
+}
+
+.gm-batter-card {
+    padding: 8px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xs);
+    background: var(--bg-card-subtle);
+}
+
+.gm-batter-header {
+    margin-bottom: 6px;
+}
+
+.gm-striker-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-card);
+    color: var(--text-main);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.gm-striker-pill.active,
+.gm-striker-pill:has(input:checked) {
+    border-color: #0072B2;
+    border-left: 6px solid #0072B2;
+    background: rgba(0, 114, 178, 0.12);
+    color: var(--color-primary);
+}
+
+.gm-checkbox-wrap {
+    justify-content: flex-end;
+}
+
+.gm-check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-xs);
+    background: var(--bg-card-subtle);
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.gm-details-summary {
+    display: flex;
+    align-items: center;
+    font-size: 0.84rem;
+    font-weight: 800;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+@media (max-width: 640px) {
+    .gm-grid-4,
+    .gm-grid-5 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .gm-span-name {
+        grid-column: 1 / -1;
+    }
+    .gm-grid-2 {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Completed Overs History */
@@ -1250,6 +1412,10 @@ button:disabled {
     max-width: 440px;
     margin: 1.75rem auto;
     pointer-events: none;
+}
+
+.modal-dialog.modal-lg {
+    max-width: 740px;
 }
 
 .cric-modal-card {

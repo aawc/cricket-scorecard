@@ -3,7 +3,7 @@
 **Application**: Cricket Scorecard PWA  
 **Version**: `v20260907-003`  
 **Repository**: `cricket-scorecard`  
-**Module**: [`src/feedback.ts`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L1)
+**Module**: [`src/feedback.ts`](../../src/feedback.ts#L1)
 
 ---
 
@@ -110,9 +110,9 @@ When a user pastes a bug report into the AI chat or GitHub issues:
 
 ## 5. Technical Implementation Details
 
-- [`src/feedback.ts:L20-L64`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L20-L64) (`recordRuntimeError`): In-memory ring buffer (up to 20 logs) capturing `window.addEventListener('error')` and `window.addEventListener('unhandledrejection')`.
-- [`src/feedback.ts:L106-L239`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L106-L239) (`generateBugReportMarkdown`): Constructs the markdown document with environment, match figures, Fall of Wickets, and reproduction JSON.
-- [`src/feedback.ts:L244-L275`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L244-L275) (`copyBugReportToClipboard`): Modern `navigator.clipboard` writer with fallback to `document.execCommand('copy')`.
-- [`src/feedback.ts:L280-L293`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/feedback.ts#L280-L293) (`getGitHubIssueUrl`): Encodes GitHub new issue URL with size bounds.
-- [`src/ui.ts:L1088-L1145`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/ui.ts#L1088-L1145): UI modal event wiring and real-time live preview update.
-- [`test/test_cases.ts:L1500-L1625`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/test/test_cases.ts#L1500-L1625): Unit tests 51, 52, and 53.
+- [`src/feedback.ts:L21-L65`](../../src/feedback.ts#L21-L65) (`recordRuntimeError`): In-memory ring buffer (up to 20 logs) capturing `window.addEventListener('error')` and `window.addEventListener('unhandledrejection')`.
+- [`src/feedback.ts:L107-L240`](../../src/feedback.ts#L107-L240) (`generateBugReportMarkdown`): Constructs the markdown document with environment, match figures, Fall of Wickets, and reproduction JSON.
+- [`src/feedback.ts:L245-L276`](../../src/feedback.ts#L245-L276) (`copyBugReportToClipboard`): Modern `navigator.clipboard` writer with fallback to `document.execCommand('copy')`.
+- [`src/feedback.ts:L281-L294`](../../src/feedback.ts#L281-L294) (`getGitHubIssueUrl`): Encodes GitHub new issue URL with size bounds.
+- [`src/ui.ts:L1744-L1795`](../../src/ui.ts#L1744-L1795): UI modal event wiring and real-time live preview update.
+- [`test/test_cases.ts:L1562-L1684`](../../test/test_cases.ts#L1562-L1684): Unit tests 51, 52, and 53.

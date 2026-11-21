@@ -35,6 +35,10 @@
                         <span class="pill-icon">➕</span>
                         <span class="pill-label">New Match</span>
                     </button>
+                    <button id="god-mode-btn" class="nav-pill-btn gm-nav-btn" type="button" title="Umpire God Mode — Override Match State">
+                        <span class="pill-icon" aria-hidden="true">⚡</span>
+                        <span class="pill-label">God Mode</span>
+                    </button>
                     <button id="wakelock-btn" class="nav-pill-btn" title="Keep screen awake (Screen Wake Lock)">
                         <span class="pill-icon">💡</span>
                         <span class="pill-label">Screen On</span>
@@ -634,6 +638,281 @@
                                     <button type="button" class="btn-cric-dialog secondary" data-bs-dismiss="modal">Close</button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Umpire God Mode Full-State Override Modal -->
+            <div class="modal fade" id="godModeModal" tabindex="-1" aria-labelledby="godModeModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+                    <div class="modal-content cric-modal-card gm-modal-card">
+                        <div class="modal-header cric-modal-head">
+                            <div class="d-flex align-items-center gap-2">
+                                <span aria-hidden="true">⚡</span>
+                                <h5 class="modal-title cric-modal-title" id="godModeModalLabel">Umpire God Mode — Match State Override</h5>
+                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body cric-modal-body gm-modal-body">
+                            <div id="gm-error-banner" class="gm-error-banner d-none" role="alert" aria-live="assertive"></div>
+                            <datalist id="gm-batting-datalist"></datalist>
+                            <datalist id="gm-bowling-datalist"></datalist>
+
+                            <section class="gm-section" aria-label="Match Phase and Innings">
+                                <h6 class="gm-section-title">Match Phase &amp; Innings</h6>
+                                <div class="gm-grid gm-grid-4">
+                                    <div class="gm-field">
+                                        <label for="gm-phase" class="cric-form-label">Target Phase</label>
+                                        <select id="gm-phase" class="gm-input">
+                                            <option value="AUTO">Auto-Detect</option>
+                                            <option value="SETUP">Setup (Pre-Match)</option>
+                                            <option value="TOSS">Toss</option>
+                                            <option value="PLAYING_INNINGS">Playing Innings</option>
+                                            <option value="INNINGS_BREAK">Innings Break</option>
+                                            <option value="MATCH_OVER">Match Over</option>
+                                        </select>
+                                    </div>
+                                    <div class="gm-field">
+                                        <label for="gm-innings" class="cric-form-label">Innings</label>
+                                        <select id="gm-innings" class="gm-input">
+                                            <option value="1">1st Innings</option>
+                                            <option value="2">2nd Innings</option>
+                                        </select>
+                                    </div>
+                                    <div class="gm-field">
+                                        <label for="gm-batting-team" class="cric-form-label">Batting Side</label>
+                                        <select id="gm-batting-team" class="gm-input">
+                                            <option id="gm-batting-team-opt-1" value="1">Team 1</option>
+                                            <option id="gm-batting-team-opt-2" value="2">Team 2</option>
+                                        </select>
+                                    </div>
+                                    <div id="gm-target-wrap" class="gm-field d-none">
+                                        <label for="gm-target" class="cric-form-label">Target Score</label>
+                                        <input id="gm-target" type="number" min="1" step="1" inputmode="numeric" class="gm-input" placeholder="Auto (Inn1 + 1)" />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <div id="gm-live-section">
+                                <section class="gm-section" aria-label="Scoreboard and Extras">
+                                    <h6 class="gm-section-title">Live Scoreboard &amp; Extras</h6>
+                                    <div class="gm-grid gm-grid-4">
+                                        <div class="gm-field">
+                                            <label for="gm-score" class="cric-form-label">Total Runs</label>
+                                            <input id="gm-score" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-wickets" class="cric-form-label">Wickets</label>
+                                            <input id="gm-wickets" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-overs" class="cric-form-label">Completed Overs</label>
+                                            <input id="gm-overs" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-balls" class="cric-form-label">Balls in Over (0–5)</label>
+                                            <input id="gm-balls" type="number" min="0" max="5" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                    </div>
+                                    <div class="gm-grid gm-grid-4 mt-2">
+                                        <div class="gm-field">
+                                            <label for="gm-wides" class="cric-form-label">Wides</label>
+                                            <input id="gm-wides" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-noballs" class="cric-form-label">No-Balls</label>
+                                            <input id="gm-noballs" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-byes" class="cric-form-label">Byes</label>
+                                            <input id="gm-byes" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-legbyes" class="cric-form-label">Leg-Byes</label>
+                                            <input id="gm-legbyes" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="gm-section" aria-label="Active Batters and Striker">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                        <h6 class="gm-section-title mb-0">Active Batters &amp; Strike</h6>
+                                        <button type="button" id="gm-swap-strike-btn" class="btn-cric-dialog secondary gm-touch-btn">
+                                            ⇄ Swap Strike
+                                        </button>
+                                    </div>
+                                    <div class="gm-batter-card mb-2">
+                                        <div class="gm-batter-header">
+                                            <label id="gm-striker-pill-1" for="gm-striker-1" class="gm-striker-pill active">
+                                                <input id="gm-striker-1" type="radio" name="gm-striker" value="1" checked />
+                                                <span id="gm-striker-label-1">● Batter 1 [STRIKER]</span>
+                                            </label>
+                                        </div>
+                                        <div class="gm-grid gm-grid-5">
+                                            <div class="gm-field gm-span-name">
+                                                <label for="gm-bat1-name" class="cric-form-label">Batter 1 Name</label>
+                                                <input id="gm-bat1-name" type="text" list="gm-batting-datalist" class="gm-input" placeholder="Select or type batter" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat1-runs" class="cric-form-label">Runs</label>
+                                                <input id="gm-bat1-runs" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat1-balls" class="cric-form-label">Balls</label>
+                                                <input id="gm-bat1-balls" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat1-fours" class="cric-form-label">4s</label>
+                                                <input id="gm-bat1-fours" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat1-sixes" class="cric-form-label">6s</label>
+                                                <input id="gm-bat1-sixes" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="gm-batter-card">
+                                        <div class="gm-batter-header">
+                                            <label id="gm-striker-pill-2" for="gm-striker-2" class="gm-striker-pill">
+                                                <input id="gm-striker-2" type="radio" name="gm-striker" value="2" />
+                                                <span id="gm-striker-label-2">○ Batter 2 [NON-STRIKER]</span>
+                                            </label>
+                                        </div>
+                                        <div class="gm-grid gm-grid-5">
+                                            <div class="gm-field gm-span-name">
+                                                <label for="gm-bat2-name" class="cric-form-label">Batter 2 Name</label>
+                                                <input id="gm-bat2-name" type="text" list="gm-batting-datalist" class="gm-input" placeholder="Non-striker (optional if solo)" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat2-runs" class="cric-form-label">Runs</label>
+                                                <input id="gm-bat2-runs" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat2-balls" class="cric-form-label">Balls</label>
+                                                <input id="gm-bat2-balls" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat2-fours" class="cric-form-label">4s</label>
+                                                <input id="gm-bat2-fours" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                            <div class="gm-field">
+                                                <label for="gm-bat2-sixes" class="cric-form-label">6s</label>
+                                                <input id="gm-bat2-sixes" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="gm-section" aria-label="Bowling and Dismissals">
+                                    <h6 class="gm-section-title">Current Bowler &amp; Dismissed Batters</h6>
+                                    <div class="gm-grid gm-grid-5">
+                                        <div class="gm-field gm-span-name">
+                                            <label for="gm-bowler-name" class="cric-form-label">Current Bowler</label>
+                                            <input id="gm-bowler-name" type="text" list="gm-bowling-datalist" class="gm-input" placeholder="Select or type bowler" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-bowler-runs" class="cric-form-label">Runs</label>
+                                            <input id="gm-bowler-runs" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-bowler-balls" class="cric-form-label">Legal Balls</label>
+                                            <input id="gm-bowler-balls" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-bowler-wickets" class="cric-form-label">Wickets</label>
+                                            <input id="gm-bowler-wickets" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-bowler-maidens" class="cric-form-label">Maidens</label>
+                                            <input id="gm-bowler-maidens" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                    </div>
+                                    <div class="gm-grid gm-grid-2 mt-2">
+                                        <div class="gm-field">
+                                            <label for="gm-prev-bowler" class="cric-form-label">Previous Over Bowler (Clause 12/13)</label>
+                                            <input id="gm-prev-bowler" type="text" list="gm-bowling-datalist" class="gm-input" placeholder="Optional previous bowler" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-out-batsmen" class="cric-form-label">Dismissed Batters (comma-separated)</label>
+                                            <input id="gm-out-batsmen" type="text" class="gm-input" placeholder="e.g. Rohit, Ishan" />
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            <section id="gm-innings1-section" class="gm-section d-none" aria-label="First Innings Summary">
+                                <h6 class="gm-section-title">1st Innings Summary (Archived Score)</h6>
+                                <div class="gm-grid gm-grid-4">
+                                    <div class="gm-field">
+                                        <label for="gm-inn1-score" class="cric-form-label">1st Inn Runs</label>
+                                        <input id="gm-inn1-score" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                    </div>
+                                    <div class="gm-field">
+                                        <label for="gm-inn1-wickets" class="cric-form-label">1st Inn Wickets</label>
+                                        <input id="gm-inn1-wickets" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                    </div>
+                                    <div class="gm-field">
+                                        <label for="gm-inn1-overs" class="cric-form-label">1st Inn Overs</label>
+                                        <input id="gm-inn1-overs" type="number" min="0" step="1" inputmode="numeric" class="gm-input" />
+                                    </div>
+                                    <div class="gm-field">
+                                        <label for="gm-inn1-balls" class="cric-form-label">1st Inn Balls (0–5)</label>
+                                        <input id="gm-inn1-balls" type="number" min="0" max="5" step="1" inputmode="numeric" class="gm-input" />
+                                    </div>
+                                </div>
+                            </section>
+
+                            <details id="gm-rules-details" class="gm-section gm-details">
+                                <summary class="gm-details-summary">Match Rules &amp; Team Rosters</summary>
+                                <div class="gm-details-body pt-2">
+                                    <div class="gm-grid gm-grid-4">
+                                        <div class="gm-field">
+                                            <label for="gm-overs-per-innings" class="cric-form-label">Overs / Innings</label>
+                                            <input id="gm-overs-per-innings" type="number" min="1" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-max-overs-per-bowler" class="cric-form-label">Max Overs / Bowler</label>
+                                            <input id="gm-max-overs-per-bowler" type="number" min="1" step="1" inputmode="numeric" class="gm-input" />
+                                        </div>
+                                        <div class="gm-field gm-checkbox-wrap">
+                                            <label for="gm-allow-single-batsman" class="gm-check-label">
+                                                <input id="gm-allow-single-batsman" type="checkbox" />
+                                                <span>Allow Single Batsman</span>
+                                            </label>
+                                        </div>
+                                        <div class="gm-field gm-checkbox-wrap">
+                                            <label for="gm-enable-legbyes" class="gm-check-label">
+                                                <input id="gm-enable-legbyes" type="checkbox" />
+                                                <span>Enable Leg-Byes</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="gm-grid gm-grid-2 mt-2">
+                                        <div class="gm-field">
+                                            <label for="gm-team1-name" class="cric-form-label">Team 1 Name</label>
+                                            <input id="gm-team1-name" type="text" class="gm-input mb-2" />
+                                            <label for="gm-team1-players" class="cric-form-label">Team 1 Roster (one per line)</label>
+                                            <textarea id="gm-team1-players" rows="4" class="cric-textarea"></textarea>
+                                        </div>
+                                        <div class="gm-field">
+                                            <label for="gm-team2-name" class="cric-form-label">Team 2 Name</label>
+                                            <input id="gm-team2-name" type="text" class="gm-input mb-2" />
+                                            <label for="gm-team2-players" class="cric-form-label">Team 2 Roster (one per line)</label>
+                                            <textarea id="gm-team2-players" rows="4" class="cric-textarea"></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
+                        <div class="modal-footer cric-modal-foot d-flex justify-content-between gap-2">
+                            <button type="button" id="gm-cancel-btn" class="btn-cric-dialog secondary gm-touch-btn" data-bs-dismiss="modal">
+                                Cancel
+                            </button>
+                            <button type="button" id="gm-apply-btn" class="btn-cric-dialog primary gm-touch-btn">
+                                ⚡ Apply Override
+                            </button>
                         </div>
                     </div>
                 </div>
