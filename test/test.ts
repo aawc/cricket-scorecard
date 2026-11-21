@@ -320,6 +320,13 @@ async function loadModulesAndRun() {
     (global as any).openReleaseNotesModal = releaseNotesMod.openReleaseNotesModal;
     (global as any).initReleaseNotesModal = releaseNotesMod.initReleaseNotesModal;
 
+    // Umpire God Mode & synthetic over-log reconciliation globals
+    const reducerMod: any = await import('../src/reducer.js');
+    const rulesMod: any = await import('../src/rules.js');
+    (global as any).buildGodModeDraftFromState = reducerMod.buildGodModeDraftFromState;
+    (global as any).validateGodModePayload = reducerMod.validateGodModePayload;
+    (global as any).parseSyntheticDeliveryToken = rulesMod.parseSyntheticDeliveryToken;
+
     // Run tests - dynamic import for ESM compatibility
     await import('./test_cases.js');
 }

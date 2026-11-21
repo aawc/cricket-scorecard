@@ -131,7 +131,8 @@ export type Action =
   | { type: 'CHANGE_BOWLER'; payload: { name: string } }
   | { type: 'START_NEXT_INNINGS' }
   | { type: 'UNDO' }
-  | { type: 'RESET_MATCH' };
+  | { type: 'RESET_MATCH' }
+  | { type: 'APPLY_GOD_MODE'; payload: GodModeState };
 
 export interface CompletedMatchRecord {
   id: string;
@@ -147,6 +148,58 @@ export interface CompletedMatchRecord {
     wickets2: number;
   };
   state: any;
+}
+
+export interface GodModeInningsSummary {
+  score: number;
+  wickets: number;
+  balls: number;
+  extras?: Partial<Extras>;
+  batsmen?: Record<string, BatsmanStats>;
+  bowlers?: Record<string, BowlerStats>;
+  currentBatsman1?: string | null;
+  currentBatsman2?: string | null;
+  currentBowler?: string | null;
+  previousBowler?: string | null;
+  outBatsmen?: string[];
+  overs?: Array<{ bowler: string; balls: string[] }>;
+  overLog?: string[];
+  fow?: FallOfWicket[];
+}
+
+export interface GodModeState {
+  oversPerInnings?: number;
+  maxOversPerBowler?: number;
+  allowSingleBatsman?: boolean;
+  enableLegByes?: boolean;
+  team1Name?: string;
+  team2Name?: string;
+  team1Players?: string[];
+  team2Players?: string[];
+  phase?: MatchPhase;
+  targetPhase?: MatchPhase | 'AUTO';
+  currentInnings?: 1 | 2;
+  currentBattingTeam?: 1 | 2;
+  target?: number | null;
+  innings1Summary?: GodModeInningsSummary | null;
+  score?: number;
+  wickets?: number;
+  balls?: number;
+  overs?: number;
+  ballsInOver?: number;
+  extras?: Partial<Extras>;
+  currentBatsman1?: string | null;
+  batsman1Stats?: Partial<Omit<BatsmanStats, 'active'>>;
+  currentBatsman2?: string | null;
+  batsman2Stats?: Partial<Omit<BatsmanStats, 'active'>>;
+  activeStriker?: 1 | 2;
+  outBatsmen?: string[];
+  fow?: FallOfWicket[];
+  currentBowler?: string | null;
+  currentBowlerStats?: Partial<BowlerStats>;
+  previousBowler?: string | null;
+  batsmenOverrides?: Record<string, Partial<BatsmanStats>>;
+  bowlersOverrides?: Record<string, Partial<BowlerStats>>;
 }
 
 // Global type overrides for CDN loaded libraries

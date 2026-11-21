@@ -132,3 +132,102 @@ export function findConsecutiveOverBreaches(
     return breaches;
 }
 
+export interface SyntheticDeliveryParsed {
+    isSynthetic: true;
+    isLegal: boolean;
+    runs: number;
+    isWicket: boolean;
+}
+
+/**
+ * Parses synthetic over-log tokens emitted by Umpire God Mode reconciliation:
+ *   '~0' / '~N'     => legal synthetic delivery scoring N runs (0 wickets)
+ *   '~W'            => legal synthetic wicket delivery (0 runs)
+ *   '~N+W'          => legal synthetic delivery scoring N runs with a wicket
+ *   '~+N'           => non-legal zero-ball run adjustment (balls === 0 && score > 0)
+ *   '~+W' / '~+N+W' => non-legal zero-ball wicket/run adjustment
+ * Returns null for genuine delivery tokens or malformed strings.
+ */
+export function parseSyntheticDeliveryToken(token: string): SyntheticDeliveryParsed | null {
+    if (typeof token !== 'string') return null;
+    const norm = token.trim();
+    if (!norm.startsWith('~')) return null;
+
+    if (norm === '~W') {
+        return { isSynthetic: true, isLegal: true, runs: 0, isWicket: true };
+    }
+    const zeroBallWktMatch = norm.match(/^~\+(?:(\d+)\+)?W$/);
+    if (zeroBallWktMatch) {
+        return {
+            isSynthetic: true,
+            isLegal: false,
+            runs: zeroBallWktMatch[1] ? parseInt(zeroBallWktMatch[1], 10) : 0,
+            isWicket: true
+        };
+    }
+    const zeroBallMatch = norm.match(/^~\+(\d+)$/);
+    if (zeroBallMatch) {
+        return {
+            isSynthetic: true,
+            isLegal: false,
+            runs: parseInt(zeroBallMatch[1], 10),
+            isWicket: false
+        };
+    }
+    const legalWktMatch = norm.match(/^~(\d+)\+W$/);
+    if (legalWktMatch) {
+        return {
+            isSynthetic: true,
+            isLegal: true,
+            runs: parseInt(legalWktMatch[1], 10),
+            isWicket: true
+        };
+    }
+    const legalRunsMatch = norm.match(/^~(\d+)$/);
+    if (legalRunsMatch) {
+        return {
+            isSynthetic: true,
+            isLegal: true,
+            runs: parseInt(legalRunsMatch[1], 10),
+            isWicket: false
+        };
+    }
+    return null;
+}
+
+const UNSAFE_OBJECT_KEYS = new Set<string>([
+    '__proto__',
+    'prototype',
+    'constructor',
+    'toString',
+    'toLocaleString',
+    'valueOf',
+    'hasOwnProperty',
+    'isPrototypeOf',
+    'propertyIsEnumerable',
+    '__defineGetter__',
+    '__defineSetter__',
+    '__lookupGetter__',
+    '__lookupSetter__'
+]);
+
+export function hasOwn(obj: unknown, key: string): boolean {
+    return obj !== null && typeof obj === 'object' && Object.prototype.hasOwnProperty.call(obj, key);
+}
+
+export function isUnsafeObjectKey(name: unknown): boolean {
+    if (typeof name !== 'string') return true;
+    const trimmed = name.trim();
+    if (!trimmed) return false;
+    return UNSAFE_OBJECT_KEYS.has(trimmed) || trimmed in Object.prototype;
+}
+
+export function escapeHtml(value: unknown): string {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+

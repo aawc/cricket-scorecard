@@ -86,6 +86,10 @@ declare function handleCopySpectatorUrl(): void;
 declare function handleCopyUmpireUrl(): void;
 declare function handleSpectatorManualRefresh(): void;
 declare function updateLiveIndicators(): void;
+declare function buildGodModeDraftFromState(state: any): any;
+declare function validateGodModePayload(state: any, payload: any): string | null;
+declare function parseSyntheticDeliveryToken(token: string): any;
+declare function parseBallLog(b: string): { runs: number; wicket: number };
 
 const doc = document as any;
 
@@ -5285,6 +5289,872 @@ console.log("Running Test 56...");
             }
         } finally {
             cleanupTmp103();
+        }
+    }
+
+    // =========================================================================
+    // Test 104: Umpire God Mode - Lossless Zero-Edit Round-Trip, Partial Edit Merge & Undo Recovery
+    // =========================================================================
+    console.log("Running Test 104 (God Mode: Lossless Zero-Edit Round-Trip, Partial Edit Merge & Undo Recovery)...");
+    {
+        const { getSelectableBowlers } = await import('../src/rules.js');
+
+        if (typeof buildGodModeDraftFromState !== 'function' || typeof validateGodModePayload !== 'function') {
+            console.error("[FAIL] Test 104 Failed: buildGodModeDraftFromState and validateGodModePayload must be exported from src/reducer.ts");
+            process.exit(1);
+        }
+
+        // 1. Lossless round-trip on SETUP and TOSS phases
+        resetTestState();
+        dispatch({ type: 'RESET_MATCH' });
+        gameState.match.team1.players = [];
+        gameState.match.team2.players = [];
+        const setupBefore = JSON.parse(JSON.stringify(gameState.match));
+        const setupDraft = buildGodModeDraftFromState(gameState);
+        dispatch({ type: 'APPLY_GOD_MODE', payload: setupDraft });
+        if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false || JSON.stringify(gameState.match) !== JSON.stringify(setupBefore)) {
+            console.error("[FAIL] Test 104 Failed: SETUP zero-edit round-trip mutated match state:", gameState);
+            process.exit(1);
+        }
+
+        dispatch({
+            type: 'START_MATCH',
+            payload: {
+                settings: { oversPerInnings: 8, maxOversPerBowler: 2, allowSingleBatsman: false, enableLegByes: true },
+                team1Players: ["Rohit", "Ishan", "Surya", "Tilak", "Hardik"],
+                team2Players: ["Chahar", "Jadeja", "Pathirana", "Deshpande"]
+            }
+        });
+        const tossBefore = JSON.parse(JSON.stringify(gameState.match));
+        const tossDraft = buildGodModeDraftFromState(gameState);
+        dispatch({ type: 'APPLY_GOD_MODE', payload: tossDraft });
+        if (gameState.phase !== 'TOSS' || gameState.matchStarted !== true || JSON.stringify(gameState.match) !== JSON.stringify(tossBefore)) {
+            console.error("[FAIL] Test 104 Failed: TOSS zero-edit round-trip mutated match state:", gameState);
+            process.exit(1);
+        }
+
+        // 2. Active match at 42/2 (4.3 overs = 27 balls) with dismissed batters, FOW, and 3 bowlers with maidens/quotas
+        resetTestState();
+        gameState.settings = {
+            totalInnings: 1,
+            oversPerInnings: 8,
+            maxOversPerBowler: 2,
+            widePenalty: 1,
+            noBallPenalty: 1,
+            allowSingleBatsman: false,
+            theme: 'light',
+            enableLegByes: true
+        };
+        gameState.match = {
+            currentInnings: 1,
+            currentBattingTeam: 1,
+            team1: { name: "Mumbai", players: ["Rohit", "Ishan", "Surya", "Tilak", "Hardik"], innings: [] },
+            team2: { name: "Chennai", players: ["Chahar", "Jadeja", "Pathirana", "Deshpande"], innings: [] },
+            liveInnings: {
+                score: 42,
+                wickets: 2,
+                balls: 27,
+                extras: { wides: 1, noballs: 0, byes: 1, legbyes: 0 },
+                batsmen: {
+                    "Rohit": { runs: 14, balls: 8, fours: 2, sixes: 1, active: false },
+                    "Ishan": { runs: 9, balls: 6, fours: 1, sixes: 0, active: false },
+                    "Surya": { runs: 12, balls: 8, fours: 1, sixes: 1, active: true },
+                    "Tilak": { runs: 5, balls: 5, fours: 0, sixes: 0, active: false }
+                },
+                bowlers: {
+                    "Chahar": { runs: 12, balls: 12, wickets: 1, maidens: 1, wides: 0, noballs: 0 },
+                    "Jadeja": { runs: 17, balls: 12, wickets: 1, maidens: 0, wides: 1, noballs: 0 },
+                    "Pathirana": { runs: 12, balls: 3, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+                },
+                currentBatsman1: "Surya",
+                currentBatsman2: "Tilak",
+                currentBowler: "Pathirana",
+                previousBowler: "Jadeja",
+                outBatsmen: ["Rohit", "Ishan"],
+                overs: [
+                    { bowler: "Chahar", balls: ["0", "0", "0", "0", "0", "0"] },
+                    { bowler: "Jadeja", balls: ["4", "4", "1", "wd", "2", "0", "0"] },
+                    { bowler: "Chahar", balls: ["6", "4", "1", "1", "0", "W"] },
+                    { bowler: "Jadeja", balls: ["2", "W", "1b", "1", "1", "1"] }
+                ],
+                overLog: ["6", "4", "2"],
+                fow: [
+                    { wicket: 1, score: 24, batsman: "Rohit", overs: "3.0" },
+                    { wicket: 2, score: 26, batsman: "Ishan", overs: "3.2" }
+                ]
+            },
+            target: null,
+            matchOver: false
+        };
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.matchStarted = true;
+        gameState.history = [];
+
+        const liveBeforeRoundTrip = JSON.parse(JSON.stringify(gameState.match.liveInnings));
+        const matchBeforeRoundTrip = JSON.parse(JSON.stringify(gameState.match));
+        const activeDraft = buildGodModeDraftFromState(gameState);
+
+        if (validateGodModePayload(gameState, activeDraft) !== null) {
+            console.error("[FAIL] Test 104 Failed: buildGodModeDraftFromState produced invalid draft:", validateGodModePayload(gameState, activeDraft));
+            process.exit(1);
+        }
+
+        dispatch({ type: 'APPLY_GOD_MODE', payload: activeDraft });
+
+        if (JSON.stringify(gameState.match.liveInnings) !== JSON.stringify(liveBeforeRoundTrip)) {
+            console.error("[FAIL] Test 104 Failed: Zero-edit APPLY_GOD_MODE mutated liveInnings.\nExpected:", JSON.stringify(liveBeforeRoundTrip), "\nGot:", JSON.stringify(gameState.match.liveInnings));
+            process.exit(1);
+        }
+        if (JSON.stringify(gameState.match) !== JSON.stringify(matchBeforeRoundTrip)) {
+            console.error("[FAIL] Test 104 Failed: Zero-edit APPLY_GOD_MODE mutated match wrapper.");
+            process.exit(1);
+        }
+
+        // 3. Partial edit merge: rename teams, swap activeStriker to slot 2, extend oversPerInnings to 12
+        gameState.history = [];
+        const prePartialMatch = JSON.parse(JSON.stringify(gameState.match));
+        const prePartialSettings = JSON.parse(JSON.stringify(gameState.settings));
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                team1Name: "MI",
+                team2Name: "CSK",
+                activeStriker: 2,
+                oversPerInnings: 12
+            }
+        });
+
+        if (gameState.match.team1.name !== "MI" || gameState.match.team2.name !== "CSK" || gameState.settings.oversPerInnings !== 12) {
+            console.error("[FAIL] Test 104 Failed: Partial edit failed to update team names or oversPerInnings:", gameState.match.team1.name, gameState.match.team2.name, gameState.settings.oversPerInnings);
+            process.exit(1);
+        }
+        const liveAfterPartial = gameState.match.liveInnings;
+        if (liveAfterPartial.batsmen["Tilak"]?.active !== true || liveAfterPartial.batsmen["Surya"]?.active !== false) {
+            console.error("[FAIL] Test 104 Failed: activeStriker: 2 did not transfer strike to Tilak:", liveAfterPartial.batsmen);
+            process.exit(1);
+        }
+        if (liveAfterPartial.batsmen["Rohit"]?.runs !== 14 || liveAfterPartial.batsmen["Rohit"]?.fours !== 2 || liveAfterPartial.batsmen["Ishan"]?.runs !== 9) {
+            console.error("[FAIL] Test 104 Failed: Dismissed batters' historical stats were wiped on partial edit:", liveAfterPartial.batsmen);
+            process.exit(1);
+        }
+        if (JSON.stringify(liveAfterPartial.outBatsmen) !== JSON.stringify(["Rohit", "Ishan"]) || liveAfterPartial.overs.length !== 4 || JSON.stringify(liveAfterPartial.overLog) !== JSON.stringify(["6", "4", "2"])) {
+            console.error("[FAIL] Test 104 Failed: outBatsmen, overs, or overLog corrupted on partial edit:", liveAfterPartial);
+            process.exit(1);
+        }
+        if (liveAfterPartial.bowlers["Chahar"]?.balls !== 12 || liveAfterPartial.bowlers["Chahar"]?.maidens !== 1 || liveAfterPartial.bowlers["Jadeja"]?.balls !== 12 || liveAfterPartial.bowlers["Jadeja"]?.wides !== 1 || liveAfterPartial.bowlers["Pathirana"]?.balls !== 3) {
+            console.error("[FAIL] Test 104 Failed: Prior bowler quotas/maidens/wides corrupted on partial edit:", liveAfterPartial.bowlers);
+            process.exit(1);
+        }
+        const selectable = getSelectableBowlers(liveAfterPartial, gameState.match.team2.players, gameState.settings);
+        if (selectable.bowlers.includes("Chahar") || selectable.bowlers.includes("Jadeja") || !selectable.bowlers.includes("Deshpande")) {
+            console.error("[FAIL] Test 104 Failed: ICC Clause 12/13 bowler quotas lost after partial edit:", selectable);
+            process.exit(1);
+        }
+
+        // 4. Undo recovery restores exact pre-God-Mode state
+        if (gameState.history.length !== 1) {
+            console.error(`[FAIL] Test 104 Failed: Expected history.length === 1 after mid-match God Mode, got ${gameState.history.length}`);
+            process.exit(1);
+        }
+        dispatch({ type: 'UNDO' });
+        if (JSON.stringify(gameState.match) !== JSON.stringify(prePartialMatch) || JSON.stringify(gameState.settings) !== JSON.stringify(prePartialSettings)) {
+            console.error("[FAIL] Test 104 Failed: UNDO did not restore exact pre-God-Mode state");
+            process.exit(1);
+        }
+    }
+
+    // =========================================================================
+    // Test 105: Fresh Sync from SETUP, Roster Disjointness, Auto-Padding & ICC Clause 17 Maiden Lock
+    // =========================================================================
+    console.log("Running Test 105 (God Mode: Fresh SETUP Sync, Roster Disjointness, Auto-Padding & Clause 17 Maiden Lock)...");
+    {
+        if (typeof parseSyntheticDeliveryToken !== 'function') {
+            console.error("[FAIL] Test 105 Failed: parseSyntheticDeliveryToken must be exported from src/rules.ts");
+            process.exit(1);
+        }
+
+        // Verify parseSyntheticDeliveryToken grammar
+        const tDot = parseSyntheticDeliveryToken('~0');
+        const tRuns = parseSyntheticDeliveryToken('~14');
+        const tWkt = parseSyntheticDeliveryToken('~W');
+        const tRunsWkt = parseSyntheticDeliveryToken('~4+W');
+        const tZeroBall = parseSyntheticDeliveryToken('~+5');
+        const tGenuine = parseSyntheticDeliveryToken('4');
+        if (!tDot || !tDot.isSynthetic || !tDot.isLegal || tDot.runs !== 0 || tDot.isWicket !== false ||
+            !tRuns || !tRuns.isLegal || tRuns.runs !== 14 || tRuns.isWicket !== false ||
+            !tWkt || !tWkt.isLegal || tWkt.runs !== 0 || tWkt.isWicket !== true ||
+            !tRunsWkt || !tRunsWkt.isLegal || tRunsWkt.runs !== 4 || tRunsWkt.isWicket !== true ||
+            !tZeroBall || tZeroBall.isLegal !== false || tZeroBall.runs !== 5 || tZeroBall.isWicket !== false ||
+            tGenuine !== null) {
+            console.error("[FAIL] Test 105 Failed: parseSyntheticDeliveryToken grammar mismatch:", { tDot, tRuns, tWkt, tRunsWkt, tZeroBall, tGenuine });
+            process.exit(1);
+        }
+
+        // Start from completely empty SETUP
+        resetTestState();
+        dispatch({ type: 'RESET_MATCH' });
+        gameState.match.team1.players = [];
+        gameState.match.team2.players = [];
+
+        if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false || gameState.history.length !== 0) {
+            console.error("[FAIL] Test 105 Failed: Expected clean SETUP baseline");
+            process.exit(1);
+        }
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                oversPerInnings: 10,
+                maxOversPerBowler: 3,
+                allowSingleBatsman: false,
+                score: 67,
+                wickets: 3,
+                balls: 44,
+                currentBatsman1: "Head",
+                currentBatsman2: "Marsh",
+                currentBowler: "Starc"
+            }
+        });
+
+        if (gameState.phase !== 'PLAYING_INNINGS' || !gameState.matchStarted) {
+            console.error(`[FAIL] Test 105 Failed: Expected phase PLAYING_INNINGS after fresh SETUP sync, got ${gameState.phase}`);
+            process.exit(1);
+        }
+        if (gameState.history.length !== 0) {
+            console.error(`[FAIL] Test 105 Failed: Fresh SETUP sync must leave history.length === 0, got ${gameState.history.length}`);
+            process.exit(1);
+        }
+
+        const t1Players: string[] = gameState.match.team1.players;
+        const t2Players: string[] = gameState.match.team2.players;
+        if (t1Players.some(p => t2Players.includes(p))) {
+            console.error("[FAIL] Test 105 Failed: Batting and bowling rosters must be strictly disjoint:", { t1Players, t2Players });
+            process.exit(1);
+        }
+        if (t1Players.includes("Starc") || t2Players.includes("Head") || t2Players.includes("Marsh")) {
+            console.error("[FAIL] Test 105 Failed: Bowler leaked into batting roster or batter leaked into bowling roster:", { t1Players, t2Players });
+            process.exit(1);
+        }
+        if (t1Players.length < 5 || t2Players.length !== 4) {
+            console.error(`[FAIL] Test 105 Failed: Expected auto-padded t1Players.length >= 5 and t2Players.length === 4 (Math.max(2, Math.ceil(10/3))), got ${t1Players.length} and ${t2Players.length}`);
+            process.exit(1);
+        }
+
+        if (gameState.match.liveInnings.bowlers["Starc"]?.balls !== 2) {
+            console.error(`[FAIL] Test 105 Failed: Newly added currentBowler Starc at 7.2 ov must default to 2 balls (44 % 6), got ${gameState.match.liveInnings.bowlers["Starc"]?.balls}`);
+            process.exit(1);
+        }
+        if (gameState.match.liveInnings.overs.length !== 7 || gameState.match.liveInnings.overLog.length !== 2) {
+            console.error(`[FAIL] Test 105 Failed: Expected 7 completed synthetic overs and 2 balls in overLog at 7.2 ov, got overs=${gameState.match.liveInnings.overs.length}, overLog=${JSON.stringify(gameState.match.liveInnings.overLog)}`);
+            process.exit(1);
+        }
+
+        // Score 1 run -> advances to 68/3 at 7.3 overs in PLAYING_INNINGS (no premature all-out / INNINGS_BREAK!)
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 1 } });
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.liveInnings.score !== 68 || gameState.match.liveInnings.balls !== 45) {
+            console.error(`[FAIL] Test 105 Failed: Expected 68/3 at 45 balls in PLAYING_INNINGS, got phase=${gameState.phase}, score=${gameState.match.liveInnings.score}, balls=${gameState.match.liveInnings.balls}`);
+            process.exit(1);
+        }
+
+        // Bowl 3 dot balls to reach 8.0 (48 balls): completes Over 8 with maidens === 0
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
+        if (gameState.match.liveInnings.balls !== 48 || gameState.match.liveInnings.overs.length !== 8 || gameState.match.liveInnings.bowlers["Starc"]?.maidens !== 0) {
+            console.error("[FAIL] Test 105 Failed: Over 8 completion mismatch:", gameState.match.liveInnings);
+            process.exit(1);
+        }
+
+        // Now jump mid-over to 8.2 (50 balls) with 0 delta runs -> overLog has ['~0', '~0'], then bowl 4 genuine dot balls to 9.0 (54 balls)
+        const secondBowler = t2Players.find(p => p !== "Starc")!;
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                balls: 50,
+                score: 68,
+                currentBowler: secondBowler
+            }
+        });
+        if (JSON.stringify(gameState.match.liveInnings.overLog) !== JSON.stringify(["~0", "~0"])) {
+            console.error(`[FAIL] Test 105 Failed: Expected ['~0', '~0'] in overLog at 8.2, got ${JSON.stringify(gameState.match.liveInnings.overLog)}`);
+            process.exit(1);
+        }
+        for (let i = 0; i < 4; i++) {
+            dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
+        }
+        if (gameState.match.liveInnings.balls !== 54 || gameState.match.liveInnings.overs.length !== 9) {
+            console.error(`[FAIL] Test 105 Failed: Expected 54 balls and 9 overs, got balls=${gameState.match.liveInnings.balls}, overs=${gameState.match.liveInnings.overs.length}`);
+            process.exit(1);
+        }
+        if ((gameState.match.liveInnings.bowlers[secondBowler]?.maidens || 0) !== 0 || gameState.match.liveInnings.bowlers[secondBowler]?.balls !== 6) {
+            console.error(`[FAIL] Test 105 Failed: Synthetic '~0' balls + 4 genuine dot balls MUST NOT award a false maiden under ICC Clause 17 and must tally 6 balls! Got:`, gameState.match.liveInnings.bowlers[secondBowler]);
+            process.exit(1);
+        }
+
+        // Over 10 (54 -> 60 balls): select Starc and bowl 6 genuine dot balls -> awards 1 genuine maiden!
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "Starc" } });
+        for (let i = 0; i < 6; i++) {
+            dispatch({ type: 'ADD_RUNS', payload: { runs: 0 } });
+        }
+        if (gameState.match.liveInnings.bowlers["Starc"]?.maidens !== 1) {
+            console.error(`[FAIL] Test 105 Failed: 6 genuine dot balls in Over 10 must award maidens === 1, got ${gameState.match.liveInnings.bowlers["Starc"]?.maidens}`);
+            process.exit(1);
+        }
+
+        // Verify 4-over / 4-max-per-bowler fresh sync pads bowling team to >= 2 batters so Innings 2 ball 1 never triggers 0-wicket all-out
+        resetTestState();
+        dispatch({ type: 'RESET_MATCH' });
+        gameState.match.team1.players = [];
+        gameState.match.team2.players = [];
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                oversPerInnings: 4,
+                maxOversPerBowler: 4,
+                allowSingleBatsman: false,
+                score: 30,
+                wickets: 1,
+                balls: 24,
+                currentBowler: "SoloBowler"
+            }
+        });
+        if (gameState.phase !== 'INNINGS_BREAK' || gameState.match.team2.players.length < 2) {
+            console.error(`[FAIL] Test 105 Failed: 4/4 fresh sync must pad team2.players to >= 2 so Innings 2 is playable, got phase=${gameState.phase}, team2=${JSON.stringify(gameState.match.team2.players)}`);
+            process.exit(1);
+        }
+        dispatch({ type: 'START_NEXT_INNINGS' });
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 1, name: gameState.match.team2.players[0] } });
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 2, name: gameState.match.team2.players[1] } });
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: gameState.match.team1.players[0] } });
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 1 } });
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.liveInnings.score !== 1) {
+            console.error(`[FAIL] Test 105 Failed: Innings 2 ball 1 prematurely ended match! phase=${gameState.phase}`);
+            process.exit(1);
+        }
+
+        // Verify allowSingleBatsman solo survivor in Slot 2 promotes cleanly to currentBatsman1
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                allowSingleBatsman: true,
+                team2Players: ["Solo1", "Solo2"],
+                wickets: 1,
+                outBatsmen: ["Solo1"],
+                currentBatsman1: "",
+                currentBatsman2: "Solo2",
+                targetPhase: 'PLAYING_INNINGS'
+            }
+        });
+        if (gameState.match.liveInnings.currentBatsman1 !== "Solo2" || gameState.match.liveInnings.currentBatsman2 !== "") {
+            console.error("[FAIL] Test 105 Failed: Lone Slot 2 survivor in allowSingleBatsman mode must promote to currentBatsman1:", gameState.match.liveInnings);
+            process.exit(1);
+        }
+    }
+
+    // =========================================================================
+    // Test 106: All-Phase Transitions, Innings 1 <-> 2 Rollback/Promotion, Archive/Unarchive & Permalink Round-Trip
+    // =========================================================================
+    console.log("Running Test 106 (God Mode: Phase Transitions, Innings 1<->2, Duplicate-Free Archive & Permalink Round-Trip)...");
+    {
+        resetTestState();
+        gameState.settings.oversPerInnings = 8;
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.settings.allowSingleBatsman = false;
+        gameState.match.team1 = { name: "Alpha", players: ["A1", "A2", "A3", "A4", "A5"], innings: [] };
+        gameState.match.team2 = { name: "Beta", players: ["B1", "B2", "B3", "B4", "B5"], innings: [] };
+        gameState.match.currentInnings = 1;
+        gameState.match.currentBattingTeam = 1;
+        gameState.match.liveInnings = {
+            score: 19,
+            wickets: 0,
+            balls: 9,
+            extras: { wides: 0, noballs: 0, byes: 0, legbyes: 0 },
+            batsmen: {
+                "A1": { runs: 13, balls: 6, fours: 2, sixes: 0, active: true },
+                "A2": { runs: 6, balls: 3, fours: 1, sixes: 0, active: false }
+            },
+            bowlers: {
+                "B1": { runs: 12, balls: 6, wickets: 0, maidens: 0, wides: 0, noballs: 0 },
+                "B2": { runs: 7, balls: 3, wickets: 0, maidens: 0, wides: 0, noballs: 0 }
+            },
+            currentBatsman1: "A1",
+            currentBatsman2: "A2",
+            currentBowler: "B2",
+            previousBowler: "B1",
+            outBatsmen: [],
+            overs: [{ bowler: "B1", balls: ["4", "2", "0", "4", "1", "1"] }],
+            overLog: ["4", "1", "2"],
+            fow: []
+        };
+        gameState.phase = 'PLAYING_INNINGS';
+        gameState.matchStarted = true;
+
+        // 1. PLAYING_INNINGS -> INNINGS_BREAK
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'INNINGS_BREAK' } });
+        if (gameState.phase !== 'INNINGS_BREAK' || gameState.match.team1.innings.length !== 1 || gameState.match.target !== 20 || gameState.match.liveInnings.overLog.length !== 0 || gameState.match.liveInnings.overs.length !== 2) {
+            console.error("[FAIL] Test 106 Failed: PLAYING_INNINGS -> INNINGS_BREAK failed to archive cleanly:", gameState.match);
+            process.exit(1);
+        }
+
+        // 2. Reopen INNINGS_BREAK -> PLAYING_INNINGS (partial overLog restored, team1.innings popped)
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'PLAYING_INNINGS' } });
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.team1.innings.length !== 0 || gameState.match.target !== null || gameState.match.liveInnings.overs.length !== 1 || JSON.stringify(gameState.match.liveInnings.overLog) !== JSON.stringify(["4", "1", "2"])) {
+            console.error("[FAIL] Test 106 Failed: INNINGS_BREAK -> PLAYING_INNINGS failed to unarchive or restore partial overLog:", gameState.match);
+            process.exit(1);
+        }
+
+        // 3. Promote to Innings 2 with innings1Summary: { score: 119, wickets: 6, balls: 48 }
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 2,
+                currentBattingTeam: 2,
+                innings1Summary: { score: 119, wickets: 6, balls: 48 },
+                score: 114,
+                wickets: 2,
+                balls: 44,
+                currentBatsman1: "B1",
+                currentBatsman2: "B2",
+                currentBowler: "A1"
+            }
+        });
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.currentInnings !== 2 || gameState.match.currentBattingTeam !== 2 || gameState.match.target !== 120 || gameState.match.team1.innings.length !== 1 || gameState.match.team1.innings[0].score !== 119 || gameState.match.team2.innings.length !== 0) {
+            console.error("[FAIL] Test 106 Failed: Promotion to Innings 2 mismatch:", gameState.match);
+            process.exit(1);
+        }
+
+        // 4. Finish to MATCH_OVER via normal scoring, verify UNDO remains blocked (Test 80 invariant)
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 6 } });
+        if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver || gameState.match.team2.innings.length !== 1) {
+            console.error("[FAIL] Test 106 Failed: Expected MATCH_OVER with team2.innings.length === 1, got:", gameState.phase, gameState.match.team2.innings.length);
+            process.exit(1);
+        }
+        dispatch({ type: 'UNDO' });
+        if (gameState.phase !== 'MATCH_OVER' || gameState.match.liveInnings.score !== 120) {
+            console.error("[FAIL] Test 106 Failed: UNDO must remain blocked in MATCH_OVER per Test 80!");
+            process.exit(1);
+        }
+
+        // 5. Reopen MATCH_OVER -> PLAYING_INNINGS, then finish again -> zero duplicate innings!
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                targetPhase: 'PLAYING_INNINGS',
+                score: 114,
+                balls: 44
+            }
+        });
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.matchOver !== false || gameState.match.team2.innings.length !== 0 || gameState.match.team1.innings.length !== 1 || gameState.match.target !== 120) {
+            console.error("[FAIL] Test 106 Failed: Reopen MATCH_OVER -> PLAYING_INNINGS left stale archive or matchOver flag:", gameState.match);
+            process.exit(1);
+        }
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                score: 121,
+                balls: 45
+            }
+        });
+        if (gameState.phase !== 'MATCH_OVER' || !gameState.match.matchOver || gameState.match.team1.innings.length !== 1 || gameState.match.team2.innings.length !== 1) {
+            console.error(`[FAIL] Test 106 Failed: Re-completing match must maintain team2.innings.length === 1 (zero duplicates), got phase=${gameState.phase}, t1=${gameState.match.team1.innings.length}, t2=${gameState.match.team2.innings.length}`);
+            process.exit(1);
+        }
+
+        // 6. Rollback 2 -> 1
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 1,
+                currentBattingTeam: 1,
+                targetPhase: 'PLAYING_INNINGS',
+                score: 95,
+                wickets: 4,
+                balls: 38
+            }
+        });
+        if (gameState.phase !== 'PLAYING_INNINGS' || gameState.match.currentInnings !== 1 || gameState.match.target !== null || gameState.match.matchOver !== false || gameState.match.team1.innings.length !== 0 || gameState.match.team2.innings.length !== 0) {
+            console.error("[FAIL] Test 106 Failed: Rollback 2 -> 1 did not clear target and both archived innings:", gameState.match);
+            process.exit(1);
+        }
+
+        // 7. Permalink minifyState/unminifyState + healInningsOvers round-trip with '~' and '~+N' tokens
+        const min1 = minifyState(gameState);
+        const restored1 = unminifyState(min1);
+        healInningsOvers(restored1.match.liveInnings);
+        if (restored1.match.liveInnings.score !== 95 || restored1.match.liveInnings.balls !== 38 || restored1.match.liveInnings.overs.length !== 6 || restored1.match.liveInnings.overLog.length !== 2) {
+            console.error("[FAIL] Test 106 Failed: Permalink round-trip corrupted synthetic overs:", restored1.match.liveInnings);
+            process.exit(1);
+        }
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                score: 10,
+                wickets: 0,
+                balls: 0
+            }
+        });
+        if (JSON.stringify(gameState.match.liveInnings.overLog) !== JSON.stringify(["~+10"]) || gameState.match.liveInnings.overs.length !== 0) {
+            console.error(`[FAIL] Test 106 Failed: Expected zero-ball run adjustment ['~+10'], got ${JSON.stringify(gameState.match.liveInnings.overLog)}`);
+            process.exit(1);
+        }
+        const minZero = minifyState(gameState);
+        const restoredZero = unminifyState(minZero);
+        healInningsOvers(restoredZero.match.liveInnings);
+        if (restoredZero.match.liveInnings.overs.length !== 0 || JSON.stringify(restoredZero.match.liveInnings.overLog) !== JSON.stringify(["~+10"])) {
+            console.error("[FAIL] Test 106 Failed: healInningsOvers treated '~+10' as legal ball or corrupted overLog:", restoredZero.match.liveInnings);
+            process.exit(1);
+        }
+
+        // 8. End-to-end generatePermalink() + loadState() round-trip and SETUP matchStarted===false preservation
+        const { loadState } = await import('../src/storage.js');
+        (global as any).window.LZString = {
+            compressToEncodedURIComponent: lzCompressToEncodedURIComponent,
+            decompressFromEncodedURIComponent: lzDecompressFromEncodedURIComponent
+        };
+        (global as any).window.location.origin = 'https://varun.khaneja.org';
+        (global as any).window.location.pathname = '/cricket-scorecard/';
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { score: 73, wickets: 2, balls: 32 } });
+        const permalinkUrl = generatePermalink(gameState);
+        const qIndex = permalinkUrl.indexOf('?');
+        (global as any).window.location.search = qIndex >= 0 ? permalinkUrl.slice(qIndex) : '';
+        const loadedFromUrl = loadState();
+        (global as any).window.location.search = '';
+        if (!loadedFromUrl || loadedFromUrl.match.liveInnings.score !== 73 || loadedFromUrl.match.liveInnings.balls !== 32 || loadedFromUrl.match.liveInnings.overs.length !== 5 || loadedFromUrl.match.liveInnings.overLog.length !== 2) {
+            console.error("[FAIL] Test 106 Failed: End-to-end generatePermalink + loadState corrupted synthetic state:", loadedFromUrl);
+            process.exit(1);
+        }
+
+        // 9. Transitioning back to TOSS / SETUP via APPLY_GOD_MODE must clear undo history & preserve SETUP matchStarted===false on unminifyState
+        if (gameState.history.length === 0) {
+            console.error("[FAIL] Test 106 Failed: Expected non-empty history before TOSS/SETUP reset check");
+            process.exit(1);
+        }
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'TOSS' } });
+        if (gameState.phase !== 'TOSS' || gameState.history.length !== 0) {
+            console.error(`[FAIL] Test 106 Failed: APPLY_GOD_MODE -> TOSS must clear history, got phase=${gameState.phase}, history=${gameState.history.length}`);
+            process.exit(1);
+        }
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { targetPhase: 'SETUP' } });
+        if (gameState.phase !== 'SETUP' || gameState.matchStarted !== false || gameState.history.length !== 0) {
+            console.error(`[FAIL] Test 106 Failed: APPLY_GOD_MODE -> SETUP must set matchStarted=false and clear history, got`, gameState);
+            process.exit(1);
+        }
+        const setupRestored = unminifyState(minifyState(gameState));
+        if (setupRestored.phase !== 'SETUP' || setupRestored.matchStarted !== false) {
+            console.error("[FAIL] Test 106 Failed: unminifyState on SETUP payload must preserve matchStarted === false, got:", setupRestored);
+            process.exit(1);
+        }
+    }
+
+    // =========================================================================
+    // Test 107: Payload Validation, Rejected Undo Stack Hygiene & v2 Analytics Bridge Projections
+    // =========================================================================
+    console.log("Running Test 107 (God Mode: Payload Validation, Rejected Undo Hygiene & v2 Analytics Bridge)...");
+    {
+        const { getProjectionsFromGameState } = await import('../src/v2/bridge.js');
+        const { findConsecutiveOverBreaches } = await import('../src/rules.js');
+
+        resetTestState();
+        gameState.settings.oversPerInnings = 8;
+        gameState.settings.maxOversPerBowler = 2;
+        gameState.match.team1 = { name: "India", players: ["Rohit", "Gill", "Kohli", "Pant", "Hardik"], innings: [] };
+        gameState.match.team2 = { name: "Australia", players: ["Starc", "Cummins", "Zampa", "Hazlewood", "Head", "Marsh"], innings: [] };
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 4 } });
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 2 } });
+
+        const baselineHistoryLen = gameState.history.length;
+        const baselineStateJson = JSON.stringify(gameState);
+
+        const invalidPayloads: Array<{ label: string; payload: any }> = [
+            { label: "negative score", payload: { score: -5 } },
+            { label: "negative wickets", payload: { wickets: -1 } },
+            { label: "negative balls", payload: { balls: -2 } },
+            { label: "negative extras", payload: { extras: { wides: -1 } } },
+            { label: "negative batsman stats", payload: { batsman1Stats: { runs: -4 } } },
+            { label: "negative bowler stats", payload: { currentBowlerStats: { wickets: -1 } } },
+            { label: "oversPerInnings < 1", payload: { oversPerInnings: 0 } },
+            { label: "maxOversPerBowler > oversPerInnings", payload: { oversPerInnings: 4, maxOversPerBowler: 5 } },
+            { label: "balls > maxBalls", payload: { balls: 49 } },
+            { label: "duplicate active batters", payload: { currentBatsman1: "Kohli", currentBatsman2: "Kohli" } },
+            { label: "active batter in outBatsmen", payload: { currentBatsman1: "Kohli", wickets: 1, outBatsmen: ["Kohli"] } },
+            { label: "outBatsmen.length > wickets", payload: { wickets: 1, outBatsmen: ["Rohit", "Gill"] } },
+            { label: "explicit PLAYING_INNINGS at maxBalls", payload: { targetPhase: 'PLAYING_INNINGS', balls: 48 } },
+            { label: "explicit PLAYING_INNINGS when target reached", payload: { targetPhase: 'PLAYING_INNINGS', currentInnings: 2, target: 80, score: 80, balls: 30 } },
+            { label: "__proto__ in batsmenOverrides", payload: JSON.parse('{"batsmenOverrides":{"__proto__":{"runs":99}}}') },
+            { label: "constructor in bowlersOverrides", payload: { bowlersOverrides: { constructor: { wickets: 3 } } } },
+            { label: "unsafe currentBatsman1", payload: { currentBatsman1: "__proto__" } },
+            { label: "unsafe team1Players key", payload: { team1Players: ["Rohit", "toString"] } },
+            { label: "fow.length > wickets", payload: { wickets: 1, fow: [{ wicket: 1, score: 10, batsman: "Rohit", overs: "1.0" }, { wicket: 2, score: 15, batsman: "Gill", overs: "2.0" }] } },
+            { label: "malformed fow entry", payload: { wickets: 1, fow: [{ wicket: 0, score: -1, batsman: "", overs: "0.1" }] } },
+            { label: "unsafe innings1Summary key", payload: JSON.parse('{"currentInnings":2,"innings1Summary":{"score":50,"wickets":1,"balls":24,"batsmen":{"__proto__":{"runs":50,"balls":24,"active":false}}}}') }
+        ];
+
+        for (const item of invalidPayloads) {
+            const err = validateGodModePayload(gameState, item.payload);
+            if (!err || typeof err !== 'string' || err.startsWith('[ERROR]')) {
+                console.error(`[FAIL] Test 107 Failed: validateGodModePayload should return clean reason string for ${item.label}, got:`, err);
+                process.exit(1);
+            }
+            dispatch({ type: 'APPLY_GOD_MODE', payload: item.payload });
+            if (gameState.history.length !== baselineHistoryLen) {
+                console.error(`[FAIL] Test 107 Failed: Rejected payload (${item.label}) polluted undo history! Expected ${baselineHistoryLen}, got ${gameState.history.length}`);
+                process.exit(1);
+            }
+            if (JSON.stringify(gameState) !== baselineStateJson) {
+                console.error(`[FAIL] Test 107 Failed: Rejected payload (${item.label}) mutated gameState!`);
+                process.exit(1);
+            }
+        }
+
+        // v2 Analytics Bridge Projections after God Mode jump (67/3 in 44 balls chasing 120)
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 2,
+                currentBattingTeam: 2,
+                innings1Summary: { score: 119, wickets: 6, balls: 48 },
+                target: 120,
+                score: 67,
+                wickets: 3,
+                balls: 44,
+                extras: { wides: 2, noballs: 1, byes: 3, legbyes: 0 },
+                currentBatsman1: "Head",
+                batsman1Stats: { runs: 34, balls: 18, fours: 4, sixes: 1 },
+                currentBatsman2: "Marsh",
+                batsman2Stats: { runs: 15, balls: 10, fours: 2, sixes: 0 },
+                currentBowler: "Starc",
+                currentBowlerStats: { runs: 14, balls: 8, wickets: 1, maidens: 0, wides: 1, noballs: 0 }
+            }
+        });
+
+        const proj = getProjectionsFromGameState(gameState);
+        if (proj.innings1.totalScore !== 119 || proj.innings1.totalWickets !== 6 || proj.innings1.legalBalls !== 48) {
+            console.error("[FAIL] Test 107 Failed: Innings 1 v2 projection mismatch:", proj.innings1);
+            process.exit(1);
+        }
+        if (!proj.innings2 || proj.innings2.totalScore !== 67 || proj.innings2.totalWickets !== 3 || proj.innings2.legalBalls !== 44 || proj.innings2.oversFormatted !== '7.2') {
+            console.error("[FAIL] Test 107 Failed: Innings 2 v2 projection totals mismatch:", proj.innings2);
+            process.exit(1);
+        }
+        if (proj.innings2.extras.total !== 6 || proj.innings2.extras.wides !== 2 || proj.innings2.extras.noballs !== 1 || proj.innings2.extras.byes !== 3) {
+            console.error("[FAIL] Test 107 Failed: Innings 2 v2 extras reconciliation mismatch:", proj.innings2.extras);
+            process.exit(1);
+        }
+        if (proj.innings2.batsmen["Head"]?.runs !== 34 || proj.innings2.batsmen["Head"]?.fours !== 4 || proj.innings2.batsmen["Head"]?.isOut || proj.innings2.batsmen["Marsh"]?.isOut || proj.innings2.bowlers["Starc"]?.balls !== 8 || proj.innings2.bowlers["Starc"]?.maidens !== 0 || proj.innings2.bowlers["Adjusted"]) {
+            console.error("[FAIL] Test 107 Failed: Innings 2 v2 batsmen/bowlers reconciliation mismatch (or active batters falsely marked out):", { batsmen: proj.innings2.batsmen, bowlers: proj.innings2.bowlers });
+            process.exit(1);
+        }
+        if (proj.innings2.fallOfWickets.length !== 0) {
+            console.error("[FAIL] Test 107 Failed: Synthetic innings with empty live.fow must yield empty fallOfWickets, got:", proj.innings2.fallOfWickets);
+            process.exit(1);
+        }
+        if (proj.innings1.partnerships.length !== 0 || proj.innings2.partnerships.length !== 0 || proj.innings2.currentPartnership !== null) {
+            console.error("[FAIL] Test 107 Failed: Synthetic jump innings must not retain fabricated partnerships:", {
+                p1: proj.innings1.partnerships,
+                p2: proj.innings2.partnerships,
+                cp2: proj.innings2.currentPartnership
+            });
+            process.exit(1);
+        }
+
+        // Verify parseBallLog, generateSummaryView, updateUI, and formatMonospaceScorecard with synthetic '~' tokens & HTML/SVG escaping
+        const pSyn4 = parseBallLog('~4');
+        const pSynZero = parseBallLog('~+10');
+        const pSynWkt = parseBallLog('~2+W');
+        if (pSyn4.runs !== 4 || pSyn4.wicket !== 0 || pSynZero.runs !== 10 || pSynZero.wicket !== 0 || pSynWkt.runs !== 2 || pSynWkt.wicket !== 1) {
+            console.error("[FAIL] Test 107 Failed: parseBallLog failed on synthetic '~' tokens:", { pSyn4, pSynZero, pSynWkt });
+            process.exit(1);
+        }
+
+        const { formatMonospaceScorecard } = await import('../src/v2/export.js');
+        const { renderWormChartSVG, renderPartnershipChartSVG } = await import('../src/v2/charts.js');
+        const monoCard = formatMonospaceScorecard(proj.innings1, proj.innings2);
+        if (monoCard.includes('NaN') || monoCard.includes('1st Wicket:') || monoCard.includes('1th Wicket:') || monoCard.includes('Partnerships:')) {
+            console.error("[FAIL] Test 107 Failed: formatMonospaceScorecard produced NaN or fabricated partnerships on synthetic match:\n", monoCard);
+            process.exit(1);
+        }
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                team1Name: 'Alpha & Beta <svg onload=alert(1)>',
+                team2Name: 'Gamma <img src=x onerror=alert(1)>',
+                currentBatsman1: 'Head <script>alert(1)</script>',
+                batsman1Stats: { runs: 34, balls: 18, fours: 4, sixes: 1 }
+            }
+        });
+        updateUI();
+        generateSummaryView();
+        const summariesHtml = elements['innings-summaries']?.innerHTML || '';
+        const completedOversHtml = elements['completed-overs-section']?.innerHTML || '';
+        const escapedWorm = renderWormChartSVG(proj.wormData, {
+            team1Name: gameState.match.team1.name,
+            team2Name: gameState.match.team2.name
+        });
+        const escapedPship = renderPartnershipChartSVG([
+            { wicketNumber: 1, player1Name: 'Head <svg onload=1>', player1Runs: 40, player1Balls: 12, player2Name: 'Marsh & Co', player2Runs: 15, player2Balls: 10, totalRuns: 25, totalBalls: 22, unbroken: true }
+        ]);
+        if (escapedPship.includes('width="-')) {
+            console.error("[FAIL] Test 107 Failed: renderPartnershipChartSVG produced negative rect width when player1Runs > totalRuns!");
+            process.exit(1);
+        }
+        if (summariesHtml.includes('NaN') || completedOversHtml.includes('NaN')) {
+            console.error("[FAIL] Test 107 Failed: UI summary or completed overs rendered NaN on synthetic '~' tokens!");
+            process.exit(1);
+        }
+        if (summariesHtml.includes('<script>') || summariesHtml.includes('<img src=x') || escapedWorm.includes('<svg onload=') || escapedPship.includes('<svg onload=')) {
+            console.error("[FAIL] Test 107 Failed: Unescaped HTML/SVG injection found in rendered scorecard or charts!");
+            process.exit(1);
+        }
+
+        // Verify non-synthetic God Mode stat/extras override reflects in getProjectionsFromGameState & tied chase equation
+        resetTestState();
+        gameState.settings.oversPerInnings = 4;
+        gameState.match.team1 = { name: "T1", players: ["P1", "P2", "P3"], innings: [] };
+        gameState.match.team2 = { name: "T2", players: ["B1", "B2", "B3"], innings: [] };
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 4 } });
+        dispatch({ type: 'APPLY_GOD_MODE', payload: { batsman1Stats: { runs: 4, balls: 1, fours: 0, sixes: 0 }, currentBowlerStats: { runs: 4, balls: 1, wickets: 0, maidens: 1 } } });
+        const nonSynProj = getProjectionsFromGameState(gameState);
+        if (nonSynProj.innings1.batsmen["P1"]?.fours !== 0 || nonSynProj.innings1.bowlers["B1"]?.maidens !== 1) {
+            console.error("[FAIL] Test 107 Failed: Non-synthetic God Mode stat overrides not reflected in v2 projection:", nonSynProj.innings1);
+            process.exit(1);
+        }
+
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 2,
+                currentBattingTeam: 2,
+                innings1Summary: { score: 40, wickets: 2, balls: 24 },
+                target: 41,
+                score: 40,
+                wickets: 2,
+                balls: 24,
+                targetPhase: 'MATCH_OVER'
+            }
+        });
+        const tiedProj = getProjectionsFromGameState(gameState);
+        if (tiedProj.innings2?.equation !== 'Match Tied!') {
+            console.error(`[FAIL] Test 107 Failed: Tied chase in MATCH_OVER must report equation 'Match Tied!', got '${tiedProj.innings2?.equation}'`);
+            process.exit(1);
+        }
+
+        // Verify unminifyState strips __proto__ / constructor without polluting Object.prototype
+        const pollutedMin = JSON.parse('{"ph":"PLAYING_INNINGS","m":{"ci":1,"cbt":1,"li":{"sc":5,"w":0,"b":1,"bat":{"__proto__":{"r":99,"b":1,"a":1},"Safe":{"r":5,"b":1,"a":1}},"bowl":{"constructor":{"r":5,"b":1,"wk":0}}}}}');
+        const cleanedUnmin = unminifyState(pollutedMin);
+        if (({} as any).runs !== undefined || Object.prototype.hasOwnProperty.call(cleanedUnmin.match.liveInnings.batsmen, '__proto__') || Object.prototype.hasOwnProperty.call(cleanedUnmin.match.liveInnings.bowlers, 'constructor')) {
+            console.error("[FAIL] Test 107 Failed: unminifyState failed to strip unsafe prototype keys!");
+            process.exit(1);
+        }
+        const breaches = findConsecutiveOverBreaches(gameState.match.liveInnings.overs, Object.keys(gameState.match.liveInnings.bowlers));
+        if (breaches.length !== 0 || !proj.innings2.consecutiveOverBreaches || proj.innings2.consecutiveOverBreaches.length !== 0) {
+            console.error("[FAIL] Test 107 Failed: Synthetic 'Adjusted' overs caused false Clause 12/13 breaches:", breaches, proj.innings2.consecutiveOverBreaches);
+            process.exit(1);
+        }
+        const worm1Last = proj.wormData.innings1[proj.wormData.innings1.length - 1];
+        const worm2Last = proj.wormData.innings2[proj.wormData.innings2.length - 1];
+        if (!worm1Last || worm1Last.score !== 119 || !worm2Last || worm2Last.score !== 67 || worm2Last.ballIndex !== 44) {
+            console.error("[FAIL] Test 107 Failed: Worm chart trajectory mismatch:", { worm1Last, worm2Last });
+            process.exit(1);
+        }
+        const manhattan1Sum = proj.manhattan1.reduce((s, b) => s + b.runs, 0);
+        const manhattan2Sum = proj.manhattan2.reduce((s, b) => s + b.runs, 0);
+        if (manhattan1Sum !== 119 || manhattan2Sum !== 67) {
+            console.error(`[FAIL] Test 107 Failed: Manhattan bar sums mismatch (expected 119 and 67, got ${manhattan1Sum} and ${manhattan2Sum})`);
+            process.exit(1);
+        }
+
+        // MATCH_OVER in Innings 1 must keep innings2 === null (not clone Innings 1!)
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                currentInnings: 1,
+                currentBattingTeam: 1,
+                targetPhase: 'MATCH_OVER',
+                score: 45,
+                wickets: 2,
+                balls: 18
+            }
+        });
+        const projInngs1Over = getProjectionsFromGameState(gameState);
+        if (projInngs1Over.innings1.totalScore !== 45 || projInngs1Over.innings2 !== null) {
+            console.error("[FAIL] Test 107 Failed: MATCH_OVER in Innings 1 must yield innings2 === null, got:", projInngs1Over.innings2);
+            process.exit(1);
+        }
+
+        // Verify 0-wicket synthetic jump reconciles unbroken 1st-wicket currentPartnership from live.batsmen,
+        // and genuine wicket before synthetic jump preserves genuine partnership while slicing synthetic ones
+        resetTestState();
+        gameState.settings.oversPerInnings = 6;
+        gameState.match.team1 = { name: "Aus", players: ["Head", "Marsh", "Smith", "Carey"], innings: [] };
+        gameState.match.team2 = { name: "Ind", players: ["Bumrah", "Siraj", "Shami"], innings: [] };
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                score: 25,
+                wickets: 0,
+                balls: 12,
+                currentBatsman1: "Head",
+                batsman1Stats: { runs: 15, balls: 7, fours: 2, sixes: 0 },
+                currentBatsman2: "Marsh",
+                batsman2Stats: { runs: 10, balls: 5, fours: 1, sixes: 0 },
+                currentBowler: "Bumrah"
+            }
+        });
+        const zeroWktProj = getProjectionsFromGameState(gameState);
+        if (
+            zeroWktProj.innings1.partnerships.length !== 0 ||
+            !zeroWktProj.innings1.currentPartnership ||
+            zeroWktProj.innings1.currentPartnership.wicketNumber !== 1 ||
+            zeroWktProj.innings1.currentPartnership.player1Name !== "Head" ||
+            zeroWktProj.innings1.currentPartnership.player1Runs !== 15 ||
+            zeroWktProj.innings1.currentPartnership.player2Name !== "Marsh" ||
+            zeroWktProj.innings1.currentPartnership.player2Runs !== 10 ||
+            zeroWktProj.innings1.currentPartnership.totalRuns !== 25 ||
+            zeroWktProj.innings1.currentPartnership.totalBalls !== 12 ||
+            !zeroWktProj.innings1.currentPartnership.unbroken
+        ) {
+            console.error("[FAIL] Test 107 Failed: 0-wicket synthetic jump failed to reconcile unbroken 1st-wicket currentPartnership:", zeroWktProj.innings1.currentPartnership);
+            process.exit(1);
+        }
+
+        // Genuine wicket first, then synthetic jump to 3 wickets -> preserves 1 genuine partnership, slices 2 synthetic ones
+        resetTestState();
+        gameState.settings.oversPerInnings = 6;
+        gameState.match.team1 = { name: "Aus", players: ["Head", "Marsh", "Smith", "Carey", "Inglis"], innings: [] };
+        gameState.match.team2 = { name: "Ind", players: ["Bumrah", "Siraj", "Shami"], innings: [] };
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 1, name: "Head" } });
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 2, name: "Marsh" } });
+        dispatch({ type: 'CHANGE_BOWLER', payload: { name: "Bumrah" } });
+        dispatch({ type: 'ADD_RUNS', payload: { runs: 4 } });
+        dispatch({ type: 'ADD_WICKET' });
+        dispatch({ type: 'CHANGE_BATSMAN', payload: { slot: 1, name: "Smith" } });
+        dispatch({
+            type: 'APPLY_GOD_MODE',
+            payload: {
+                score: 42,
+                wickets: 3,
+                balls: 18,
+                currentBatsman1: "Carey",
+                currentBatsman2: "Inglis",
+                currentBowler: "Siraj"
+            }
+        });
+        const mixedWktProj = getProjectionsFromGameState(gameState);
+        if (
+            mixedWktProj.innings1.partnerships.length !== 1 ||
+            mixedWktProj.innings1.partnerships[0].wicketNumber !== 1 ||
+            mixedWktProj.innings1.partnerships[0].totalRuns !== 4 ||
+            mixedWktProj.innings1.currentPartnership !== null
+        ) {
+            console.error("[FAIL] Test 107 Failed: Genuine wicket before synthetic jump failed to preserve 1 genuine partnership and slice synthetic ones:", {
+                partnerships: mixedWktProj.innings1.partnerships,
+                currentPartnership: mixedWktProj.innings1.currentPartnership
+            });
+            process.exit(1);
         }
     }
 

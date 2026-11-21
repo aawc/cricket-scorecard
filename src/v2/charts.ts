@@ -7,6 +7,7 @@
  */
 
 import { WormChartData, ManhattanBar, Partnership } from './types.js';
+import { escapeHtml } from '../rules.js';
 
 export interface ChartOptions {
   width?: number;
@@ -84,8 +85,8 @@ export function renderWormChartSVG(
     wickets2 += `<text x="${cx}" y="${cy - 7}" font-size="9" font-weight="bold" fill="#D55E00" text-anchor="middle">W</text>`;
   });
 
-  const t1 = options.team1Name || '1st Innings';
-  const t2 = options.team2Name || '2nd Innings';
+  const t1 = escapeHtml(options.team1Name || '1st Innings');
+  const t2 = escapeHtml(options.team2Name || '2nd Innings');
 
   return `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" class="cric-svg-chart worm-chart" role="img" aria-label="Worm Chart comparing Innings 1 and 2">
@@ -269,12 +270,15 @@ export function renderPartnershipChartSVG(
   partnerships.forEach((pship, idx) => {
     const y = 30 + idx * rowH;
     const totalW = (pship.totalRuns / maxPshipRuns) * plotW;
-    const p1W = pship.totalRuns > 0 ? (pship.player1Runs / pship.totalRuns) * totalW : 0;
-    const p2W = totalW - p1W;
+    const p1W = pship.totalRuns > 0 ? Math.min(totalW, Math.max(0, (pship.player1Runs / pship.totalRuns) * totalW)) : 0;
+    const p2W = Math.max(0, totalW - p1W);
 
     // Wicket label
     const label = pship.unbroken ? `Curr (${pship.totalRuns})` : `${pship.wicketNumber}${getOrdinal(pship.wicketNumber)}`;
-    rowsSvg += `<text x="${padL - 8}" y="${y + 14}" font-size="11" font-weight="600" fill="currentColor" text-anchor="end">${label}</text>`;
+    const safeP1 = escapeHtml(pship.player1Name || 'Batter 1');
+    const safeP2 = escapeHtml(pship.player2Name || 'Batter 2');
+    rowsSvg += `<g><title>${safeP1}: ${pship.player1Runs} (${pship.player1Balls}b), ${safeP2}: ${pship.player2Runs} (${pship.player2Balls}b)</title>`;
+    rowsSvg += `<text x="${padL - 8}" y="${y + 14}" font-size="11" font-weight="600" fill="currentColor" text-anchor="end">${escapeHtml(label)}</text>`;
 
     // Stacked Bars
     if (pship.totalRuns > 0) {
@@ -296,6 +300,7 @@ export function renderPartnershipChartSVG(
     } else {
       rowsSvg += `<text x="${padL + 8}" y="${y + 14}" font-size="10" fill="currentColor" fill-opacity="0.5">${pship.totalRuns} (${pship.totalBalls}b)</text>`;
     }
+    rowsSvg += `</g>`;
   });
 
   return `

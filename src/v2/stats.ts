@@ -17,6 +17,7 @@ import {
   ManhattanBar,
   DismissalKind
 } from './types.js';
+import { hasOwn, isUnsafeObjectKey } from '../rules.js';
 
 /**
  * Format balls into standard cricket overs notation (e.g., 17 balls -> "2.5")
@@ -195,8 +196,9 @@ export function projectInnings(
   let activeNonStriker = initialNonStriker || null;
   let activeBowler = initialBowler || null;
 
-  function ensureBatsman(name: string): BatsmanProjection {
-    if (!batsmenMap[name]) {
+  function ensureBatsman(rawName: string): BatsmanProjection {
+    const name = isUnsafeObjectKey(rawName) ? `Batter_${String(rawName || 'Unknown')}` : rawName;
+    if (!hasOwn(batsmenMap, name)) {
       batsmenMap[name] = {
         name,
         runs: 0,
@@ -215,8 +217,9 @@ export function projectInnings(
     return batsmenMap[name];
   }
 
-  function ensureBowler(name: string): BowlerProjection {
-    if (!bowlersMap[name]) {
+  function ensureBowler(rawName: string): BowlerProjection {
+    const name = isUnsafeObjectKey(rawName) ? `Bowler_${String(rawName || 'Unknown')}` : rawName;
+    if (!hasOwn(bowlersMap, name)) {
       bowlersMap[name] = {
         name,
         balls: 0,

@@ -1,7 +1,7 @@
 import { gameState, dispatch, setGameState } from './state.js';
 import { saveState, loadState, generatePermalink, clearState, archiveCompletedMatch } from './storage.js';
 import { GameState, LiveInnings, Team } from './types.js';
-import { getSelectableBowlers, isBowlingResourceExhausted, findConsecutiveOverBreaches } from './rules.js';
+import { getSelectableBowlers, isBowlingResourceExhausted, findConsecutiveOverBreaches, parseSyntheticDeliveryToken, escapeHtml } from './rules.js';
 import { generateBugReportMarkdown, copyBugReportToClipboard, getGitHubIssueUrl } from './feedback.js';
 import { openModal, closeModal, initModalSystem, registerModalHiddenCallback, cleanupModalScrollLock } from './modal.js';
 import {
@@ -712,6 +712,8 @@ export function toggleScreenshotMode(): void {
 }
 
 export function parseBallLog(b: string): { runs: number; wicket: number } {
+    const syn = parseSyntheticDeliveryToken(b);
+    if (syn) return { runs: syn.runs, wicket: syn.isWicket ? 1 : 0 };
     let runs = 0;
     let wicket = 0;
     
@@ -726,21 +728,21 @@ export function parseBallLog(b: string): { runs: number; wicket: number } {
         const extra = b.includes('+') ? parseInt(b.split('+')[1], 10) : 0;
         runs = gameState.settings.noBallPenalty + (isNaN(extra) ? 0 : extra);
     } else if (b.startsWith('lb')) {
-        runs = parseInt(b.replace('lb', ''), 10);
+        const parsedLb = parseInt(b.replace('lb', ''), 10);
+        runs = isNaN(parsedLb) ? 0 : parsedLb;
     } else if (b.includes('b') && !b.startsWith('n') && !b.startsWith('w')) {
         const part = b.split('+')[0];
-        runs = parseInt(part.replace('b', ''), 10);
+        const parsedBye = parseInt(part.replace('b', ''), 10);
+        runs = isNaN(parsedBye) ? 0 : parsedBye;
     } else if (b === 'W' || b === 'W-RO') {
         runs = 0;
     } else if (b.includes('+W-RO')) {
         const part = b.split('+')[0];
-        if (part.endsWith('b')) {
-            runs = parseInt(part.replace('b', ''), 10);
-        } else {
-            runs = parseInt(part, 10);
-        }
+        const parsedRo = parseInt(part.replace('b', ''), 10);
+        runs = isNaN(parsedRo) ? 0 : parsedRo;
     } else {
-        runs = parseInt(b, 10);
+        const parsed = parseInt(b, 10);
+        runs = isNaN(parsed) ? 0 : parsed;
     }
     
     return { runs, wicket };
@@ -759,7 +761,7 @@ export function generateSummaryView(): void {
             const matchResultDiv = document.createElement('div');
             matchResultDiv.classList.add('scorecard-match-result-banner');
             const winMsg = (matchStatusDisplay && matchStatusDisplay.textContent) ? matchStatusDisplay.textContent : 'Match Over';
-            matchResultDiv.innerHTML = `<span class="scorecard-match-result-text">${winMsg}</span>`;
+            matchResultDiv.innerHTML = `<span class="scorecard-match-result-text">${escapeHtml(winMsg)}</span>`;
             summariesDiv.appendChild(matchResultDiv);
         }
 
@@ -824,11 +826,11 @@ export function generateSummaryView(): void {
             batsmenTable.classList.add('summary-table');
             batsmenTable.innerHTML = `<thead><tr><th>Batsman</th><th>Runs</th><th>Balls</th><th>4s</th><th>6s</th><th>SR</th></tr></thead>`;
             const batsmenTbody = document.createElement('tbody');
-            for (const name in inningsData.batsmen) {
+            for (const name of Object.keys(inningsData.batsmen || {})) {
                 const b = inningsData.batsmen[name];
                 const tr = document.createElement('tr');
                 const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
-                tr.innerHTML = `<td>${name}</td><td>${b.runs}</td><td>${b.balls}</td><td>${b.fours || 0}</td><td>${b.sixes || 0}</td><td>${sr}</td>`;
+                tr.innerHTML = `<td>${escapeHtml(name)}</td><td>${b.runs}</td><td>${b.balls}</td><td>${b.fours || 0}</td><td>${b.sixes || 0}</td><td>${sr}</td>`;
                 batsmenTbody.appendChild(tr);
             }
             batsmenTable.appendChild(batsmenTbody);
@@ -838,7 +840,7 @@ export function generateSummaryView(): void {
             bowlersTable.classList.add('summary-table');
             bowlersTable.innerHTML = `<thead><tr><th>Bowler</th><th>Overs</th><th>Maidens</th><th>Runs</th><th>Wickets</th><th>Econ</th><th>Wides</th><th>No Balls</th></tr></thead>`;
             const bowlersTbody = document.createElement('tbody');
-            for (const name in inningsData.bowlers) {
+            for (const name of Object.keys(inningsData.bowlers || {})) {
                 const b = inningsData.bowlers[name];
                 const tr = document.createElement('tr');
                 const bOvers = Math.floor(b.balls / 6);
@@ -846,7 +848,7 @@ export function generateSummaryView(): void {
                 const bWides = b.wides || 0;
                 const bNoBalls = b.noballs || 0;
                 const econ = b.balls > 0 ? (b.runs / (b.balls / 6)).toFixed(2) : '0.00';
-                tr.innerHTML = `<td>${name}</td><td>${bOvers}.${bBalls}</td><td>${b.maidens || 0}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${econ}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
+                tr.innerHTML = `<td>${escapeHtml(name)}</td><td>${bOvers}.${bBalls}</td><td>${b.maidens || 0}</td><td>${b.runs}</td><td>${b.wickets}</td><td>${econ}</td><td>${bWides}</td><td>${bNoBalls}</td>`;
                 bowlersTbody.appendChild(tr);
             }
             bowlersTable.appendChild(bowlersTbody);
@@ -861,7 +863,7 @@ export function generateSummaryView(): void {
             if (inningsData.fow && inningsData.fow.length > 0) {
                 const fowDiv = document.createElement('div');
                 fowDiv.classList.add('fow-container');
-                const fowList = inningsData.fow.map((f: any) => `${f.wicket}-${f.score} (${f.batsman}, ${f.overs} ov)`).join(', ');
+                const fowList = inningsData.fow.map((f: any) => `${f.wicket}-${f.score} (${escapeHtml(f.batsman)}, ${escapeHtml(f.overs)} ov)`).join(', ');
                 fowDiv.innerHTML = `<strong>Fall of Wickets:</strong> ${fowList}`;
                 inningsDiv.appendChild(fowDiv);
             }
@@ -922,7 +924,7 @@ export function generateSummaryView(): void {
             if (breaches.length > 0) {
                 const breachDiv = document.createElement('div');
                 breachDiv.classList.add('clause-breach-notice');
-                const detail = breaches.map(b => `${b.bowler} (over ${b.over})`).join(', ');
+                const detail = breaches.map(b => `${escapeHtml(b.bowler)} (over ${b.over})`).join(', ');
                 breachDiv.innerHTML = `<strong>[WARN] Clause 12/13 relaxed:</strong> consecutive overs were bowled by ${detail}. This innings departs from the ICC playing conditions.`;
                 inningsDiv.appendChild(breachDiv);
             }
@@ -955,10 +957,10 @@ export function generateSummaryView(): void {
                     
                     tr.innerHTML = `
                         <td>${idx + 1}${isLive ? '*' : ''}</td>
-                        <td>${over.bowler}</td>
+                        <td>${escapeHtml(over.bowler)}</td>
                         <td>${overRuns}</td>
                         <td>${overWickets}</td>
-                        <td>${over.balls.join(', ')}</td>
+                        <td>${(over.balls || []).map((b: string) => escapeHtml(b)).join(', ')}</td>
                     `;
                     overLogTbody.appendChild(tr);
                 });
@@ -1351,7 +1353,7 @@ export function updateUI(): void {
                 headerDiv.classList.add('completed-over-header');
                 headerDiv.dataset.index = idx.toString();
                 headerDiv.innerHTML = `
-                    <span>Over ${idx + 1}: ${over.bowler}</span>
+                    <span>Over ${idx + 1}: ${escapeHtml(over.bowler)}</span>
                     <span>Runs: ${overRuns} | Wkts: ${overWickets} <span class="arrow">${isExpanded ? '▲' : '▼'}</span></span>
                 `;
                 itemDiv.appendChild(headerDiv);

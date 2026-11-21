@@ -1,5 +1,5 @@
-import { CompletedMatchRecord, GameState, LiveInnings, Team } from './types.js';
-
+import { CompletedMatchRecord, GameState, LiveInnings, MatchPhase, Team } from './types.js';
+import { hasOwn, isUnsafeObjectKey } from './rules.js';
 const KEY_STR_URI_SAFE = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$";
 
 export function lzCompressToEncodedURIComponent(uncompressed: string): string {
@@ -555,7 +555,7 @@ export function healInningsOvers(innings: LiveInnings): void {
     
     for (const ball of innings.overLog) {
         currentOverBalls.push(ball);
-        if (!ball.startsWith('wd') && !ball.startsWith('nb')) {
+        if (!ball.startsWith('wd') && !ball.startsWith('nb') && !ball.startsWith('~+')) {
             legalCount++;
         }
         
@@ -645,6 +645,11 @@ export function minifyState(state: GameState): any {
 }
 
 export function unminifyState(min: any): GameState {
+    const safeName = (val: unknown): string => {
+        if (typeof val !== 'string') return "";
+        const trimmed = val.trim();
+        return (!trimmed || isUnsafeObjectKey(trimmed)) ? "" : trimmed;
+    };
     const unminifyInnings = (inn: any): LiveInnings => {
         if (!inn) return {
             score: 0, wickets: 0, balls: 0,
@@ -654,10 +659,10 @@ export function unminifyState(min: any): GameState {
             currentBowler: "", previousBowler: null,
             outBatsmen: [], overs: [], overLog: [], fow: []
         };
-            const cb1 = inn.cb1 || "";
-            const cb2 = inn.cb2 || "";
-            let cb1Active = inn.bat?.[cb1]?.a === 1;
-            let cb2Active = inn.bat?.[cb2]?.a === 1;
+            const cb1 = safeName(inn.cb1);
+            const cb2 = safeName(inn.cb2);
+            let cb1Active = Boolean(cb1 && hasOwn(inn.bat, cb1) && inn.bat[cb1]?.a === 1);
+            let cb2Active = Boolean(cb2 && hasOwn(inn.bat, cb2) && inn.bat[cb2]?.a === 1);
             if (cb1 && cb2) {
                 if (cb1Active === cb2Active) {
                     cb1Active = true;
@@ -669,20 +674,43 @@ export function unminifyState(min: any): GameState {
                 cb2Active = true;
             }
 
-            const unminifiedBatsmen = Object.fromEntries(
-                Object.entries(inn.bat || {}).map(([k, v]: [string, any]) => {
+            const unminifiedBatsmen: Record<string, any> = {};
+            if (inn.bat && typeof inn.bat === 'object' && !Array.isArray(inn.bat)) {
+                for (const rawKey of Object.getOwnPropertyNames(inn.bat)) {
+                    const k = safeName(rawKey);
+                    if (!k) continue;
+                    const v = inn.bat[rawKey];
+                    if (!v || typeof v !== 'object') continue;
                     let active = false;
                     if (k === cb1) active = cb1Active;
                     else if (k === cb2) active = cb2Active;
-                    return [k, {
+                    unminifiedBatsmen[k] = {
                         runs: v.r || 0,
                         balls: v.b || 0,
                         fours: v.f || 0,
                         sixes: v.s || 0,
                         active
-                    }];
-                })
-            );
+                    };
+                }
+            }
+
+            const unminifiedBowlers: Record<string, any> = {};
+            if (inn.bowl && typeof inn.bowl === 'object' && !Array.isArray(inn.bowl)) {
+                for (const rawKey of Object.getOwnPropertyNames(inn.bowl)) {
+                    const k = safeName(rawKey);
+                    if (!k) continue;
+                    const v = inn.bowl[rawKey];
+                    if (!v || typeof v !== 'object') continue;
+                    unminifiedBowlers[k] = {
+                        runs: v.r || 0,
+                        balls: v.b || 0,
+                        wickets: v.wk || 0,
+                        maidens: v.m || 0,
+                        wides: v.wd || 0,
+                        noballs: v.nb || 0
+                    };
+                }
+            }
 
             return {
                 score: inn.sc || 0,
@@ -695,15 +723,15 @@ export function unminifyState(min: any): GameState {
                     legbyes: inn.ex ? (inn.ex.lb || 0) : 0
                 },
                 batsmen: unminifiedBatsmen,
-                bowlers: Object.fromEntries(Object.entries(inn.bowl || {}).map(([k, v]: [string, any]) => [k, { runs: v.r || 0, balls: v.b || 0, wickets: v.wk || 0, maidens: v.m || 0, wides: v.wd || 0, noballs: v.nb || 0 }])),
+                bowlers: unminifiedBowlers,
                 currentBatsman1: cb1,
                 currentBatsman2: cb2,
-                currentBowler: inn.cbo || "",
-                previousBowler: inn.pbo || null,
-                outBatsmen: inn.ob || [],
-                overs: (inn.ov || []).map((o: any) => ({ bowler: o.bo, balls: o.bl })),
-                overLog: inn.ol || [],
-                fow: (inn.fw || []).map((f: any) => ({ wicket: f.w, score: f.s, batsman: f.b, overs: f.ov }))
+                currentBowler: safeName(inn.cbo),
+                previousBowler: safeName(inn.pbo) || null,
+                outBatsmen: Array.isArray(inn.ob) ? inn.ob.map(safeName).filter(Boolean) : [],
+                overs: Array.isArray(inn.ov) ? inn.ov.map((o: any) => ({ bowler: safeName(o?.bo) || "Unknown", balls: Array.isArray(o?.bl) ? o.bl : [] })) : [],
+                overLog: Array.isArray(inn.ol) ? inn.ol : [],
+                fow: Array.isArray(inn.fw) ? inn.fw.map((f: any) => ({ wicket: f.w, score: f.s, batsman: safeName(f.b), overs: f.ov })) : []
             };
         };
 
@@ -711,18 +739,19 @@ export function unminifyState(min: any): GameState {
         if (!t) return { name: defName, players: [], innings: [] };
         return {
             name: t.n || defName,
-            players: t.p || [],
-            innings: (t.in || []).map(unminifyInnings)
+            players: Array.isArray(t.p) ? t.p.map(safeName).filter(Boolean) : [],
+            innings: Array.isArray(t.in) ? t.in.map(unminifyInnings) : []
         };
     };
 
-    const inferredPhase = min.m && min.m.mo === 1
+    const inferredPhase: MatchPhase = min.m && min.m.mo === 1
         ? 'MATCH_OVER'
         : (min.m && min.m.tg !== null && min.m.ci === 1 ? 'INNINGS_BREAK' : 'PLAYING_INNINGS');
+    const resolvedPhase: MatchPhase = min.ph || inferredPhase;
 
     return {
-        phase: min.ph || inferredPhase,
-        matchStarted: true,
+        phase: resolvedPhase,
+        matchStarted: resolvedPhase !== 'SETUP',
         uiEvents: [],
         history: [],
         settings: {

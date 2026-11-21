@@ -67,11 +67,21 @@ function isUndoableAction(actionType: string): boolean {
 }
 
 export function dispatch(action: Action): void {
-    if (isUndoableAction(action.type)) {
+    const historySaved = action.type === 'APPLY_GOD_MODE'
+        ? !!gameState.matchStarted
+        : isUndoableAction(action.type);
+    if (historySaved) {
         saveHistory(gameState);
     }
 
     const nextState = reducer(gameState, action);
+    if (nextState === gameState) {
+        if (historySaved) {
+            gameState.history.pop();
+        }
+        return;
+    }
+
     setGameState(nextState);
     if (action.type === 'RESET_MATCH') {
         clearState();
