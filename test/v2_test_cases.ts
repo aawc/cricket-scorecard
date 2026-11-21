@@ -30,6 +30,9 @@ import {
   haptics,
   audioSynth
 } from '../src/v2/hardware.js';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { getProjectionsFromGameState, synthesizeEventsFromLiveInnings } from '../src/v2/bridge.js';
 import { unminifyState } from '../src/storage.js';
 
@@ -672,6 +675,415 @@ export async function runV2Tests(): Promise<void> {
       if (rendered !== expectedNotations[i]) {
         console.error(`Test 93 Failed: Expected '${expectedNotations[i]}', got:`, rendered);
         process.exit(1);
+      }
+    }
+  }
+
+  // =========================================================================
+  // Test 104: Dependency Hygiene, Registry Isolation & Security Advisory Floor (#14, #15, #16)
+  // =========================================================================
+  {
+    console.log("Running Test 104 (Dependency Hygiene, Registry Isolation & Security Advisory Floor #14, #15, #16)...");
+
+    function failTest104(detail: string): never {
+      console.error(`[FAIL] Test 104 Failed: ${detail}`);
+      process.exit(1);
+    }
+
+    const parseSemverFloor = (spec: string, allowRangePrefix = true): [number, number, number] => {
+      const pattern = allowRangePrefix
+        ? /^(?:\^|~|>=)?(\d+)\.(\d+)\.(\d+)(?:\+[0-9A-Za-z.-]+)?$/
+        : /^(\d+)\.(\d+)\.(\d+)(?:\+[0-9A-Za-z.-]+)?$/;
+      const match = pattern.exec(spec.trim());
+      if (!match) {
+        throw new TypeError(
+          `Unsupported or malformed ${allowRangePrefix ? 'release semver floor' : 'exact lockfile semver'} specification "${spec}"`
+        );
+      }
+      return [Number(match[1]), Number(match[2]), Number(match[3])];
+    };
+
+    const isAtLeast = (actual: [number, number, number], min: [number, number, number]): boolean => {
+      if (actual[0] !== min[0]) return actual[0] > min[0];
+      if (actual[1] !== min[1]) return actual[1] > min[1];
+      return actual[2] >= min[2];
+    };
+
+    const parseRequiredSemverFloor = (
+      label: string,
+      rawSpec: unknown,
+      allowRangePrefix = true
+    ): [number, number, number] => {
+      if (typeof rawSpec !== 'string' || rawSpec.trim().length === 0) {
+        return failTest104(`${label} must be a non-empty semver string, got ${JSON.stringify(rawSpec)}`);
+      }
+      try {
+        return parseSemverFloor(rawSpec, allowRangePrefix);
+      } catch (err) {
+        const errSummary = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+        return failTest104(`${label} failed semver parsing (${errSummary})`);
+      }
+    };
+
+    let rejectedRangeInExactMode = false;
+    try {
+      parseSemverFloor('^8.3.8', false);
+    } catch (err) {
+      if (err instanceof TypeError) {
+        rejectedRangeInExactMode = true;
+      }
+    }
+    if (
+      !rejectedRangeInExactMode ||
+      isAtLeast(parseSemverFloor('^8.0.16', true), [8, 1, 6]) ||
+      isAtLeast(parseSemverFloor('~8.1.5', true), [8, 1, 6]) ||
+      !isAtLeast(parseSemverFloor('>=8.1.6', true), [8, 1, 6]) ||
+      !isAtLeast(parseSemverFloor('9.0.0', false), [8, 1, 6]) ||
+      isAtLeast(parseSemverFloor('3.3.16', false), [3, 3, 18]) ||
+      !isAtLeast(parseSemverFloor('3.3.20', false), [3, 3, 18])
+    ) {
+      failTest104('Semver tuple comparator failed boundary or exact-lockfile verification');
+    }
+
+    const validateNpmrcAllowlist = (raw: string): string | null => {
+      const nonCommentLines = raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0 && !line.startsWith('#') && !line.startsWith(';'));
+
+      for (const line of nonCommentLines) {
+        if (line.includes('http://')) {
+          return `.npmrc non-comment line must not contain insecure http:// URL: "${line}"`;
+        }
+        if (line.startsWith('//')) {
+          return `.npmrc non-comment line must not contain protocol-relative host directive: "${line}"`;
+        }
+        const lineUrls = line.match(/https?:\/\/[^\s"',;]+/g) ?? [];
+        for (const url of lineUrls) {
+          if (!url.startsWith('https://registry.npmjs.org/')) {
+            return `.npmrc non-comment line contains URL outside https://registry.npmjs.org/: "${url}"`;
+          }
+        }
+      }
+
+      const registryLines = nonCommentLines.filter((line) => /(?:^|:)registry\s*=/.test(line));
+      if (registryLines.length !== 1 || registryLines[0] !== 'registry=https://registry.npmjs.org/') {
+        return `.npmrc must contain exactly one registry directive equal to "registry=https://registry.npmjs.org/", got: ${JSON.stringify(registryLines)}`;
+      }
+
+      return null;
+    };
+
+    const DEPENDENCY_MAP_KEYS = new Set([
+      'dependencies',
+      'devDependencies',
+      'optionalDependencies',
+      'peerDependencies',
+    ]);
+
+    const checkNonFundingUrls = (
+      node: unknown,
+      inFunding: boolean,
+      jsonPath: string,
+      inDependencyMap = false
+    ): string | null => {
+      if (typeof node === 'string') {
+        if (node.includes('://') || node.startsWith('//')) {
+          if (!inFunding) {
+            if (!node.startsWith('https://registry.npmjs.org/')) {
+              return `package-lock.json non-funding URL at ${jsonPath} must start with https://registry.npmjs.org/, got "${node}"`;
+            }
+          } else {
+            let parsedFundingUrl: URL;
+            try {
+              parsedFundingUrl = new URL(node);
+            } catch (err) {
+              const errSummary = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+              return `package-lock.json funding URL at ${jsonPath} is malformed: "${node}" (${errSummary})`;
+            }
+            if (
+              parsedFundingUrl.protocol !== 'https:' ||
+              !parsedFundingUrl.hostname.includes('.') ||
+              parsedFundingUrl.hostname === 'localhost'
+            ) {
+              return `package-lock.json funding URL at ${jsonPath} must use https:// with a public domain hostname, got "${node}"`;
+            }
+          }
+        }
+        return null;
+      }
+
+      if (Array.isArray(node)) {
+        for (let i = 0; i < node.length; i++) {
+          const itemErr = checkNonFundingUrls(node[i], inFunding, `${jsonPath}[${i}]`, false);
+          if (itemErr !== null) {
+            return itemErr;
+          }
+        }
+        return null;
+      }
+
+      if (node !== null && typeof node === 'object') {
+        for (const [key, value] of Object.entries(node as Record<string, unknown>)) {
+          const nextInFunding =
+            key === 'resolved' ? false : inFunding || (!inDependencyMap && key === 'funding');
+          const nextInDependencyMap = DEPENDENCY_MAP_KEYS.has(key);
+          const childErr = checkNonFundingUrls(
+            value,
+            nextInFunding,
+            `${jsonPath}.${key}`,
+            nextInDependencyMap
+          );
+          if (childErr !== null) {
+            return childErr;
+          }
+        }
+      }
+
+      return null;
+    };
+
+    const validateLockfileProvenance = (
+      raw: string,
+      parsedRoot: unknown,
+      packagesMap: Record<string, { version?: unknown; resolved?: unknown; link?: unknown }>
+    ): string | null => {
+      if (raw.includes('http://') || raw.includes('http:\\/\\/')) {
+        return 'package-lock.json must contain zero insecure http:// URLs';
+      }
+
+      const lockfileUrls = raw.match(/https?:\/\/[^\s"',)]+/g) ?? [];
+      if (lockfileUrls.length === 0) {
+        return 'package-lock.json contained zero https:// URLs';
+      }
+      for (const url of lockfileUrls) {
+        let parsedUrl: URL;
+        try {
+          parsedUrl = new URL(url);
+        } catch (err) {
+          const errSummary = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+          return `package-lock.json contains malformed URL "${url}" (${errSummary})`;
+        }
+        if (
+          parsedUrl.protocol !== 'https:' ||
+          !parsedUrl.hostname.includes('.') ||
+          parsedUrl.hostname === 'localhost'
+        ) {
+          return `package-lock.json URL "${url}" must use https:// with a public domain hostname`;
+        }
+      }
+
+      const nonFundingTreeError = checkNonFundingUrls(parsedRoot, false, '$');
+      if (nonFundingTreeError !== null) {
+        return nonFundingTreeError;
+      }
+
+      for (const match of raw.matchAll(/"resolved"\s*:\s*"([^"]*)"/g)) {
+        if (!match[1].startsWith('https://registry.npmjs.org/')) {
+          return `package-lock.json raw "resolved" field must start with https://registry.npmjs.org/, got "${match[1]}"`;
+        }
+      }
+
+      let resolvedUrlCount = 0;
+      for (const [pkgKey, pkgMeta] of Object.entries(packagesMap)) {
+        if (!pkgMeta || typeof pkgMeta !== 'object') {
+          return `package-lock.json packages["${pkgKey}"] must be an object`;
+        }
+        if (pkgKey === '') {
+          if (
+            pkgMeta.resolved !== undefined &&
+            (typeof pkgMeta.resolved !== 'string' || !pkgMeta.resolved.startsWith('https://registry.npmjs.org/'))
+          ) {
+            return `package-lock.json root package resolved field must be omitted or start with https://registry.npmjs.org/, got ${JSON.stringify(pkgMeta.resolved)}`;
+          }
+          continue;
+        }
+        if (pkgMeta.link === true) {
+          continue;
+        }
+        if (typeof pkgMeta.resolved !== 'string' || !pkgMeta.resolved.startsWith('https://registry.npmjs.org/')) {
+          return `package-lock.json packages["${pkgKey}"].resolved must start with https://registry.npmjs.org/, got ${JSON.stringify(pkgMeta.resolved)}`;
+        }
+        resolvedUrlCount++;
+      }
+
+      if (resolvedUrlCount === 0) {
+        return 'package-lock.json contained zero packages with resolved https://registry.npmjs.org/ tarball URLs';
+      }
+
+      return null;
+    };
+
+    const checkSyntheticLockfile = (syntheticRoot: {
+      packages: Record<string, { version?: unknown; resolved?: unknown; link?: unknown; [k: string]: unknown }>;
+      [k: string]: unknown;
+    }): string | null => {
+      return validateLockfileProvenance(JSON.stringify(syntheticRoot), syntheticRoot, syntheticRoot.packages);
+    };
+
+    if (
+      validateNpmrcAllowlist('registry=http://registry.npmjs.org/\n') === null ||
+      validateNpmrcAllowlist('registry=https://mirror.example.com/\n') === null ||
+      validateNpmrcAllowlist('registry=https://registry.npmjs.org.example.com/\n') === null ||
+      validateNpmrcAllowlist('registry=https://registry.npmjs.org/\nhttps-proxy=https://proxy.example.com/\n') === null ||
+      validateNpmrcAllowlist('registry=https://registry.npmjs.org/\n@scope:registry=https://registry.npmjs.org/\n') === null ||
+      validateNpmrcAllowlist('registry=https://registry.npmjs.org/\n//registry.npmjs.org/:_authToken=token\n') === null ||
+      validateNpmrcAllowlist('# public npm registry\nregistry=https://registry.npmjs.org/\n') !== null ||
+      checkSyntheticLockfile({
+        packages: { 'node_modules/pkg': { resolved: 'https://mirror.example.com/pkg.tgz' } },
+      }) === null ||
+      checkSyntheticLockfile({
+        packages: { 'node_modules/pkg': { resolved: 'https://registry.npmjs.org.example.com/pkg.tgz' } },
+      }) === null ||
+      checkSyntheticLockfile({
+        packages: {
+          '': { devDependencies: { pkg: 'https://mirror.example.com/pkg.tgz' } },
+          'node_modules/pkg': { resolved: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz' },
+        },
+      }) === null ||
+      checkSyntheticLockfile({
+        packages: {
+          '': { devDependencies: { pkg: '//mirror.example.com/pkg.tgz' } },
+          'node_modules/pkg': { resolved: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz' },
+        },
+      }) === null ||
+      checkSyntheticLockfile({
+        packages: {
+          'node_modules/pkg': {
+            resolved: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz',
+            funding: { url: 'http://ko-fi.com/pkg' },
+          },
+        },
+      }) === null ||
+      checkSyntheticLockfile({
+        packages: {
+          'node_modules/pkg': {
+            resolved: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz',
+            funding: { url: 'https://localhost/pkg' },
+          },
+        },
+      }) === null ||
+      checkSyntheticLockfile({
+        packages: {
+          'node_modules/pkg': {
+            resolved: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz',
+            funding: { url: 'https://intranet/pkg' },
+          },
+        },
+      }) === null ||
+      checkSyntheticLockfile({ packages: { 'node_modules/pkg': {} } }) === null ||
+      checkSyntheticLockfile({
+        packages: {
+          '': {},
+          'node_modules/pkg': {
+            resolved: 'https://registry.npmjs.org/pkg/-/pkg-1.0.0.tgz',
+            funding: { url: 'https://ko-fi.com/pkg' },
+          },
+        },
+      }) !== null
+    ) {
+      failTest104('Registry allowlist provenance validator failed negative or positive self-check');
+    }
+
+    const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+    // (a) .npmrc public registry allowlist (single-directive guard against insecure HTTP, non-public mirrors, or scoped overrides)
+    const npmrcPath = path.join(repoRoot, '.npmrc');
+    if (!fs.existsSync(npmrcPath)) {
+      failTest104(`.npmrc does not exist at ${npmrcPath}`);
+    }
+    const npmrcRaw = fs.readFileSync(npmrcPath, 'utf8');
+    const npmrcAllowlistError = validateNpmrcAllowlist(npmrcRaw);
+    if (npmrcAllowlistError !== null) {
+      failTest104(npmrcAllowlistError);
+    }
+
+    // (b) package.json minimum floor & transitive override
+    const packageJsonPath = path.join(repoRoot, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) {
+      failTest104(`package.json does not exist at ${packageJsonPath}`);
+    }
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+      devDependencies?: Record<string, unknown>;
+      overrides?: Record<string, unknown>;
+    };
+
+    const viteSpecRaw = packageJson.devDependencies?.['vite'];
+    const viteSpecFloor = parseRequiredSemverFloor('package.json devDependencies.vite', viteSpecRaw, true);
+    if (!isAtLeast(viteSpecFloor, [8, 1, 6])) {
+      failTest104(
+        `package.json devDependencies.vite ("${String(viteSpecRaw)}") must specify floor >= 8.1.6 to remediate Dependabot alerts #14, #15, and #16`
+      );
+    }
+
+    const launchEditorOverrideRaw = packageJson.overrides?.['launch-editor'];
+    const launchEditorOverrideFloor = parseRequiredSemverFloor(
+      'package.json overrides["launch-editor"]',
+      launchEditorOverrideRaw,
+      true
+    );
+    if (!isAtLeast(launchEditorOverrideFloor, [2, 14, 2])) {
+      failTest104(
+        `package.json overrides["launch-editor"] ("${String(launchEditorOverrideRaw)}") must specify floor >= 2.14.2`
+      );
+    }
+
+    // (c) package-lock.json public registry allowlist provenance
+    const lockfilePath = path.join(repoRoot, 'package-lock.json');
+    if (!fs.existsSync(lockfilePath)) {
+      failTest104(`package-lock.json does not exist at ${lockfilePath}`);
+    }
+    const lockfileRaw = fs.readFileSync(lockfilePath, 'utf8');
+    const lockfileJson = JSON.parse(lockfileRaw) as {
+      packages?: Record<string, { version?: unknown; resolved?: unknown; link?: unknown }>;
+    };
+    const lockPackages = lockfileJson.packages;
+    if (!lockPackages || typeof lockPackages !== 'object') {
+      return failTest104('package-lock.json is missing top-level "packages" map');
+    }
+
+    const lockfileProvenanceError = validateLockfileProvenance(lockfileRaw, lockfileJson, lockPackages);
+    if (lockfileProvenanceError !== null) {
+      failTest104(lockfileProvenanceError);
+    }
+
+    // (d) package-lock.json exact advisory version floors (vite >= 8.1.6, launch-editor >= 2.14.2, nanoid >= 3.3.18)
+    const lockedViteMeta = lockPackages['node_modules/vite'];
+    const lockedViteVersion = parseRequiredSemverFloor(
+      'package-lock.json packages["node_modules/vite"].version',
+      lockedViteMeta?.version,
+      false
+    );
+    if (!isAtLeast(lockedViteVersion, [8, 1, 6])) {
+      failTest104(
+        `package-lock.json packages["node_modules/vite"].version ("${String(lockedViteMeta?.version)}") must be >= 8.1.6 (GHSA-698v-4r3x-3vcv #14, GHSA-587h-7wmj-h5pm #15, GHSA-r825-w8mm-5pxw #16, GHSA-rq7h-c2jc-7f22, GHSA-9jrq-w75r-8gcw)`
+      );
+    }
+
+    for (const [pkgKey, pkgMeta] of Object.entries(lockPackages)) {
+      if (pkgKey === 'node_modules/launch-editor' || pkgKey.endsWith('/node_modules/launch-editor')) {
+        const lockedLaunchEditorVersion = parseRequiredSemverFloor(
+          `package-lock.json packages["${pkgKey}"].version`,
+          pkgMeta?.version,
+          false
+        );
+        if (!isAtLeast(lockedLaunchEditorVersion, [2, 14, 2])) {
+          failTest104(
+            `package-lock.json packages["${pkgKey}"].version ("${String(pkgMeta?.version)}") must be >= 2.14.2`
+          );
+        }
+      }
+      if (pkgKey === 'node_modules/nanoid' || pkgKey.endsWith('/node_modules/nanoid')) {
+        const lockedNanoidVersion = parseRequiredSemverFloor(
+          `package-lock.json packages["${pkgKey}"].version`,
+          pkgMeta?.version,
+          false
+        );
+        if (!isAtLeast(lockedNanoidVersion, [3, 3, 18])) {
+          failTest104(
+            `package-lock.json packages["${pkgKey}"].version ("${String(pkgMeta?.version)}") must be >= 3.3.18 (GHSA-2v37-7h3g-55p8)`
+          );
+        }
       }
     }
   }

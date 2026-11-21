@@ -75,8 +75,8 @@ cricket-scorecard/
 │       └── types.ts                 # Event-sourced DeliveryEvent schemas & interfaces
 ├── test/                            # Automated Unit & Regression Test Suites
 │   ├── test.ts                      # Test harness & JSDOM test runner
-│   ├── test_cases.ts                # Core regression test cases (Tests 1–84)
-│   └── v2_test_cases.ts             # v2 Architecture & Analytics test suite (Tests 85–89)
+│   ├── test_cases.ts                # Core regression test cases (Tests 1–84, 94–103)
+│   └── v2_test_cases.ts             # v2 Architecture, Analytics & Hygiene test suite (Tests 85–93, 104)
 ├── .gitignore                       # Git ignore patterns
 ├── .npmrc                           # Public npmjs.org registry pin for hermetic lockfiles
 ├── AGENTS.md                        # Canonical multi-agent developer guide & standing rules
