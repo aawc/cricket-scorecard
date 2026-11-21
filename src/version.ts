@@ -22,9 +22,9 @@ export interface ReleaseInfo {
 /**
  * Active application version formatted as timestamped semantic tag: v$yyyy.$mm.$nnn
  */
-export const APP_VERSION = "v2026.11.001";
+export const APP_VERSION = "v2026.11.002";
 export const APP_RELEASE_DATE = "2026-11-21";
-export const APP_RELEASE_TIMESTAMP = "2026-11-21T08:47:07.356Z";
+export const APP_RELEASE_TIMESTAMP = "2026-11-21T11:28:38.278Z";
 
 /**
  * Categorize a git commit message into conventional change types.
@@ -90,6 +90,31 @@ export function getNextSemanticVersion(existingTags: string[] = [], referenceDat
  * Structured Release History containing all releases, highlights, and commit records.
  */
 export const RELEASE_HISTORY: ReleaseInfo[] = [
+    {
+        "version": "v2026.11.002",
+        "date": "2026-11-21",
+        "timestamp": "2026-11-21T11:28:38.278Z",
+        "highlights": [
+            "Add modular Umpire God Mode modal with spectator lockout and doc sync",
+            "Add lossless APPLY_GOD_MODE state machine and v2 bridge reconciliation"
+        ],
+        "commits": [
+            {
+                "hash": "8713b79",
+                "author": "Varun Khaneja",
+                "date": "2026-11-21",
+                "message": "feat(ui): add modular Umpire God Mode modal with spectator lockout and doc sync",
+                "category": "feat"
+            },
+            {
+                "hash": "b28c6c1",
+                "author": "Varun Khaneja",
+                "date": "2026-11-21",
+                "message": "feat(reducer): add lossless APPLY_GOD_MODE state machine and v2 bridge reconciliation",
+                "category": "feat"
+            }
+        ]
+    },
     {
         "version": "v2026.11.001",
         "date": "2026-11-21",

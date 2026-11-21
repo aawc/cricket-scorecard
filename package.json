@@ -1,6 +1,6 @@
 {
   "name": "cricket-scorecard-pwa",
-  "version": "2026.11.001",
+  "version": "2026.11.002",
   "description": "Cricket Scorecard PWA",
   "type": "module",
   "scripts": {
