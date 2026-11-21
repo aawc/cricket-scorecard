@@ -4538,7 +4538,18 @@ console.log("Running Test 56...");
         // 4. End-to-end execution of scripts/release.js inside an isolated temporary git repository
         const tmpDir = fs103.mkdtempSync(path103.join(os103.tmpdir(), "cric-release-test-"));
         const ghOutDir = fs103.mkdtempSync(path103.join(os103.tmpdir(), "cric-release-ghout-"));
+        const remoteDir = fs103.mkdtempSync(path103.join(os103.tmpdir(), "cric-release-remote-"));
+        const cleanupTmp103 = () => {
+            fs103.rmSync(tmpDir, { recursive: true, force: true });
+            fs103.rmSync(ghOutDir, { recursive: true, force: true });
+            fs103.rmSync(remoteDir, { recursive: true, force: true });
+        };
         try {
+            const fail103: (msg: string) => never = (msg: string): never => {
+                console.error(msg);
+                cleanupTmp103();
+                process.exit(1);
+            };
             const gitEnv = {
                 ...process.env,
                 GIT_AUTHOR_NAME: "Test Runner",
@@ -4610,14 +4621,12 @@ console.log("Running Test 56...");
 
             const dirtyAfterRelease = runGit(["status", "--porcelain"]);
             if (dirtyAfterRelease !== "") {
-                console.error(`[FAIL] Test 103 Failed: Expected clean working tree after --ci release, got:\n${dirtyAfterRelease}`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Expected clean working tree after --ci release, got:\n${dirtyAfterRelease}`);
             }
 
             const headSubject = runGit(["log", "-n", "1", "--pretty=%s"]);
             if (!/^chore\(release\): v\d{4}\.\d{2}\.\d{3} \[skip ci\]$/.test(headSubject)) {
-                console.error(`[FAIL] Test 103 Failed: Expected release commit subject 'chore(release): vYYYY.MM.NNN [skip ci]', got "${headSubject}"`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Expected release commit subject 'chore(release): vYYYY.MM.NNN [skip ci]', got "${headSubject}"`);
             }
 
             const ghOut1 = fs103.readFileSync(ghOutputFile1, "utf8");
@@ -4629,26 +4638,22 @@ console.log("Running Test 56...");
 
             const newTag = outMap1["tag"];
             if (!newTag || !/^v\d{4}\.\d{2}\.\d{3}$/.test(newTag) || newTag === "v2026.09.001") {
-                console.error(`[FAIL] Test 103 Failed: Invalid new tag in GITHUB_OUTPUT: ${JSON.stringify(outMap1)}`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Invalid new tag in GITHUB_OUTPUT: ${JSON.stringify(outMap1)}`);
             }
 
             const headSha1 = runGit(["rev-parse", "HEAD"]);
             const tagTargetSha = runGit(["rev-parse", `${newTag}^{commit}`]);
             if (tagTargetSha !== headSha1) {
-                console.error(`[FAIL] Test 103 Failed: Tag ${newTag} (${tagTargetSha}) does not point to release commit HEAD (${headSha1}) — git commit must run BEFORE git tag -a`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Tag ${newTag} (${tagTargetSha}) does not point to release commit HEAD (${headSha1}) — git commit must run BEFORE git tag -a`);
             }
 
             const versionTsAtTag = runGit(["show", `${newTag}:src/version.ts`]);
             if (!versionTsAtTag.includes(`APP_VERSION = "${newTag}"`)) {
-                console.error(`[FAIL] Test 103 Failed: ${newTag}:src/version.ts does not contain APP_VERSION = "${newTag}"`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: ${newTag}:src/version.ts does not contain APP_VERSION = "${newTag}"`);
             }
 
             if (outMap1["skipped"] !== "false" || outMap1["release_sha"] !== headSha1) {
-                console.error(`[FAIL] Test 103 Failed: GITHUB_OUTPUT mismatch after release: ${JSON.stringify(outMap1)} (expected skipped=false, release_sha=${headSha1})`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: GITHUB_OUTPUT mismatch after release: ${JSON.stringify(outMap1)} (expected skipped=false, release_sha=${headSha1})`);
             }
 
             // Second commit: pure-markdown edit on top of newTag must skip release
@@ -4681,14 +4686,12 @@ console.log("Running Test 56...");
                 if (eqIdx > 0) outMap2[line.slice(0, eqIdx)] = line.slice(eqIdx + 1);
             }
             if (outMap2["skipped"] !== "true" || outMap2["release_sha"] !== docHeadSha) {
-                console.error(`[FAIL] Test 103 Failed: Pure-markdown commit must emit skipped=true and release_sha=${docHeadSha}, got: ${JSON.stringify(outMap2)}`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Pure-markdown commit must emit skipped=true and release_sha=${docHeadSha}, got: ${JSON.stringify(outMap2)}`);
             }
 
             const allTagsAfterDoc = runGit(["tag", "-l", "v*"]).split(/\r?\n/).filter(Boolean);
             if (allTagsAfterDoc.length !== 2 || !allTagsAfterDoc.includes("v2026.09.001") || !allTagsAfterDoc.includes(newTag)) {
-                console.error(`[FAIL] Test 103 Failed: Pure-markdown commit must not mint a new tag, got tags: ${JSON.stringify(allTagsAfterDoc)}`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Pure-markdown commit must not mint a new tag, got tags: ${JSON.stringify(allTagsAfterDoc)}`);
             }
 
             // Third commit: local non-CI release must omit [skip ci] and preserve RELEASE_HISTORY despite `arr[0];` in prior release
@@ -4708,20 +4711,17 @@ console.log("Running Test 56...");
 
             const localHeadSubject = runGit(["log", "-n", "1", "--pretty=%s"]);
             if (!/^chore\(release\): v\d{4}\.\d{2}\.\d{3}$/.test(localHeadSubject) || localHeadSubject.includes("[skip ci]")) {
-                console.error(`[FAIL] Test 103 Failed: Local non-CI release commit must omit [skip ci], got "${localHeadSubject}"`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: Local non-CI release commit must omit [skip ci], got "${localHeadSubject}"`);
             }
 
             const versionAfterSecondRelease = fs103.readFileSync(path103.join(tmpDir, "src/version.ts"), "utf8");
             const historyMatch = versionAfterSecondRelease.match(/export const RELEASE_HISTORY:\s*ReleaseInfo\[\]\s*=\s*(\[\s*\]|\[[\s\S]*?\n\]);/);
             if (!historyMatch) {
-                console.error("[FAIL] Test 103 Failed: Could not match RELEASE_HISTORY array in generated src/version.ts");
-                process.exit(1);
+                fail103("[FAIL] Test 103 Failed: Could not match RELEASE_HISTORY array in generated src/version.ts");
             }
             const parsedHistory = new Function(`return (${historyMatch[1]});`)();
             if (!Array.isArray(parsedHistory) || parsedHistory.length < 3) {
-                console.error(`[FAIL] Test 103 Failed: RELEASE_HISTORY was truncated by 'arr[0];' commit subject; expected >= 3 releases, got ${parsedHistory?.length}`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: RELEASE_HISTORY was truncated by 'arr[0];' commit subject; expected >= 3 releases, got ${parsedHistory?.length}`);
             }
 
             const extractNotesScriptPath = path103.resolve(repoRoot, "scripts/extract-release-notes.js");
@@ -4731,88 +4731,560 @@ console.log("Running Test 56...");
                 { cwd: tmpDir, encoding: "utf8" }
             );
             if (!extractedNotes1.includes("guard arr[0]; prevent crash")) {
-                console.error(`[FAIL] Test 103 Failed: extract-release-notes.js failed to parse RELEASE_HISTORY containing 'arr[0];':\n${extractedNotes1}`);
-                process.exit(1);
+                fail103(`[FAIL] Test 103 Failed: extract-release-notes.js failed to parse RELEASE_HISTORY containing 'arr[0];':\n${extractedNotes1}`);
             }
-        } finally {
-            fs103.rmSync(tmpDir, { recursive: true, force: true });
-            fs103.rmSync(ghOutDir, { recursive: true, force: true });
-        }
 
-        // 5. Verify GitHub Actions workflow contracts & zero script-injection interpolations in run: blocks
-        const deployYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/deploy.yml"), "utf8");
-        const releaseYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/release.yml"), "utf8");
-        const ciYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/ci.yml"), "utf8");
+            // 5. Verify GitHub Actions workflow YAML validity, contracts, zero script-injection interpolations, and finalize_outputs logic
+            const deployYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/deploy.yml"), "utf8");
+            const releaseYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/release.yml"), "utf8");
+            const ciYml = fs103.readFileSync(path103.resolve(repoRoot, ".github/workflows/ci.yml"), "utf8");
 
-        const extractYamlRunBlocks = (yamlText: string): string[] => {
-            const lines = yamlText.split(/\r?\n/);
-            const blocks: string[] = [];
-            for (let i = 0; i < lines.length; i++) {
-                const runMatch = lines[i].match(/^(\s*(?:-\s+)?)run:\s*(.*)$/);
-                if (!runMatch) continue;
-                const indentLen = lines[i].match(/^\s*/)?.[0].length ?? 0;
-                const inlineVal = runMatch[2].trim();
-                if (inlineVal === "|" || inlineVal === ">" || inlineVal === "|-" || inlineVal === ">-") {
-                    const bodyLines: string[] = [];
-                    for (let j = i + 1; j < lines.length; j++) {
-                        const line = lines[j];
-                        if (line.trim() === "") {
-                            bodyLines.push(line);
-                            continue;
+            const validateGithubWorkflowYaml = (wfName: string, yamlText: string): string | null => {
+                const lines = yamlText.split(/\r?\n/);
+                let blockScalarParentIndent: number | null = null;
+                const leadingIndicators = new Set([
+                    "!", "&", "*", "%", "@", "`", ",", "]", "}", "#", "|", ">", "'", "\"", "{"
+                ]);
+
+                const validateScalarValue = (rawVal: string, indentLen: number, lineNo: number): string | null => {
+                    if (rawVal === "") return null;
+
+                    if (/^[|>][-+]?(?:\s+#.*)?$/.test(rawVal)) {
+                        blockScalarParentIndent = indentLen;
+                        return null;
+                    }
+
+                    if (rawVal.startsWith("'")) {
+                        let idx = 1;
+                        let closed = false;
+                        while (idx < rawVal.length) {
+                            if (rawVal[idx] === "'") {
+                                if (idx + 1 < rawVal.length && rawVal[idx + 1] === "'") {
+                                    idx += 2;
+                                    continue;
+                                }
+                                closed = true;
+                                idx++;
+                                break;
+                            }
+                            idx++;
                         }
-                        const childIndent = line.match(/^\s*/)?.[0].length ?? 0;
-                        if (childIndent <= indentLen) {
-                            i = j - 1;
+                        if (!closed) {
+                            return `${wfName}:${lineNo}: unterminated single-quoted scalar: ${rawVal}`;
+                        }
+                        const trailing = rawVal.slice(idx);
+                        if (trailing.trim() !== "" && !/^\s+#/.test(trailing)) {
+                            return `${wfName}:${lineNo}: unbalanced trailing content after single-quoted scalar: ${rawVal}`;
+                        }
+                        return null;
+                    }
+
+                    if (rawVal.startsWith("\"")) {
+                        let idx = 1;
+                        let closed = false;
+                        while (idx < rawVal.length) {
+                            if (rawVal[idx] === "\\") {
+                                if (idx + 1 >= rawVal.length) {
+                                    break;
+                                }
+                                idx += 2;
+                                continue;
+                            }
+                            if (rawVal[idx] === "\"") {
+                                closed = true;
+                                idx++;
+                                break;
+                            }
+                            idx++;
+                        }
+                        if (!closed) {
+                            return `${wfName}:${lineNo}: unterminated double-quoted scalar: ${rawVal}`;
+                        }
+                        const trailing = rawVal.slice(idx);
+                        if (trailing.trim() !== "" && !/^\s+#/.test(trailing)) {
+                            return `${wfName}:${lineNo}: unbalanced trailing content after double-quoted scalar: ${rawVal}`;
+                        }
+                        return null;
+                    }
+
+                    if (rawVal.startsWith("[")) {
+                        let idx = 0;
+                        let depth = 0;
+                        let inSingle = false;
+                        let inDouble = false;
+                        let closed = false;
+                        while (idx < rawVal.length) {
+                            const ch = rawVal[idx];
+                            if (inSingle) {
+                                if (ch === "'") {
+                                    if (idx + 1 < rawVal.length && rawVal[idx + 1] === "'") {
+                                        idx += 2;
+                                        continue;
+                                    }
+                                    inSingle = false;
+                                }
+                                idx++;
+                                continue;
+                            }
+                            if (inDouble) {
+                                if (ch === "\\") {
+                                    if (idx + 1 >= rawVal.length) break;
+                                    idx += 2;
+                                    continue;
+                                }
+                                if (ch === "\"") {
+                                    inDouble = false;
+                                }
+                                idx++;
+                                continue;
+                            }
+                            if (ch === "'") {
+                                inSingle = true;
+                            } else if (ch === "\"") {
+                                inDouble = true;
+                            } else if (ch === "[") {
+                                depth++;
+                            } else if (ch === "]") {
+                                depth--;
+                                if (depth === 0) {
+                                    closed = true;
+                                    idx++;
+                                    break;
+                                }
+                            }
+                            idx++;
+                        }
+                        if (!closed || depth !== 0 || inSingle || inDouble) {
+                            return `${wfName}:${lineNo}: unbalanced flow sequence: ${rawVal}`;
+                        }
+                        const trailing = rawVal.slice(idx);
+                        if (trailing.trim() !== "" && !/^\s+#/.test(trailing)) {
+                            return `${wfName}:${lineNo}: unexpected content after flow sequence: ${rawVal}`;
+                        }
+                        const flowInner = rawVal.slice(1, idx - 1);
+                        if (flowInner.trim() !== "") {
+                            const rawItems: string[] = [];
+                            let segStart = 0;
+                            let nestedDepth = 0;
+                            let itemSingle = false;
+                            let itemDouble = false;
+                            for (let p = 0; p < flowInner.length; p++) {
+                                const ch = flowInner[p];
+                                if (itemSingle) {
+                                    if (ch === "'") {
+                                        if (p + 1 < flowInner.length && flowInner[p + 1] === "'") {
+                                            p++;
+                                            continue;
+                                        }
+                                        itemSingle = false;
+                                    }
+                                    continue;
+                                }
+                                if (itemDouble) {
+                                    if (ch === "\\") {
+                                        p++;
+                                        continue;
+                                    }
+                                    if (ch === "\"") {
+                                        itemDouble = false;
+                                    }
+                                    continue;
+                                }
+                                if (ch === "'") {
+                                    itemSingle = true;
+                                } else if (ch === "\"") {
+                                    itemDouble = true;
+                                } else if (ch === "[") {
+                                    nestedDepth++;
+                                } else if (ch === "]") {
+                                    nestedDepth--;
+                                } else if (ch === "," && nestedDepth === 0) {
+                                    rawItems.push(flowInner.slice(segStart, p));
+                                    segStart = p + 1;
+                                }
+                            }
+                            rawItems.push(flowInner.slice(segStart));
+                            for (const rawItem of rawItems) {
+                                const item = rawItem.trim();
+                                if (item === "") {
+                                    return `${wfName}:${lineNo}: empty item in flow sequence: ${rawVal}`;
+                                }
+                                if (/^[|>][-+]?(?:\s+#.*)?$/.test(item)) {
+                                    return `${wfName}:${lineNo}: block scalar header '${item}' is invalid inside flow sequence: ${rawVal}`;
+                                }
+                                const itemErr = validateScalarValue(item, indentLen, lineNo);
+                                if (itemErr) return itemErr;
+                            }
+                        }
+                        return null;
+                    }
+
+                    if (leadingIndicators.has(rawVal[0])) {
+                        return `${wfName}:${lineNo}: unquoted scalar starts with YAML indicator '${rawVal[0]}': ${rawVal}`;
+                    }
+
+                    if (/^[-?](?:\s|$)/.test(rawVal)) {
+                        return `${wfName}:${lineNo}: unquoted scalar starts with YAML block indicator '${rawVal[0]}': ${rawVal}`;
+                    }
+
+                    let searchFrom = 0;
+                    while (true) {
+                        const openIdx = rawVal.indexOf("${{", searchFrom);
+                        if (openIdx === -1) break;
+                        const closeIdx = rawVal.indexOf("}}", openIdx + 3);
+                        if (closeIdx === -1) {
+                            return `${wfName}:${lineNo}: unclosed '\${{' expression in unquoted scalar: ${rawVal}`;
+                        }
+                        const exprInner = rawVal.slice(openIdx + 3, closeIdx);
+                        if (/\s#/.test(exprInner)) {
+                            return `${wfName}:${lineNo}: YAML comment indicator ' #' inside '\${{ ... }}' truncates expression: ${rawVal}`;
+                        }
+                        searchFrom = closeIdx + 2;
+                    }
+
+                    let effectiveScalar = rawVal;
+                    for (let k = 1; k < rawVal.length; k++) {
+                        if (rawVal[k] === "#" && /\s/.test(rawVal[k - 1])) {
+                            effectiveScalar = rawVal.slice(0, k).trimEnd();
                             break;
                         }
-                        bodyLines.push(line);
-                        if (j === lines.length - 1) i = j;
                     }
-                    blocks.push(bodyLines.join("\n"));
-                } else {
-                    blocks.push(inlineVal);
+
+                    if (/:(?:\s|$)/.test(effectiveScalar)) {
+                        return `${wfName}:${lineNo}: unquoted ': ' or trailing ':' in plain scalar: ${rawVal}`;
+                    }
+
+                    return null;
+                };
+
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    const lineNo = i + 1;
+
+                    if (blockScalarParentIndent !== null) {
+                        if (line.trim() === "") continue;
+                        if (/^[ ]*\t/.test(line) && (line.match(/^[ ]*/)?.[0].length ?? 0) <= blockScalarParentIndent) {
+                            return `${wfName}:${lineNo}: tab indentation is forbidden in YAML`;
+                        }
+                        const childIndent = line.match(/^[ ]*/)?.[0].length ?? 0;
+                        if (childIndent > blockScalarParentIndent) {
+                            continue;
+                        }
+                        blockScalarParentIndent = null;
+                    }
+
+                    if (/^[ ]*\t/.test(line)) {
+                        return `${wfName}:${lineNo}: tab indentation is forbidden in YAML`;
+                    }
+
+                    const trimmed = line.trim();
+                    if (trimmed === "" || trimmed.startsWith("#")) continue;
+
+                    const indentLen = line.match(/^[ ]*/)?.[0].length ?? 0;
+                    let keyIndent = indentLen;
+                    let rest = line.slice(indentLen);
+
+                    if (rest === "-" || rest.startsWith("- ")) {
+                        const afterDashRaw = rest.slice(1);
+                        if (/^[ ]*\t/.test(afterDashRaw)) {
+                            return `${wfName}:${lineNo}: tab indentation is forbidden in YAML`;
+                        }
+                        const leadingWsAfterDash = afterDashRaw.match(/^[ ]*/)?.[0].length ?? 0;
+                        const afterDash = afterDashRaw.trim();
+                        if (afterDash === "") continue;
+                        const seqMapMatch = afterDash.match(/^(?:[A-Za-z0-9_.-]+|'[^']*'|"[^"]*")\s*:(?:\s+(.*)|\s*)$/);
+                        if (seqMapMatch) {
+                            keyIndent = indentLen + 1 + leadingWsAfterDash;
+                            rest = afterDash;
+                        } else {
+                            const err = validateScalarValue(afterDash, indentLen, lineNo);
+                            if (err) return err;
+                            continue;
+                        }
+                    }
+
+                    const mapMatch = rest.match(/^(?:[A-Za-z0-9_.-]+|'[^']*'|"[^"]*")\s*:(?:\s+(.*)|\s*)$/);
+                    if (!mapMatch) {
+                        return `${wfName}:${lineNo}: malformed YAML mapping or sequence line: ${trimmed}`;
+                    }
+                    const rawVal = (mapMatch[1] ?? "").trim();
+                    const err = validateScalarValue(rawVal, keyIndent, lineNo);
+                    if (err) return err;
+                }
+
+                return null;
+            };
+
+            const negativeWorkflowCases: Array<[string, string]> = [
+                ["neg-bang-tag.yml", "jobs:\n  release:\n    if: !(github.event_name == 'push')"],
+                ["neg-unquoted-colon.yml", "env:\n  BAD: ${{ a : b }}"],
+                ["neg-unterminated-dq.yml", "name: \"unterminated"],
+                ["neg-tab-indent.yml", "jobs:\n\trelease:"],
+                ["neg-unterminated-sq.yml", "name: 'unterminated"],
+                ["neg-expr-comment.yml", "env:\n  BAD: ${{ a == '1' # inline comment }}"],
+                ["neg-compact-seq-block.yml", "steps:\n  - run: |\n      echo hi\n    if: !(github.event_name == 'push')"],
+                ["neg-flow-seq-bang.yml", "on:\n  push:\n    tags: [ !v* ]"],
+                ["neg-flow-seq-colon.yml", "on:\n  push:\n    branches: [ main: dev ]"],
+                ["neg-plain-dash-indicator.yml", "name: - invalid"]
+            ];
+            for (const [negName, negYaml] of negativeWorkflowCases) {
+                const negErr = validateGithubWorkflowYaml(negName, negYaml);
+                if (negErr === null) {
+                    fail103(`[FAIL] Test 103 Failed: validateGithubWorkflowYaml failed to reject invalid YAML fixture ${negName}`);
                 }
             }
-            return blocks;
-        };
 
-        for (const [wfName, wfText] of [["ci.yml", ciYml], ["deploy.yml", deployYml], ["release.yml", releaseYml]] as const) {
-            for (const runBlock of extractYamlRunBlocks(wfText)) {
-                if (runBlock.includes("${{")) {
-                    console.error(`[FAIL] Test 103 Failed: ${wfName} contains untrusted '\${{' interpolation inside a run: block:\n${runBlock}`);
-                    process.exit(1);
+            let workflowChecksFailed = false;
+            for (const [wfName, wfText] of [["ci.yml", ciYml], ["deploy.yml", deployYml], ["release.yml", releaseYml]] as const) {
+                const yamlErr = validateGithubWorkflowYaml(wfName, wfText);
+                if (yamlErr !== null) {
+                    console.error(`[FAIL] Test 103 Failed: Invalid GitHub Actions workflow YAML — ${yamlErr}`);
+                    workflowChecksFailed = true;
                 }
             }
-        }
 
-        if (!deployYml.includes("workflow_call") ||
-            !deployYml.includes("checkout_ref") ||
-            !deployYml.includes("ref: ${{ inputs.checkout_ref || github.ref }}") ||
-            /^\s*push\s*:/m.test(deployYml) ||
-            !deployYml.includes("dist/v2") ||
-            !/node-version:\s*['"]?22['"]?/.test(deployYml)) {
-            console.error("[FAIL] Test 103 Failed: deploy.yml missing workflow_call checkout_ref contract, /v2/ mirror, or Node 22");
-            process.exit(1);
-        }
+            const extractYamlRunBlocks = (yamlText: string): string[] => {
+                const lines = yamlText.split(/\r?\n/);
+                const blocks: string[] = [];
+                for (let i = 0; i < lines.length; i++) {
+                    const runMatch = lines[i].match(/^([ ]*(?:-[ ]+)?)run:\s*(.*)$/);
+                    if (!runMatch) continue;
+                    const keyIndent = runMatch[1].length;
+                    const inlineVal = runMatch[2].trim();
+                    if (/^[|>][-+]?$/.test(inlineVal)) {
+                        const bodyLines: string[] = [];
+                        for (let j = i + 1; j < lines.length; j++) {
+                            const line = lines[j];
+                            if (line.trim() === "") {
+                                bodyLines.push(line);
+                                continue;
+                            }
+                            const childIndent = line.match(/^[ ]*/)?.[0].length ?? 0;
+                            if (childIndent <= keyIndent) {
+                                i = j - 1;
+                                break;
+                            }
+                            bodyLines.push(line);
+                            if (j === lines.length - 1) i = j;
+                        }
+                        blocks.push(bodyLines.join("\n"));
+                    } else {
+                        blocks.push(inlineVal);
+                    }
+                }
+                return blocks;
+            };
 
-        if (!/group:\s*['"]?main-release-deploy['"]?/.test(releaseYml) ||
-            !/cancel-in-progress:\s*false/.test(releaseYml) ||
-            !releaseYml.includes("scripts/release.js") ||
-            !releaseYml.includes("ref: ${{ inputs.tag }}") ||
-            !releaseYml.includes("^v[0-9]{4}\\.[0-9]{2}\\.[0-9]{3}$") ||
-            !releaseYml.includes("origin/main") ||
-            !/^permissions:\s*\r?\n\s+contents:\s*read/m.test(releaseYml) ||
-            !/fail_on_unmatched_files:\s*true/.test(releaseYml) ||
-            !releaseYml.includes("./.github/workflows/deploy.yml") ||
-            !releaseYml.includes("checkout_ref") ||
-            !/node-version:\s*['"]?22['"]?/.test(releaseYml)) {
-            console.error("[FAIL] Test 103 Failed: release.yml missing concurrency group, least-privilege permissions, inputs.tag checkout, tag regex validation, origin/main deploy check, fail_on_unmatched_files, chained deploy.yml, or Node 22");
-            process.exit(1);
-        }
+            const compactRunBlocks = extractYamlRunBlocks(
+                "steps:\n  - run: |\n      echo hi\n    env:\n      SHA: ${{ github.sha }}"
+            );
+            if (compactRunBlocks.length !== 1 || compactRunBlocks[0].trim() !== "echo hi" || compactRunBlocks[0].includes("${{")) {
+                fail103(`[FAIL] Test 103 Failed: extractYamlRunBlocks failed to bound compact '- run: |' block at sibling env key, got ${JSON.stringify(compactRunBlocks)}`);
+            }
 
-        if (!/node-version:\s*['"]?22['"]?/.test(ciYml)) {
-            console.error("[FAIL] Test 103 Failed: ci.yml must use Node 22");
-            process.exit(1);
+            for (const [wfName, wfText] of [["ci.yml", ciYml], ["deploy.yml", deployYml], ["release.yml", releaseYml]] as const) {
+                for (const runBlock of extractYamlRunBlocks(wfText)) {
+                    if (runBlock.includes("${{")) {
+                        fail103(`[FAIL] Test 103 Failed: ${wfName} contains untrusted '\${{' interpolation inside a run: block:\n${runBlock}`);
+                    }
+                }
+            }
+
+            const extractStepRunScriptById = (yamlText: string, stepId: string): string | null => {
+                const lines = yamlText.split(/\r?\n/);
+                for (let i = 0; i < lines.length; i++) {
+                    const idMatch = lines[i].match(/^([ ]*)id:\s*(\S+)\s*$/);
+                    if (!idMatch || idMatch[2] !== stepId) continue;
+                    const propIndent = idMatch[1].length;
+                    for (let j = i + 1; j < lines.length; j++) {
+                        if (lines[j].trim() === "") continue;
+                        const curIndent = lines[j].match(/^[ ]*/)?.[0].length ?? 0;
+                        if (curIndent < propIndent || (curIndent === propIndent && lines[j].trimStart().startsWith("- "))) {
+                            break;
+                        }
+                        if (curIndent === propIndent) {
+                            const runMatch = lines[j].match(/^[ ]*run:\s*(.*)$/);
+                            if (runMatch) {
+                                const header = runMatch[1].trim();
+                                if (/^[|>][-+]?$/.test(header)) {
+                                    const body: string[] = [];
+                                    for (let k = j + 1; k < lines.length; k++) {
+                                        if (lines[k].trim() === "") {
+                                            body.push("");
+                                            continue;
+                                        }
+                                        const bodyIndent = lines[k].match(/^[ ]*/)?.[0].length ?? 0;
+                                        if (bodyIndent <= propIndent) break;
+                                        body.push(lines[k]);
+                                    }
+                                    return body.join("\n");
+                                }
+                                return header;
+                            }
+                        }
+                    }
+                }
+                return null;
+            };
+
+            const manualReleaseScript = extractStepRunScriptById(releaseYml, "manual_release");
+            if (!manualReleaseScript || !manualReleaseScript.includes('echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"')) {
+                console.error("[FAIL] Test 103 Failed: manual_release step in .github/workflows/release.yml must emit release_sha=$(git rev-parse HEAD) to GITHUB_OUTPUT");
+                workflowChecksFailed = true;
+            }
+            if (!releaseYml.includes("target_commitish: ${{ steps.manual_release.outputs.release_sha }}") ||
+                releaseYml.includes("target_commitish: ${{ github.sha }}")) {
+                console.error("[FAIL] Test 103 Failed: Publish GitHub Release (tag push or manual dispatch) must set target_commitish to steps.manual_release.outputs.release_sha rather than github.sha");
+                workflowChecksFailed = true;
+            }
+
+            const finalizeScript = extractStepRunScriptById(releaseYml, "finalize_outputs");
+            if (!finalizeScript) {
+                fail103("[FAIL] Test 103 Failed: Could not extract finalize_outputs run script from .github/workflows/release.yml");
+            }
+
+            execFileSync("git", ["init", "--bare"], { cwd: remoteDir, env: gitEnv, encoding: "utf8" });
+            runGit(["remote", "add", "origin", remoteDir]);
+
+            const mainSha = runGit(["rev-parse", "HEAD"]);
+            const parentMainSha = runGit(["rev-parse", "HEAD~1"]);
+            const latestTagAtOriginMain = runGit(["describe", "--tags", "--exact-match", "HEAD"]);
+            const v202609001Sha = runGit(["rev-parse", "v2026.09.001^{commit}"]);
+
+            let finalizeRunIdx = 0;
+            const runFinalizeCase = (envVars: {
+                EVENT_NAME: string;
+                CURRENT_REF: string;
+                INPUT_TAG: string;
+                GITHUB_SHA_ENV: string;
+                AUTO_RELEASE_SHA: string;
+            }): Record<string, string> => {
+                const outFile = path103.join(ghOutDir, `finalize_case_${++finalizeRunIdx}.txt`);
+                fs103.writeFileSync(outFile, "");
+                execFileSync("bash", ["-e", "-c", finalizeScript], {
+                    cwd: tmpDir,
+                    env: {
+                        ...gitEnv,
+                        GITHUB_OUTPUT: outFile,
+                        ...envVars
+                    },
+                    encoding: "utf8"
+                });
+                const rawOut = fs103.readFileSync(outFile, "utf8");
+                const map: Record<string, string> = {};
+                for (const line of rawOut.split(/\r?\n/).filter(Boolean)) {
+                    const eq = line.indexOf("=");
+                    if (eq > 0) map[line.slice(0, eq)] = line.slice(eq + 1);
+                }
+                return map;
+            };
+
+            // Case 2 setup first when v2026.09.001 is at origin/main tip (simulating simultaneous main + tag push):
+            // github-pages environment branch policy allows only main/v2, so refs/tags/* MUST NOT trigger deploy-pages.
+            runGit(["push", "--quiet", "origin", `${v202609001Sha}:refs/heads/main`, "refs/tags/v2026.09.001"]);
+            runGit(["checkout", "--quiet", "--detach", "v2026.09.001"]);
+            const case2Out = runFinalizeCase({
+                EVENT_NAME: "push",
+                CURRENT_REF: "refs/tags/v2026.09.001",
+                INPUT_TAG: "",
+                GITHUB_SHA_ENV: v202609001Sha,
+                AUTO_RELEASE_SHA: ""
+            });
+            if (case2Out["should_deploy"] !== "false" || case2Out["deploy_ref"] !== v202609001Sha) {
+                console.error(`[FAIL] Test 103 Failed: finalize_outputs Case 2 (tag push refs/tags/v2026.09.001) must set should_deploy=false & deploy_ref=${v202609001Sha} to respect github-pages branch policy, got ${JSON.stringify(case2Out)}`);
+                workflowChecksFailed = true;
+            }
+
+            // Advance origin/main to full main history + all tags for Cases 1, 3, 4, 5
+            runGit(["checkout", "--quiet", "main"]);
+            runGit(["push", "--quiet", "origin", "main", "--tags"]);
+
+            // Case 1: push on refs/heads/main with AUTO_RELEASE_SHA
+            const case1Out = runFinalizeCase({
+                EVENT_NAME: "push",
+                CURRENT_REF: "refs/heads/main",
+                INPUT_TAG: "",
+                GITHUB_SHA_ENV: parentMainSha,
+                AUTO_RELEASE_SHA: mainSha
+            });
+            if (case1Out["should_deploy"] !== "true" || case1Out["deploy_ref"] !== mainSha) {
+                console.error(`[FAIL] Test 103 Failed: finalize_outputs Case 1 expected should_deploy=true & deploy_ref=${mainSha}, got ${JSON.stringify(case1Out)}`);
+                workflowChecksFailed = true;
+            }
+
+            // Case 3: workflow_dispatch on refs/heads/main with empty INPUT_TAG
+            const case3Out = runFinalizeCase({
+                EVENT_NAME: "workflow_dispatch",
+                CURRENT_REF: "refs/heads/main",
+                INPUT_TAG: "",
+                GITHUB_SHA_ENV: mainSha,
+                AUTO_RELEASE_SHA: ""
+            });
+            if (case3Out["should_deploy"] !== "true" || case3Out["deploy_ref"] !== mainSha) {
+                console.error(`[FAIL] Test 103 Failed: finalize_outputs Case 3 expected should_deploy=true & deploy_ref=${mainSha}, got ${JSON.stringify(case3Out)}`);
+                workflowChecksFailed = true;
+            }
+
+            // Case 4: workflow_dispatch on refs/heads/main with INPUT_TAG at origin/main
+            const case4Out = runFinalizeCase({
+                EVENT_NAME: "workflow_dispatch",
+                CURRENT_REF: "refs/heads/main",
+                INPUT_TAG: latestTagAtOriginMain,
+                GITHUB_SHA_ENV: mainSha,
+                AUTO_RELEASE_SHA: ""
+            });
+            if (case4Out["should_deploy"] !== "true" || case4Out["deploy_ref"] !== mainSha) {
+                console.error(`[FAIL] Test 103 Failed: finalize_outputs Case 4 expected should_deploy=true & deploy_ref=${mainSha}, got ${JSON.stringify(case4Out)}`);
+                workflowChecksFailed = true;
+            }
+
+            // Case 5: workflow_dispatch on refs/heads/main with older INPUT_TAG=v2026.09.001 while origin/main has newer commits
+            runGit(["checkout", "--quiet", "--detach", "v2026.09.001"]);
+            const case5Out = runFinalizeCase({
+                EVENT_NAME: "workflow_dispatch",
+                CURRENT_REF: "refs/heads/main",
+                INPUT_TAG: "v2026.09.001",
+                GITHUB_SHA_ENV: mainSha,
+                AUTO_RELEASE_SHA: ""
+            });
+            if (case5Out["should_deploy"] !== "false" || case5Out["deploy_ref"] !== v202609001Sha) {
+                console.error(`[FAIL] Test 103 Failed: finalize_outputs Case 5 expected should_deploy=false & deploy_ref=${v202609001Sha}, got ${JSON.stringify(case5Out)}`);
+                workflowChecksFailed = true;
+            }
+
+            if (workflowChecksFailed) {
+                fail103("[FAIL] Test 103 Failed: One or more workflow validation checks failed");
+            }
+
+            if (!deployYml.includes("workflow_call") ||
+                !deployYml.includes("checkout_ref") ||
+                !deployYml.includes("ref: ${{ inputs.checkout_ref || github.ref }}") ||
+                /^\s*push\s*:/m.test(deployYml) ||
+                !deployYml.includes("dist/v2") ||
+                !/node-version:\s*['"]?22['"]?/.test(deployYml)) {
+                fail103("[FAIL] Test 103 Failed: deploy.yml missing workflow_call checkout_ref contract, /v2/ mirror, or Node 22");
+            }
+
+            if (!/group:\s*['"]?main-release-deploy['"]?/.test(releaseYml) ||
+                !/cancel-in-progress:\s*false/.test(releaseYml) ||
+                !releaseYml.includes("scripts/release.js") ||
+                !releaseYml.includes("ref: ${{ inputs.tag }}") ||
+                !releaseYml.includes("^v[0-9]{4}\\.[0-9]{2}\\.[0-9]{3}$") ||
+                !releaseYml.includes("origin/main") ||
+                releaseYml.includes("chore(release):") ||
+                !/^permissions:\s*\r?\n\s+contents:\s*read/m.test(releaseYml) ||
+                !/fail_on_unmatched_files:\s*true/.test(releaseYml) ||
+                !releaseYml.includes("./.github/workflows/deploy.yml") ||
+                !releaseYml.includes("checkout_ref") ||
+                !/node-version:\s*['"]?22['"]?/.test(releaseYml)) {
+                fail103("[FAIL] Test 103 Failed: release.yml missing concurrency group, least-privilege permissions, inputs.tag checkout, tag regex validation, origin/main deploy check, fail_on_unmatched_files, chained deploy.yml, Node 22, or still skips chore(release): pushes");
+            }
+
+            if (!/node-version:\s*['"]?22['"]?/.test(ciYml)) {
+                fail103("[FAIL] Test 103 Failed: ci.yml must use Node 22");
+            }
+        } finally {
+            cleanupTmp103();
         }
     }
 

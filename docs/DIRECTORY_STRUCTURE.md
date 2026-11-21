@@ -15,8 +15,8 @@ cricket-scorecard/
 │   ├── copilot-instructions.md      # GitHub Copilot pointer to canonical AGENTS.md
 │   └── workflows/                   # Automated GitHub Actions pipelines
 │       ├── ci.yml                   # Automated test & build verification gate
-│       ├── deploy.yml               # GitHub Pages production deployment
-│       └── release.yml              # Automated GitHub Release creation on tag push
+│       ├── deploy.yml               # Reusable GitHub Pages production deployment workflow
+│       └── release.yml              # Automated main semantic release & chained Pages orchestration
 ├── backend/                         # Serverless Backend & Cloud Edge Integrations
 │   ├── README.md                    # Backend integration overview & architectural diagram
 │   ├── cloudflare/                  # Cloudflare Workers KV Live Sync Edge Worker

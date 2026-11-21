@@ -192,7 +192,7 @@ npm run release -- --notes-only
    - Updates `public/sw.js` (`CACHE_NAME`).
    - Updates `index.html` (footer release badge text).
 6. **Production Build**: Executes `npm run build` to compile the bundle and inject hashed assets into `dist/sw.js`.
-7. **Git Tag & Push**: Creates an annotated git tag (`git tag -a <tag> -m "<summary>"`) and pushes to the repository remote (`git push <remote> <tag>`).
+7. **Git Commit, Tag & Push**: Commits synchronized release metadata (`chore(release): <tag>`) prior to creating an annotated git tag (`git tag -a <tag> -m "<summary>"`) and pushing both the release commit and tag to the repository remote (`git push <remote> HEAD` and `git push <remote> <tag>`). Code pushes to `main` also cut semantic releases and chain GitHub Pages deployments automatically via [`.github/workflows/release.yml`](.github/workflows/release.yml#L1).
 
 ---
 

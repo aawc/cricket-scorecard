@@ -1,4 +1,4 @@
-name: Create GitHub Release & Deploy Pages
+name: "Create GitHub Release & Deploy Pages"
 
 on:
   push:
@@ -23,11 +23,10 @@ concurrency:
 
 jobs:
   release:
-    name: Build, Cut Semantic Release & Publish
+    name: "Build, Cut Semantic Release & Publish"
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    if: !(github.event_name == 'push' && github.ref == 'refs/heads/main' && startsWith(github.event.head_commit.message, 'chore(release):'))
     outputs:
       should_deploy: ${{ steps.finalize_outputs.outputs.should_deploy }}
       deploy_ref: ${{ steps.finalize_outputs.outputs.deploy_ref }}
@@ -56,7 +55,7 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: node scripts/release.js --ci --skip-tests
 
-      - name: Extract Notes & Package Distribution (main branch push)
+      - name: "Extract Notes & Package Distribution (main branch push)"
         if: github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.auto_release.outputs.skipped != 'true'
         env:
           TAG_NAME: ${{ steps.auto_release.outputs.tag }}
@@ -84,7 +83,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         run: npm run build
 
-      - name: Resolve Release Tag & Package Distribution (tag push or manual dispatch)
+      - name: "Resolve Release Tag & Package Distribution (tag push or manual dispatch)"
         id: manual_release
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         env:
@@ -109,13 +108,14 @@ jobs:
           node scripts/extract-release-notes.js --tag "$TARGET_TAG" --output RELEASE_NOTES.md
           cd dist && zip -r "../cricket-scorecard-dist-${TARGET_TAG}.zip" . && cd ..
           echo "tag=$TARGET_TAG" >> "$GITHUB_OUTPUT"
+          echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub Release (tag push or manual dispatch)
         if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.manual_release.outputs.tag }}
-          target_commitish: ${{ github.sha }}
+          target_commitish: ${{ steps.manual_release.outputs.release_sha }}
           name: Release ${{ steps.manual_release.outputs.tag }}
           body_path: RELEASE_NOTES.md
           files: |
@@ -137,7 +137,7 @@ jobs:
           if [ "$EVENT_NAME" = "push" ] && [ "$CURRENT_REF" = "refs/heads/main" ]; then
             echo "should_deploy=true" >> "$GITHUB_OUTPUT"
             echo "deploy_ref=${AUTO_RELEASE_SHA:-$GITHUB_SHA_ENV}" >> "$GITHUB_OUTPUT"
-          elif [[ "$CURRENT_REF" == refs/tags/* ]] || { [ "$EVENT_NAME" = "workflow_dispatch" ] && [ -n "$INPUT_TAG" ]; }; then
+          elif [ "$EVENT_NAME" = "workflow_dispatch" ] && [ "$CURRENT_REF" = "refs/heads/main" ] && [ -n "$INPUT_TAG" ]; then
             git fetch origin main --quiet || true
             MAIN_SHA=$(git rev-parse origin/main 2>/dev/null || echo "")
             HEAD_SHA=$(git rev-parse HEAD)
