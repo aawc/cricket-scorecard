@@ -2465,11 +2465,18 @@ console.log("Running Test 56...");
         process.exit(1);
     }
 
-    // Test 79: Directory Structure Governance & Release Automation Assets
-    console.log("Running Test 79 (Directory Structure Governance & Release Automation)...");
+    // Test 79: Directory Structure Governance, Multi-Agent Instructions Hierarchy & Release Automation Assets
+    console.log("Running Test 79 (Directory Structure Governance, Multi-Agent Hierarchy & Release Automation)...");
     const fs = await import("fs");
     const path = await import("path");
     const requiredFiles = [
+        "AGENTS.md",
+        "GEMINI.md",
+        "CLAUDE.md",
+        ".github/copilot-instructions.md",
+        "README.md",
+        "CONTRIBUTING.md",
+        "docs/rules/README.md",
         "backend/README.md",
         "backend/cloudflare/worker.js",
         "backend/cloudflare/wrangler.toml",
@@ -2495,7 +2502,140 @@ console.log("Running Test 56...");
     for (const relPath of requiredFiles) {
         const fullPath = path.resolve(process.cwd(), relPath);
         if (!fs.existsSync(fullPath)) {
-            console.error(`Test 79 Failed: Required governance file ${relPath} does not exist at ${fullPath}`);
+            console.error(`[FAIL] Test 79 Failed: Required governance file ${relPath} does not exist at ${fullPath}`);
+            process.exit(1);
+        }
+    }
+
+    // Verify retired/prohibited root files do NOT exist
+    const prohibitedRootFiles = ["PROMPT.md", "task.md"];
+    for (const relPath of prohibitedRootFiles) {
+        const fullPath = path.resolve(process.cwd(), relPath);
+        if (fs.existsSync(fullPath)) {
+            console.error(`[FAIL] Test 79 Failed: Retired or prohibited root file ${relPath} must not exist at ${fullPath}`);
+            process.exit(1);
+        }
+    }
+
+    // Verify AGENTS.md canonical architecture, domain, accessibility, and standing workflow mandates
+    const agentsPath = path.resolve(process.cwd(), "AGENTS.md");
+    const agentsContent = fs.readFileSync(agentsPath, "utf8");
+    const requiredAgentsChecks: Array<{ label: string; test: (s: string) => boolean }> = [
+        { label: "project overview", test: (s) => s.includes("Cricket Scorecard PWA") && s.includes("Progressive Web App") },
+        { label: "src/app.ts module", test: (s) => s.includes("src/app.ts") },
+        { label: "src/rules.ts module", test: (s) => s.includes("src/rules.ts") },
+        { label: "src/reducer.ts module", test: (s) => s.includes("src/reducer.ts") },
+        { label: "src/v2/ module", test: (s) => s.includes("src/v2/") },
+        { label: "ICC Men's ODI Playing Conditions partial-coverage rule", test: (s) => s.includes("ICC Men's One Day International Playing Conditions") && s.includes("docs/rules/README.md") && /partial/i.test(s) },
+        { label: "red-green colorblind accessibility (#0072B2 vs #D55E00, [PASS]/[FAIL])", test: (s) => s.includes("#0072B2") && s.includes("#D55E00") && s.includes("[PASS]") && s.includes("[FAIL]") },
+        { label: "line-anchored code links (#L)", test: (s) => s.includes("#L") && /\[[^\]]+\]\([^)]+#L\d+/.test(s) },
+        { label: "ban on GitHub alert syntax (> [!NOTE])", test: (s) => s.includes("> [!NOTE]") && !/^\s*>\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]/m.test(s) },
+        { label: "code-only version bumps (no bump for documentation-only changes)", test: (s) => /code changes/i.test(s) && /documentation/i.test(s) },
+        { label: "spectator lockout", test: (s) => /spectator/i.test(s) && /(lock|disabled|read-only)/i.test(s) },
+        { label: "MCC Law 21.18 extras accounting", test: (s) => s.includes("21.18") },
+        { label: "48px touch targets", test: (s) => s.includes("48px") },
+        { label: "workflow mandate 1: phased implementation planning & phase-gate verification", test: (s) => /phased implementation/i.test(s) && /phase-gate/i.test(s) },
+        { label: "workflow mandate 2: Red-Green-Refactor TDD with concrete assertions on real calls", test: (s) => /Red-Green-Refactor/i.test(s) && /concrete assertions/i.test(s) },
+        { label: "workflow mandate 3: small independent atomic commits omitting TAG=agy/CONV=<id> with user commit approval", test: (s) => /atomic commits/i.test(s) && s.includes("TAG=agy") && s.includes("CONV=") && /approval/i.test(s) && s.includes("git commit") },
+        { label: "workflow mandate 4: independent subagent verification", test: (s) => /independent subagent/i.test(s) }
+    ];
+
+    for (const check of requiredAgentsChecks) {
+        if (!check.test(agentsContent)) {
+            console.error(`[FAIL] Test 79 Failed: AGENTS.md missing required section/rule: ${check.label}`);
+            process.exit(1);
+        }
+    }
+
+    // Verify AGENTS.md uses strictly repository-relative links (zero local file:// URIs)
+    if (/\]\(file:\/\//.test(agentsContent)) {
+        console.error("[FAIL] Test 79 Failed: AGENTS.md must use repository-relative links rather than local file:// URIs");
+        process.exit(1);
+    }
+
+    // Verify every #L<line> markdown link inside AGENTS.md resolves to an existing file and in-range line
+    const anchorLinkRegex = /\[[^\]]+\]\(([^)#\s]+)#L(\d+)(?:-L(\d+))?\)/g;
+    let anchorMatch: RegExpExecArray | null;
+    let verifiedAnchorCount = 0;
+    while ((anchorMatch = anchorLinkRegex.exec(agentsContent)) !== null) {
+        const rawTarget = anchorMatch[1];
+        if (/^https?:\/\//.test(rawTarget)) continue;
+        if (rawTarget.startsWith("file://")) {
+            console.error(`[FAIL] Test 79 Failed: AGENTS.md must use repository-relative links rather than local file:// URIs: ${rawTarget}`);
+            process.exit(1);
+        }
+        const targetAbs = path.resolve(process.cwd(), rawTarget);
+        if (!fs.existsSync(targetAbs)) {
+            console.error(`[FAIL] Test 79 Failed: AGENTS.md anchor target does not exist: ${rawTarget} (${targetAbs})`);
+            process.exit(1);
+        }
+        const totalLines = fs.readFileSync(targetAbs, "utf8").replace(/\r?\n$/, "").split(/\r?\n/).length;
+        const startLine = parseInt(anchorMatch[2], 10);
+        const endLine = anchorMatch[3] ? parseInt(anchorMatch[3], 10) : startLine;
+        if (startLine < 1 || startLine > totalLines || endLine < startLine || endLine > totalLines) {
+            console.error(`[FAIL] Test 79 Failed: AGENTS.md anchor out of bounds (${rawTarget}#L${startLine}${anchorMatch[3] ? `-L${endLine}` : ""}; file has ${totalLines} lines)`);
+            process.exit(1);
+        }
+        verifiedAnchorCount++;
+    }
+    if (verifiedAnchorCount === 0) {
+        console.error("[FAIL] Test 79 Failed: AGENTS.md must include verified #L<line> source links");
+        process.exit(1);
+    }
+
+    // Verify GEMINI.md, CLAUDE.md, and .github/copilot-instructions.md are pure zero-rule pointers
+    const pointerSpecs = [
+        { relPath: "GEMINI.md", expectedLink: "[AGENTS.md](AGENTS.md)" },
+        { relPath: "CLAUDE.md", expectedLink: "[AGENTS.md](AGENTS.md)" },
+        { relPath: ".github/copilot-instructions.md", expectedLink: "[AGENTS.md](../AGENTS.md)" }
+    ];
+    for (const spec of pointerSpecs) {
+        const ptrFull = path.resolve(process.cwd(), spec.relPath);
+        const ptrContent = fs.readFileSync(ptrFull, "utf8");
+        const nonEmptyLines = ptrContent.split(/\r?\n/).filter((line: string) => line.trim().length > 0);
+        if (nonEmptyLines.length > 4) {
+            console.error(`[FAIL] Test 79 Failed: Pointer file ${spec.relPath} must have <= 4 non-empty lines, got ${nonEmptyLines.length}`);
+            process.exit(1);
+        }
+        if (!ptrContent.includes(spec.expectedLink)) {
+            console.error(`[FAIL] Test 79 Failed: Pointer file ${spec.relPath} must contain markdown link ${spec.expectedLink}`);
+            process.exit(1);
+        }
+        if (/\b(MUST|NEVER|Standing|Rule)\b/i.test(ptrContent) || /^\s*\d+\.\s+/m.test(ptrContent)) {
+            console.error(`[FAIL] Test 79 Failed: Pointer file ${spec.relPath} must contain zero rule directives or numbered lists`);
+            process.exit(1);
+        }
+    }
+
+    // Verify README.md is strictly human-facing (0 agent rules or AI instruction file references)
+    const readmeContent = fs.readFileSync(path.resolve(process.cwd(), "README.md"), "utf8");
+    if (/\b(AGENTS\.md|GEMINI\.md|CLAUDE\.md|PROMPT\.md|copilot-instructions)\b/i.test(readmeContent) || /AI pair-programming|Standing Developer Instructions/i.test(readmeContent)) {
+        console.error("[FAIL] Test 79 Failed: README.md must remain strictly human-facing with 0 agent rules or AI instruction references");
+        process.exit(1);
+    }
+
+    // Verify zero active .md files in repo root or docs/ contain stale references to PROMPT.md
+    const collectMarkdownFiles = (dirPath: string, recursive: boolean): string[] => {
+        const results: string[] = [];
+        for (const entry of fs.readdirSync(dirPath, { withFileTypes: true })) {
+            const fullEntry = path.join(dirPath, entry.name);
+            if (entry.isDirectory() && recursive) {
+                results.push(...collectMarkdownFiles(fullEntry, true));
+            } else if (entry.isFile() && entry.name.endsWith(".md")) {
+                results.push(fullEntry);
+            }
+        }
+        return results;
+    };
+    const activeMdFiles = [
+        ...collectMarkdownFiles(process.cwd(), false),
+        ...collectMarkdownFiles(path.resolve(process.cwd(), "docs"), true)
+    ];
+    for (const mdFile of activeMdFiles) {
+        const mdText = fs.readFileSync(mdFile, "utf8");
+        if (mdText.includes("PROMPT.md")) {
+            const relMd = path.relative(process.cwd(), mdFile);
+            console.error(`[FAIL] Test 79 Failed: Stale reference to PROMPT.md found in ${relMd}`);
             process.exit(1);
         }
     }
@@ -2504,7 +2644,7 @@ console.log("Running Test 56...");
     const { execSync } = await import("child_process");
     const notesOutput = execSync("node scripts/extract-release-notes.js", { encoding: "utf8" });
     if (!notesOutput.includes((global as any).APP_VERSION) || !notesOutput.includes("Key Highlights") || !notesOutput.includes("Changes & Improvements")) {
-        console.error(`Test 79 Failed: scripts/extract-release-notes.js did not produce valid release notes. Output:\n${notesOutput}`);
+        console.error(`[FAIL] Test 79 Failed: scripts/extract-release-notes.js did not produce valid release notes. Output:\n${notesOutput}`);
         process.exit(1);
     }
 

@@ -23,7 +23,7 @@ Welcome to the technical documentation library for the **Cricket Scorecard PWA**
 
 ## Core Repository Guides (Root)
 
-- [`README.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/README.md#L1): Project overview, feature matrix, and live demo.
-- [`CONTRIBUTING.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/CONTRIBUTING.md#L1): Contributor onboarding, TDD workflow, and pull request guide.
-- [`GEMINI.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/GEMINI.md#L1): AI pairing instructions, coding rules, and verification checklist.
-- [`SECURITY.md`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/SECURITY.md#L1): Security vulnerability disclosure instructions.
+- [`README.md`](../README.md#L1): Project overview, feature matrix, and live demo.
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md#L1): Contributor onboarding, TDD workflow, and pull request guide.
+- [`AGENTS.md`](../AGENTS.md#L1): Canonical AI and developer agent instructions, architecture rules, and standing workflow mandates (pointed to by [`GEMINI.md`](../GEMINI.md#L1), [`CLAUDE.md`](../CLAUDE.md#L1), and [`.github/copilot-instructions.md`](../.github/copilot-instructions.md#L1)).
+- [`SECURITY.md`](../SECURITY.md#L1): Security vulnerability disclosure instructions.

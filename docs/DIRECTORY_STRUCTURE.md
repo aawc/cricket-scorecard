@@ -12,6 +12,7 @@ cricket-scorecard/
 │   ├── ISSUE_TEMPLATE/              # Structured issue submission templates
 │   │   ├── bug_report.yml            # Colorblind-safe bug report template
 │   │   └── feature_request.yml       # Standardized feature proposal template
+│   ├── copilot-instructions.md      # GitHub Copilot pointer to canonical AGENTS.md
 │   └── workflows/                   # Automated GitHub Actions pipelines
 │       ├── ci.yml                   # Automated test & build verification gate
 │       ├── deploy.yml               # GitHub Pages production deployment
@@ -52,10 +53,12 @@ cricket-scorecard/
 │   ├── extract-release-notes.js     # CI release highlights & notes extractor
 │   └── release.js                   # Standardized Release CLI (npm run release)
 ├── src/                             # Client Modular TypeScript Source Code
+│   ├── app.ts                       # Main PWA entry point & Service Worker registration
 │   ├── feedback.ts                  # In-app bug reporter & GitHub Issue compiler
 │   ├── modal.ts                     # Accessible modal dialog controller (W3C WAI-ARIA)
 │   ├── reducer.ts                   # Pure deterministic state machine & cricket rules
 │   ├── release_notes.ts             # Dynamic release notes modal renderer & event handler
+│   ├── rules.ts                     # Pure ICC ODI bowler eligibility & quota predicates
 │   ├── state.ts                     # Reactive state container & subscriber manager
 │   ├── storage.ts                   # LocalStorage persistence, LZ-String compression & migration
 │   ├── style.css                    # Colorblind-safe styling & responsive layouts
@@ -75,10 +78,11 @@ cricket-scorecard/
 │   ├── test_cases.ts                # Core regression test cases (Tests 1–84)
 │   └── v2_test_cases.ts             # v2 Architecture & Analytics test suite (Tests 85–89)
 ├── .gitignore                       # Git ignore patterns
+├── AGENTS.md                        # Canonical multi-agent developer guide & standing rules
+├── CLAUDE.md                        # Claude Code pointer to canonical AGENTS.md
 ├── CONTRIBUTING.md                  # Comprehensive developer & contributor onboarding guide
-├── GEMINI.md                        # AI developer pairing guide & workspace rules
+├── GEMINI.md                        # Gemini pointer to canonical AGENTS.md
 ├── LICENSE                          # MIT Open Source License
-├── PROMPT.md                        # Project specifications and core instructions
 ├── README.md                        # Primary landing page and quickstart guide
 ├── SECURITY.md                      # Security vulnerability disclosure policy
 ├── index.html                       # Mobile-first PWA HTML entry point
@@ -92,8 +96,8 @@ cricket-scorecard/
 ## 2. Directory Governance Rules
 
 ### Rule 1: Root Directory Cleanliness
-Only fundamental repository-level configuration files are permitted at the root:
-- `README.md`, `CONTRIBUTING.md`, `GEMINI.md`, `PROMPT.md`, `LICENSE`, `SECURITY.md`
+Only fundamental repository-level configuration and entry-point files are permitted at the root (plus `.github/copilot-instructions.md` under `.github/`):
+- `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `LICENSE`, `SECURITY.md`
 - `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.js`, `index.html`, `.gitignore`
 - **Strictly Prohibited**: Placing ad-hoc documentation, scratch notes, one-off scripts, or unstructured asset folders directly in the root directory.
 

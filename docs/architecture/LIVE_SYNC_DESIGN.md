@@ -238,7 +238,7 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
 
 ### 4.7 Multi-Device Umpire Link Resumption & State Hydration
 1. **Seamless Device Transfer & Scoring Resumption**:
-   - When an umpire opens an authorized umpire link (`?live=<matchId>&key=<writeKey>`) on a new device, a second phone, or a fresh browser context, `init()` invokes [`resumeUmpireSession()`](file:///usr/local/google/home/vakh/git/hub/aawc/cricket-scorecard-pwa/src/sync.ts#L613).
+   - When an umpire opens an authorized umpire link (`?live=<matchId>&key=<writeKey>`) on a new device, a second phone, or a fresh browser context, `init()` invokes [`resumeUmpireSession()`](../../src/sync.ts#L622).
 2. **Cloud State Fetch & Cryptographic Verification**:
    - Rather than initializing a new stream or pushing an unstarted local baseline, `resumeUmpireSession()` fetches the existing `LiveMatchPacket` from the active storage provider.
    - Verifies write authorization by hashing the incoming key (`hashWriteKey(writeKey) === packet.writeKeyHash`).
@@ -292,7 +292,7 @@ Average packet size: **~1.2 KB uncompressed**, **~450 bytes compressed**.
 4. **Commit 4: Automated Unit Tests**
    - Add comprehensive test cases in `test/test_cases.ts` (Tests 54–62) covering session generation, 1-year TTL calculation, write key authorization, spectator ingestion, offline recovery, and race prevention.
 5. **Commit 5: Repository Documentation Synchronization**
-   - Update `README.md` and `PROMPT.md` to reflect live streaming and multi-reader capabilities.
+   - Update [`README.md`](../../README.md#L1) and [`AGENTS.md`](../../AGENTS.md#L1) to reflect live streaming and multi-reader capabilities.
 
 ---
 
