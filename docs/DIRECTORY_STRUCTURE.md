@@ -78,6 +78,7 @@ cricket-scorecard/
 │   ├── test_cases.ts                # Core regression test cases (Tests 1–84)
 │   └── v2_test_cases.ts             # v2 Architecture & Analytics test suite (Tests 85–89)
 ├── .gitignore                       # Git ignore patterns
+├── .npmrc                           # Public npmjs.org registry pin for hermetic lockfiles
 ├── AGENTS.md                        # Canonical multi-agent developer guide & standing rules
 ├── CLAUDE.md                        # Claude Code pointer to canonical AGENTS.md
 ├── CONTRIBUTING.md                  # Comprehensive developer & contributor onboarding guide
@@ -98,7 +99,7 @@ cricket-scorecard/
 ### Rule 1: Root Directory Cleanliness
 Only fundamental repository-level configuration and entry-point files are permitted at the root (plus `.github/copilot-instructions.md` under `.github/`):
 - `README.md`, `CONTRIBUTING.md`, `AGENTS.md`, `GEMINI.md`, `CLAUDE.md`, `LICENSE`, `SECURITY.md`
-- `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.js`, `index.html`, `.gitignore`
+- `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.js`, `index.html`, `.gitignore`, `.npmrc`
 - **Strictly Prohibited**: Placing ad-hoc documentation, scratch notes, one-off scripts, or unstructured asset folders directly in the root directory.
 
 ### Rule 2: Modular Source Code Placement (`src/`)
